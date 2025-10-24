@@ -713,6 +713,13 @@ document.addEventListener('DOMContentLoaded', () => {
             titleInput,
             descInput
         ];
+        // Also hide the labels for the title/description inputs so the UI
+        // doesn't show empty labels when the inputs themselves are hidden.
+        const titleLabel = document.querySelector('label[for="recipe-title-input"]');
+        const descLabel = document.querySelector('label[for="recipe-desc-input"]');
+        if (titleLabel) elementsToToggle.push(titleLabel);
+        if (descLabel) elementsToToggle.push(descLabel);
+
         elementsToToggle.forEach(el => {
             if (!el) return;
             if (hide) el.classList.add('hidden');
