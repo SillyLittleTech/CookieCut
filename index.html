@@ -110,27 +110,13 @@
         }
         .recipe-preview-content img {
             display: block;
-            /* max-width and max-height removed from base to be controlled by size classes */
-            width: auto;
             height: auto;
             margin: 20px auto;
             border-radius: 8px;
             background-color: #f0f0f0;
             object-fit: cover;
         }
-        /* --- NEW: Image Size Classes --- */
-        .recipe-preview-content img.img-small {
-            max-width: 200px;
-            max-height: 200px;
-        }
-        .recipe-preview-content img.img-medium {
-            max-width: 350px;
-            max-height: 350px;
-        }
-        .recipe-preview-content img.img-large {
-            max-width: 600px; /* Can be larger, up to container width */
-            max-height: 600px;
-        }
+        
 
         .recipe-preview-content p#recipe-desc-preview {
             text-align: center;
@@ -234,21 +220,21 @@
 
         /* --- NEW: Material Icons Base Style --- */
         .material-icons {
-          font-family: 'Material Icons';
-          font-weight: normal;
-          font-style: normal;
-          font-size: 24px;  /* Default icon size */
-          display: inline-block;
-          line-height: 1;
-          text-transform: none;
-          letter-spacing: normal;
-          word-wrap: normal;
-          white-space: nowrap;
-          direction: ltr;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-          -moz-osx-font-smoothing: grayscale;
-          font-feature-settings: 'liga';
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;  /* Default icon size */
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            -moz-osx-font-smoothing: grayscale;
+            font-feature-settings: 'liga';
         }
 
         /* --- NEW: Inline Icon Style for Preview --- */
@@ -293,18 +279,12 @@
             /* Ensure images print well */
             .recipe-preview-content img {
                 max-width: 500px !important; /* Default to a reasonable print size */
-                max-height: none !important;
                 height: auto;
                 display: block;
                 margin: 20px auto;
                 page-break-inside: avoid;
             }
-            /* Adjust print size based on selection if needed, though 'medium' is good */
-            .recipe-preview-content img.img-small { max-width: 200px !important; }
-            .recipe-preview-content img.img-medium { max-width: 350px !important; }
-            .recipe-preview-content img.img-large { max-width: 500px !important; }
-
-
+            
             /* Style text bubble for print */
             .text-bubble, .toast-base {
                 background-color: #f8f8f8 !important;
@@ -355,7 +335,7 @@
             .recipe-text-block {
                 color: #000;
             }
- 
+
             .recipe-preview-content li {
                 color: #000;
             }
@@ -400,7 +380,7 @@
                 <button id="add-text-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Text ✏️</button>
                 <button id="add-image-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Image 🖼️</button>
                 <button id="add-toast-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Toast 🍞</button>
-                <button id="icon-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Icon Key 🔑</button>
+                <button id="icon-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Badges 🔑</button>
                 <!-- === NEW: Settings Button === -->
                 <button id="settings-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Settings ⚙️</button>
             </div>
@@ -569,16 +549,16 @@
             
             // --- STATE ---
             let recipeData = {
-                title: '', // Set to blank
-                description: '', // Set to blank
+                title: '',
+                description: '',
                 items: [],
-                settings: { // NEW: Global settings
+                settings: {
                     fontStyle: 'display'
                 }
             };
 
-            // --- UPDATED: Icon List ---
-            const COMMON_ICONS = [
+            // --- CONSTANTS ---
+             const COMMON_ICONS = [
                 // General
                 'home', 'settings', 'search', 'add', 'delete', 'edit', 'check', 'close', 'menu', 'star', 'favorite', 'lightbulb', 'info', 'warning', 'error', 'list_alt', 'menu_book', 'restaurant_menu',
                 // Food & Drink
@@ -626,7 +606,6 @@
             const textTypeHeadingBtn = document.getElementById('text-type-heading');
             const textTypeStepBtn = document.getElementById('text-type-step');
             const textTypeTextBtn = document.getElementById('text-type-text');
-            // REMOVED: headingFontStyleSelect
 
             // --- NEW: Icon Key Modal DOM Elements ---
             const iconKeyBtn = document.getElementById('icon-key-btn');
@@ -655,7 +634,6 @@
                 recipeData.items.forEach((item, index) => {
                     const el = document.createElement('div');
                     el.setAttribute('data-id', item.id);
-                    // Added animation class
                     el.className = 'p-4 bg-white border border-gray-300 rounded-lg shadow-sm animate-fade-in-down';
                     
                     let inputHtml = '';
@@ -664,7 +642,6 @@
                     switch (item.type) {
                         case 'heading':
                             itemLabel = 'Heading (H2)';
-                            // REMOVED: fontSelectHtml
                             inputHtml = `
                                 <input type="text" data-key="content" value="${escapeHTML(item.content)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter heading text">
                             `;
@@ -690,12 +667,18 @@
                                     <label class="block text-xs font-medium text-gray-600">Alt Text (for accessibility)</label>
                                     <input type="text" data-key="alt" value="${escapeHTML(item.alt)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="e.g., 'A bowl of pasta'">
                                     
-                                    <label class="block text-xs font-medium text-gray-600 mt-2">Image Size</label>
-                                    <select data-key="size" class="w-full p-2 border border-gray-300 rounded-md bg-white">
-                                        <option value="small" ${item.size === 'small' ? 'selected' : ''}>Small</option>
-                                        <option value="medium" ${item.size === 'medium' ? 'selected' : ''}>Medium</option>
-                                        <option value="large" ${item.size === 'large' ? 'selected' : ''}>Large</option>
-                                    </select>
+                                    <label class="block text-xs font-medium text-gray-600 pt-2">Image Size</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="range" data-key="size" min="100" max="600" step="1" value="${item.size}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                        <span class="text-sm text-gray-600 font-mono w-12 text-right" data-role="size-display">${item.size}px</span>
+                                    </div>
+                                    <!-- Added back the visual labels -->
+                                    <div class="flex justify-between text-xs text-gray-500 px-1">
+                                        <span>Tiny</span>
+                                        <span>Small</span>
+                                        <span>Medium</span>
+                                        <span>Large</span>
+                                    </div>
                                 </div>
                             `;
                             break;
@@ -733,45 +716,33 @@
              * Re-draws the entire recipe preview based on recipeData
              */
             function renderPreview() {
-                // NEW: Get global font style
                 const fontStyle = recipeData.settings.fontStyle || 'display';
 
-                // Update simple fields
-                titlePreview.innerHTML = renderIconCodes(escapeHTML(recipeData.title));
-                titlePreview.className = `font-style-${fontStyle}`; // Apply global font class
+                titlePreview.innerHTML = renderIconCodes(recipeData.title);
+                titlePreview.className = `font-style-${fontStyle}`; 
                 
-                descPreview.innerHTML = renderIconCodes(escapeHTML(recipeData.description));
-
-                // Render dynamic content
-                contentPreview.innerHTML = ''; // Clear existing preview
+                descPreview.innerHTML = renderIconCodes(recipeData.description);
+                contentPreview.innerHTML = ''; 
                 
-                let currentList = null; // To group steps in <ol>
+                let currentList = null;
 
                 recipeData.items.forEach(item => {
-                    // If this item is not a step and we have an open list, close it.
                     if (item.type !== 'step' && currentList) {
                         contentPreview.appendChild(currentList);
                         currentList = null;
                     }
 
                     let el;
-                    // Note: Escaping is now done in the renderBuilderInputs, but we still
-                    // want to escape it here for rendering to preview just in case.
-                    // The icon renderer relies on the text *not* being escaped, so we
-                    // pass the raw text to it, and it will escape around the icons.
                     let contentWithIcons = renderIconCodes(item.content || '');
 
                     switch (item.type) {
                         case 'heading':
                             el = document.createElement('h2');
                             el.innerHTML = contentWithIcons;
-                            // UPDATED: Apply global font style class
                             el.className = `font-style-${fontStyle}`;
                             contentPreview.appendChild(el);
                             break;
-                        
                         case 'step':
-                            // If we don't have an open list, create one
                             if (!currentList) {
                                 currentList = document.createElement('ol');
                             }
@@ -779,26 +750,23 @@
                             el.innerHTML = contentWithIcons;
                             currentList.appendChild(el);
                             break;
-                        
                         case 'text':
                             el = document.createElement('p');
                             el.className = 'recipe-text-block';
                             el.innerHTML = contentWithIcons;
                             contentPreview.appendChild(el);
                             break;
-
                         case 'image':
                             el = document.createElement('img');
-                            el.src = item.src || 'https://placehold.co/300x300?text=Image+Preview';
+                            el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview';
                             el.alt = item.alt;
-                            el.className = `img-${item.size || 'medium'}`; // Default to medium
-                            el.onerror = function() { this.src='https://placehold.co/300x300?text=Invalid+Image'; this.onerror=null; };
+                            el.style.maxWidth = `${item.size}px`; // Apply size directly
+                            el.onerror = function() { this.src='https://placehold.co/400x300?text=Invalid+Image'; this.onerror=null; };
                             contentPreview.appendChild(el);
                             break;
-                        
                         case 'bubble':
                             el = document.createElement('div');
-                            el.className = 'toast-base'; // Base class for all
+                            el.className = 'toast-base';
                             switch(item.subtype) {
                                 case 'tip': el.classList.add('toast-tip'); break;
                                 case 'warning': el.classList.add('toast-warning'); break;
@@ -810,7 +778,6 @@
                     }
                 });
 
-                // If we finished the loop and still have an open list, append it.
                 if (currentList) {
                     contentPreview.appendChild(currentList);
                 }
@@ -820,43 +787,48 @@
             
             function handleUpdateMain(e) {
                 recipeData[e.target.id === 'recipe-title-input' ? 'title' : 'description'] = e.target.value;
-                // No need to render preview constantly, only on "Preview" click
             }
 
-            function handleUpdateItem(e) {
-                const id = e.target.closest('[data-id]').dataset.id;
+            // === CORRECTED EVENT HANDLERS ===
+            /**
+             * Handles ALL live input updates, including the slider moving freely.
+             */
+            function handleLiveInput(e) {
+                const itemEl = e.target.closest('[data-id]');
+                if (!itemEl) return;
+
+                const id = itemEl.dataset.id;
                 const key = e.target.dataset.key;
                 const value = e.target.value;
-
                 const item = recipeData.items.find(i => i.id == id);
 
-                if (item) {
-                    item[key] = value;
-                    // No need to render preview constantly
+                if (!item || !key) return;
+
+                // Update the data model
+                item[key] = value;
+
+                // If it's the size slider, also update the live pixel display
+                if (key === 'size') {
+                    const display = itemEl.querySelector('[data-role="size-display"]');
+                    if (display) {
+                        display.textContent = `${value}px`;
+                    }
                 }
             }
 
-            /**
-             * Swaps an item with its neighbor in the recipeData.items array
-             */
             function moveItem(id, direction) {
                 const index = recipeData.items.findIndex(i => i.id == id);
                 
                 if (direction === 'up' && index > 0) {
-                    // Swap with item above
                     [recipeData.items[index], recipeData.items[index - 1]] = [recipeData.items[index - 1], recipeData.items[index]];
                 } else if (direction === 'down' && index < recipeData.items.length - 1) {
-                    // Swap with item below
                     [recipeData.items[index], recipeData.items[index + 1]] = [recipeData.items[index + 1], recipeData.items[index]];
                 }
             }
 
-            /**
-             * Handles clicks on the dynamic content inputs, specifically for move/delete buttons
-             */
             function handleContentInputClick(e) {
                 const itemEl = e.target.closest('[data-id]');
-                if (!itemEl) return; // Clicked outside an item
+                if (!itemEl) return;
                 
                 const id = itemEl.dataset.id;
                 
@@ -878,54 +850,38 @@
                 }
 
                 if (actionTaken) {
-                    // Re-render only the builder
                     renderBuilderInputs();
                 }
             }
 
             // --- Modal Open/Close Functions ---
-            function openToastModal() {
-                toastModal.classList.remove('hidden');
-            }
-            function closeToastModal() {
-                toastModal.classList.add('hidden');
-            }
+            function openToastModal() { toastModal.classList.remove('hidden'); }
+            function closeToastModal() { toastModal.classList.add('hidden'); }
             function handleToastSelection(subtype) {
                 closeToastModal();
                 addItem('bubble', subtype);
             }
 
-            // --- Text Modal Open/Close Functions ---
-            function openTextModal() {
-                textModal.classList.remove('hidden');
-            }
-            function closeTextModal() {
-                textModal.classList.add('hidden');
-            }
-            // UPDATED: Now only accepts type
+            function openTextModal() { textModal.classList.remove('hidden'); }
+            function closeTextModal() { textModal.classList.add('hidden'); }
             function handleTextSelection(type) {
                 closeTextModal();
                 addItem(type);
             }
 
-            // --- NEW: Icon Key Modal Functions ---
             function openIconKeyModal() {
-                renderIconList(); // Render full list
+                renderIconList();
                 iconKeyModal.classList.remove('hidden');
                 iconSearchInput.focus();
             }
             function closeIconKeyModal() {
                 iconKeyModal.classList.add('hidden');
-                iconSearchInput.value = ''; // Clear search
+                iconSearchInput.value = '';
             }
             
-            /**
-             * Renders the icon list in the modal, optionally filtering by search
-             */
             function renderIconList(filter = '') {
                 iconListContainer.innerHTML = '';
                 const lowerFilter = filter.toLowerCase();
-                // Use the expanded COMMON_ICONS list
                 const filteredIcons = COMMON_ICONS.filter(icon => icon.includes(lowerFilter));
 
                 if (filteredIcons.length === 0) {
@@ -940,20 +896,12 @@
                     el.innerHTML = `
                         <span class="material-icons text-gray-700">${icon}</span>
                         <code class="text-sm text-gray-900 font-mono">${code}</code>
-                        <button 
-                            class="copy-icon-btn ml-auto text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-2 rounded-md transition-all duration-150 active:scale-95" 
-                            data-code="${code}"
-                        >
-                            Copy
-                        </button>
+                        <button class="copy-icon-btn ml-auto text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-2 rounded-md transition-all duration-150 active:scale-95" data-code="${code}">Copy</button>
                     `;
                     iconListContainer.appendChild(el);
                 });
             }
 
-            /**
-             * Handles clicks inside the icon list (for copy buttons)
-             */
             function handleIconListClick(e) {
                 const copyBtn = e.target.closest('.copy-icon-btn');
                 if (copyBtn) {
@@ -968,7 +916,6 @@
                 }
             }
 
-            // --- NEW: Settings Modal Functions ---
             function openSettingsModal() {
                 globalFontStyleSelect.value = recipeData.settings.fontStyle;
                 settingsModal.classList.remove('hidden');
@@ -980,39 +927,33 @@
                 recipeData.settings.fontStyle = e.target.value;
             }
 
-            // --- UPDATED: addItem ---
             function addItem(type, subtype = null) {
                 const newItem = { id: Date.now() };
                 switch (type) {
                     case 'heading':
                         newItem.type = 'heading';
                         newItem.content = 'New Heading';
-                        // REMOVED: fontStyle
                         break;
                     case 'step':
-                        newItem.type = 'step';
-                        newItem.content = '';
-                        break;
                     case 'text':
-                        newItem.type = 'text';
+                        newItem.type = type;
                         newItem.content = '';
                         break;
                     case 'image':
                         newItem.type = 'image';
                         newItem.src = '';
                         newItem.alt = '';
-                        newItem.size = 'medium'; 
+                        newItem.size = 350; // Default to 350px
                         break;
                     case 'bubble':
                         newItem.type = 'bubble';
-                        newItem.subtype = subtype || 'note'; // Default to note
+                        newItem.subtype = subtype || 'note';
                         newItem.content = '';
                         break;
                 }
                 recipeData.items.push(newItem);
                 renderBuilderInputs();
                 
-                // Focus the new input
                 const newEl = contentInputs.querySelector(`[data-id="${newItem.id}"]`);
                 if (newEl) {
                     const input = newEl.querySelector('input, textarea');
@@ -1020,75 +961,54 @@
                 }
             }
 
-            // --- NEW: View Toggling Functions ---
             function showPreview() {
-                renderPreview(); // Render the preview just before showing it
+                renderPreview();
                 builderPanel.classList.add('hidden');
                 recipePanel.classList.remove('hidden');
-                window.scrollTo(0, 0); // Scroll to top
+                window.scrollTo(0, 0);
             }
 
             function showEditor() {
                 builderPanel.classList.remove('hidden');
                 recipePanel.classList.add('hidden');
-                window.scrollTo(0, 0); // Scroll to top
+                window.scrollTo(0, 0);
             }
 
-            // --- NEW: Helper Functions ---
+            // --- Helper Functions ---
 
-            /**
-             * Safely escapes HTML from a string
-             */
             function escapeHTML(str) {
                 if (typeof str !== 'string') return '';
                 const p = document.createElement('p');
                 p.textContent = str;
-                // Replace newlines with <br> after escaping
-                return p.innerHTML.replace(/\n/g, '<br>');
+                return p.textContent;
             }
 
-            /**
-             * Replaces :icon_codes: with <span> tags
-             * This function now escapes the text *around* the icons.
-             */
             function renderIconCodes(text) {
                 if (typeof text !== 'string') return '';
-                
-                // Regex to find :word_with_underscores:
-                // We split the string by the icon codes, escape the text parts,
-                // and then re-join them with the icon HTML.
                 const parts = text.split(/:([a-z0-9_]+):/g);
-                
                 let result = '';
                 for (let i = 0; i < parts.length; i++) {
                     if (i % 2 === 0) {
-                        // This is a text part, escape it
-                        result += escapeHTML(parts[i]);
+                        const p = document.createElement('p');
+                        p.textContent = parts[i];
+                        result += p.innerHTML.replace(/\n/g, '<br>');
                     } else {
-                        // This is an icon name part, check if it's valid
                         if (COMMON_ICONS.includes(parts[i])) {
                             result += `<span class="material-icons">${parts[i]}</span>`;
                         } else {
-                            // Not a valid icon, treat it as text
-                            result += escapeHTML(`:${parts[i]}:`);
+                            const p = document.createElement('p');
+                            p.textContent = `:${parts[i]}:`;
+                            result += p.innerHTML;
                         }
                     }
                 }
                 return result;
             }
 
-            /**
-             * Copies text to the clipboard (with fallback)
-             */
             function copyToClipboard(text) {
-                // Use new clipboard API if available
                 if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(text).catch(err => {
-                        console.warn('Clipboard API failed, falling back...', err);
-                        copyFallback(text);
-                    });
+                    navigator.clipboard.writeText(text).catch(err => copyFallback(text));
                 } else {
-                    // Fallback for insecure contexts (like some iframes) or old browsers
                     copyFallback(text);
                 }
             }
@@ -1108,9 +1028,7 @@
                 document.body.removeChild(ta);
             }
 
-
             // --- INITIALIZE ---
-            
             function init() {
                 // Main info
                 titleInput.addEventListener('input', handleUpdateMain);
@@ -1121,53 +1039,52 @@
                 addImageBtn.addEventListener('click', () => addItem('image'));
                 addToastBtn.addEventListener('click', openToastModal);
 
-                // --- Modal Listeners ---
+                // Toast Modal Listeners
                 closeModalBtn.addEventListener('click', closeToastModal);
                 toastModalOverlay.addEventListener('click', closeToastModal);
                 toastTypeTipBtn.addEventListener('click', () => handleToastSelection('tip'));
                 toastTypeWarningBtn.addEventListener('click', () => handleToastSelection('warning'));
                 toastTypeNoteBtn.addEventListener('click', () => handleToastSelection('note'));
 
-                // --- Text Modal Listeners ---
+                // Text Modal Listeners
                 closeTextModalBtn.addEventListener('click', closeTextModal);
                 textModalOverlay.addEventListener('click', closeTextModal);
-                
-                // UPDATED: textTypeHeadingBtn
                 textTypeHeadingBtn.addEventListener('click', () => handleTextSelection('heading'));
                 textTypeStepBtn.addEventListener('click', () => handleTextSelection('step'));
                 textTypeTextBtn.addEventListener('click', () => handleTextSelection('text'));
 
-                // --- NEW: Icon Key Modal Listeners ---
+                // Icon Key Modal Listeners
                 iconKeyBtn.addEventListener('click', openIconKeyModal);
                 closeIconKeyModalBtn.addEventListener('click', closeIconKeyModal);
                 iconKeyModalOverlay.addEventListener('click', closeIconKeyModal);
-                // *** THIS IS THE FIX: e.targe.value -> e.target.value ***
                 iconSearchInput.addEventListener('input', (e) => renderIconList(e.target.value)); 
                 iconListContainer.addEventListener('click', handleIconListClick);
 
-                // --- NEW: Settings Modal Listeners ---
+                // Settings Modal Listeners
                 settingsBtn.addEventListener('click', openSettingsModal);
                 closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
                 settingsModalOverlay.addEventListener('click', closeSettingsModal);
                 globalFontStyleSelect.addEventListener('change', handleGlobalFontChange);
 
-                // Dynamic item handlers
-                contentInputs.addEventListener('input', handleUpdateItem);
+                // === CORRECTED Dynamic item handlers ===
+                // This single 'input' listener handles all live updates smoothly.
+                // It works for text fields and the slider while dragging.
+                contentInputs.addEventListener('input', handleLiveInput); 
+                // Removed the 'change' listener as it's no longer needed for snapping.
                 contentInputs.addEventListener('click', handleContentInputClick);
 
-                // --- NEW: View Toggle Listeners ---
+
+                // View Toggle Listeners
                 previewBtn.addEventListener('click', showPreview);
                 editBtn.addEventListener('click', showEditor);
                 printBtn.addEventListener('click', () => window.print());
 
                 // Initial render
                 renderBuilderInputs();
-                // Also update the preview-side inputs to match the blank state
                 titleInput.value = recipeData.title;
                 descInput.value = recipeData.description;
                 titlePreview.innerHTML = renderIconCodes(recipeData.title);
                 descPreview.innerHTML = renderIconCodes(recipeData.description);
-                // Set initial font styles
                 globalFontStyleSelect.value = recipeData.settings.fontStyle;
                 titlePreview.className = `font-style-${recipeData.settings.fontStyle}`;
             }
@@ -1177,4 +1094,3 @@
     </script>
 </body>
 </html>
-
