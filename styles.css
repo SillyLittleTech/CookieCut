@@ -326,35 +326,6 @@
     background: linear-gradient(90deg,#60a5fa,#7c3aed);
 }
 
-/* Drag handle (grapple) shown on hover; hidden in print */
-.drag-handle {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    cursor: grab;
-    font-weight: 700;
-    color: #374151;
-    opacity: 0;
-    transition: opacity 120ms ease, transform 120ms ease;
-    z-index: 20;
-    user-select: none;
-}
-.inline-item:hover .drag-handle { opacity: 1; transform: translateY(-1px); }
-.drag-handle:active { cursor: grabbing; }
-
-@media print {
-    .drag-handle { display: none !important; }
-}
-
 /* Floating add menu default styles (menu created dynamically) */
 #floating-add-menu button:hover { background: #f3f4f6; }
 
@@ -382,5 +353,26 @@
 }
 .inline-item.drop-target {
     outline: 2px solid rgba(79,70,229,0.25);
+}
+
+
+/* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only
+   we make only the chosen preview visible for printing. This prevents UI chrome
+   from appearing in the printout when using the experimental inline editor. */
+@media print {
+    /* Hide everything first */
+    body.print-inline-only * { visibility: hidden !important; }
+    /* Show inline preview only */
+    body.print-inline-only #inline-preview, body.print-inline-only #inline-preview * { visibility: visible !important; }
+    body.print-inline-only #inline-preview { position: absolute; left: 0; top: 0; width: 100%; }
+
+    /* Classic/preview-only print (used when printing from the recipe preview) */
+    body.print-recipe-only * { visibility: hidden !important; }
+    body.print-recipe-only #recipe-preview, body.print-recipe-only #recipe-preview * { visibility: visible !important; }
+    body.print-recipe-only #recipe-preview { position: absolute; left: 0; top: 0; width: 100%; }
+
+    /* Ensure we don't print editor outlines or floating controls */
+    .new-text-outline { outline: none !important; padding: 0 !important; }
+    #floating-add-btn, #icon-key-btn, #settings-btn { display: none !important; }
 }
 

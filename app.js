@@ -280,9 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         inlinePreview.appendChild(p);
 
-    // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
-    let currentList = null; // for grouping contiguous steps into an ordered list
-    recipeData.items.forEach(item => {
+        // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
+        recipeData.items.forEach(item => {
             let el; 
             const contentWithIcons = renderIconCodes(item.content || '');
 
@@ -341,25 +340,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Wrap non-li items
             if (item.type === 'step') {
-                // group contiguous steps: create a new ol when needed
-                if (!currentList) {
-                    currentList = document.createElement('ol');
-                    inlinePreview.appendChild(currentList);
+                // ensure an ordered list container exists
+                let ol = inlinePreview.querySelector('ol');
+                if (!ol) {
+                    ol = document.createElement('ol');
+                    inlinePreview.appendChild(ol);
                 }
-                // make li act as inline-item; dragging will be handled by a small drag handle
+                // make li draggable and act as inline-item
                 el.classList.add('inline-item');
-                el.draggable = false; // disable direct dragging to avoid selection interference
-                el.style.position = el.style.position || 'relative';
-                currentList.appendChild(el);
-
-                // outline empty steps so they're visible
-                if (!item.content || item.content.trim() === '') {
-                    el.classList.add('new-text-outline');
-                    const onFirstInputStep = () => { el.classList.remove('new-text-outline'); el.removeEventListener('input', onFirstInputStep); };
-                    el.addEventListener('input', onFirstInputStep);
-                    setTimeout(() => el.focus(), 20);
-                }
-
+                el.draggable = true;
+                ol.appendChild(el);
                 // dblclick to remove
                 el.addEventListener('dblclick', (ev) => {
                     ev.stopPropagation();
@@ -369,60 +359,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderInlinePreview();
                     }
                 });
-
-                // provide li-level drop behavior (highlight on dragover; insertion handled centrally)
+                // drag handlers for li
+                el.addEventListener('dragstart', (ev) => {
+                    ev.dataTransfer.setData('text/plain', String(item.id));
+                    el.classList.add('dragging');
+                });
+                el.addEventListener('dragend', (ev) => {
+                    el.classList.remove('dragging');
+                    inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
+                });
                 el.addEventListener('dragover', (ev) => { ev.preventDefault(); el.classList.add('drop-target'); });
                 el.addEventListener('dragleave', (ev) => { el.classList.remove('drop-target'); });
                 el.addEventListener('drop', (ev) => {
                     ev.preventDefault();
                     const dragId = ev.dataTransfer.getData('text/plain');
-                    if (!dragId) return;
-                    insertDraggedAtClientY(dragId, ev.clientY);
-                    renderBuilderInputs();
-                    renderInlinePreview();
+                    const targetId = el.dataset.id;
+                    if (dragId && targetId && dragId !== targetId) {
+                        reorderItems(dragId, targetId);
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    }
                 });
-
-                // create and attach a drag handle for this li so users can drag without selecting text
-                const liHandle = document.createElement('div');
-                liHandle.className = 'drag-handle';
-                liHandle.textContent = '≡';
-                liHandle.setAttribute('aria-hidden', 'true');
-                liHandle.setAttribute('contenteditable', 'false');
-                liHandle.draggable = true;
-                liHandle.addEventListener('click', (ev) => ev.stopPropagation());
-                liHandle.addEventListener('dragstart', (ev) => {
-                    ev.dataTransfer.setData('text/plain', String(item.id));
-                    try { const c = document.createElement('canvas'); c.width=1; c.height=1; ev.dataTransfer.setDragImage(c,0,0); } catch(err){}
-                    ev.dataTransfer.effectAllowed = 'move';
-                    el.classList.add('dragging');
-                });
-                liHandle.addEventListener('dragend', (ev) => { el.classList.remove('dragging'); inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n=>n.classList.remove('drop-target')); });
-                liHandle.addEventListener('mousedown', (ev) => ev.preventDefault());
-                el.appendChild(liHandle);
             } else {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'inline-item';
                 wrapper.dataset.id = item.id;
-                wrapper.draggable = false; // use handle for dragging to avoid interfering with text selection
-                wrapper.style.position = wrapper.style.position || 'relative';
+                wrapper.draggable = true;
                 wrapper.appendChild(el);
-                // add a drag handle for non-step items
-                const handle = document.createElement('div');
-                handle.className = 'drag-handle';
-                handle.textContent = '≡';
-                handle.setAttribute('aria-hidden', 'true');
-                handle.setAttribute('contenteditable', 'false');
-                handle.draggable = true;
-                handle.addEventListener('click', (ev) => ev.stopPropagation());
-                handle.addEventListener('dragstart', (ev) => {
-                    ev.dataTransfer.setData('text/plain', String(item.id));
-                    try { const c = document.createElement('canvas'); c.width=1;c.height=1; ev.dataTransfer.setDragImage(c,0,0); } catch(err){}
-                    ev.dataTransfer.effectAllowed = 'move';
-                    wrapper.classList.add('dragging');
-                });
-                handle.addEventListener('dragend', (ev) => { wrapper.classList.remove('dragging'); inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n=>n.classList.remove('drop-target')); });
-                handle.addEventListener('mousedown', (ev) => ev.preventDefault());
-                wrapper.appendChild(handle);
                 // mark new text with outline to make it visible
                 if ((item.type === 'text' || item.type === 'heading' || item.type === 'step') && (!item.content || item.content.trim() === '')) {
                     el.classList.add('new-text-outline');
@@ -444,16 +407,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                // drop handlers (dragstart/drageend handled by the handle element)
+                // drag handlers
+                wrapper.addEventListener('dragstart', (ev) => {
+                    ev.dataTransfer.setData('text/plain', String(item.id));
+                    wrapper.classList.add('dragging');
+                });
+                wrapper.addEventListener('dragend', (ev) => {
+                    wrapper.classList.remove('dragging');
+                    // cleanup drop-target classes
+                    inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
+                });
                 wrapper.addEventListener('dragover', (ev) => { ev.preventDefault(); wrapper.classList.add('drop-target'); });
                 wrapper.addEventListener('dragleave', (ev) => { wrapper.classList.remove('drop-target'); });
                 wrapper.addEventListener('drop', (ev) => {
                     ev.preventDefault();
                     const dragId = ev.dataTransfer.getData('text/plain');
-                    if (!dragId) return;
-                    insertDraggedAtClientY(dragId, ev.clientY);
-                    renderBuilderInputs();
-                    renderInlinePreview();
+                    const targetId = wrapper.dataset.id;
+                    if (dragId && targetId && dragId !== targetId) {
+                        reorderItems(dragId, targetId);
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    }
                 });
             }
         });
@@ -469,7 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const dragId = e.dataTransfer.getData('text/plain');
             if (!dragId) return;
-            insertDraggedAtClientY(dragId, e.clientY);
+            // move dragged item to end
+            const idx = recipeData.items.findIndex(i => String(i.id) === String(dragId));
+            if (idx === -1) return;
+            const [item] = recipeData.items.splice(idx,1);
+            recipeData.items.push(item);
             renderBuilderInputs();
             renderInlinePreview();
         };
@@ -743,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Reorder helper: move the dragged item so it appears before the target item
-    function reorderItems(dragId, targetId, insertAfter = false) {
+    function reorderItems(dragId, targetId) {
         const dragIndex = recipeData.items.findIndex(i => String(i.id) === String(dragId));
         if (dragIndex === -1) return;
         const [dragItem] = recipeData.items.splice(dragIndex, 1);
@@ -753,47 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // append to end
             recipeData.items.push(dragItem);
         } else {
-            const insertIndex = insertAfter ? newTargetIndex + 1 : newTargetIndex;
-            recipeData.items.splice(insertIndex, 0, dragItem);
-        }
-    }
-
-    // Insert dragged item at a position determined by clientY relative to current rendered items.
-    function insertDraggedAtClientY(dragId, clientY) {
-        const dragIndex = recipeData.items.findIndex(i => String(i.id) === String(dragId));
-        if (dragIndex === -1) return;
-        const [dragItem] = recipeData.items.splice(dragIndex, 1);
-
-        // Build an array of visible item elements in DOM order mapped to their ids
-        const domElements = [];
-        // include wrappers and list items
-        inlinePreview.querySelectorAll('.inline-item, ol > li').forEach(el => {
-            const id = el.dataset.id;
-            if (id) domElements.push({ id: String(id), el });
-        });
-
-        // Now find first element whose midpoint is below clientY
-        let inserted = false;
-        for (let i = 0; i < domElements.length; i++) {
-            const { id, el } = domElements[i];
-            const rect = el.getBoundingClientRect();
-            const mid = rect.top + rect.height / 2;
-            if (clientY < mid) {
-                // insert before the item with id
-                const idx = recipeData.items.findIndex(it => String(it.id) === String(id));
-                if (idx === -1) {
-                    recipeData.items.splice(0, 0, dragItem);
-                } else {
-                    recipeData.items.splice(idx, 0, dragItem);
-                }
-                inserted = true;
-                break;
-            }
-        }
-
-        if (!inserted) {
-            // append to end
-            recipeData.items.push(dragItem);
+            recipeData.items.splice(newTargetIndex, 0, dragItem);
         }
     }
 
@@ -869,19 +807,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function handleGlobalFontChange(e) {
         recipeData.settings.fontStyle = e.target.value;
-        // Immediately update both preview and inline preview so changes are visible
-        try {
-            renderPreview();
-        } catch (err) {
-            console.error('Error rendering preview after font change', err);
-        }
-        if (recipeData.settings.editorMode === 'inline') {
-            try {
-                renderInlinePreview();
-            } catch (err) {
-                console.error('Error rendering inline preview after font change', err);
-            }
-        }
     }
 
     function addItem(type, subtype = null) {
@@ -929,6 +854,29 @@ document.addEventListener('DOMContentLoaded', () => {
         builderPanel.classList.remove('hidden');
         recipePanel.classList.add('hidden');
         window.scrollTo(0, 0);
+    }
+
+    /**
+     * Print helper that ensures only the desired preview is visible when printing.
+     * - Inline editor mode: print only `#inline-preview`
+     * - Otherwise: print only `#recipe-preview`
+     */
+    function handlePrint() {
+        const isInline = isInlineMode();
+        if (isInline) document.body.classList.add('print-inline-only');
+        else document.body.classList.add('print-recipe-only');
+
+        // Cleanup after print — use afterprint when available
+        function cleanup() {
+            document.body.classList.remove('print-inline-only', 'print-recipe-only');
+            window.removeEventListener('afterprint', cleanup);
+        }
+
+        window.addEventListener('afterprint', cleanup);
+        // Trigger the print dialog
+        window.print();
+        // Fallback: ensure cleanup even if afterprint doesn't fire in some environments
+        setTimeout(cleanup, 1500);
     }
 
     // --- Helper Functions ---
@@ -1065,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 menu.appendChild(makeBtn('Add Text', () => openTextModal()));
                 menu.appendChild(makeBtn('Add Image', () => addItem('image')));
                 menu.appendChild(makeBtn('Add Toast', () => openToastModal()));
-                menu.appendChild(makeBtn('Print', () => window.print()));
+                menu.appendChild(makeBtn('Print', () => handlePrint()));
 
                 document.body.appendChild(menu);
                 // click outside to close
@@ -1090,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // View Toggle Listeners
         previewBtn.addEventListener('click', showPreview);
         editBtn.addEventListener('click', showEditor);
-        printBtn.addEventListener('click', () => window.print());
+    printBtn.addEventListener('click', () => handlePrint());
 
         // Initial render
         renderBuilderInputs();
