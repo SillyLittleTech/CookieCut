@@ -229,7 +229,11 @@
 
     /* Ensure images print well */
     .recipe-preview-content img {
-        max-width: 500px !important; /* Default to a reasonable print size */
+        /* Allow the inline `style="max-width:...px"` set by the preview to take precedence
+           while still preventing images from overflowing the printed page. Removing the
+           previous `!important` cap lets element inline styles (the user's chosen size)
+           apply. Use max-width:100% so very large values still fit the page. */
+        max-width: 100%;
         height: auto;
         display: block;
         margin: 20px auto;
@@ -302,3 +306,81 @@
         page-break-after: avoid;
     }
 }
+
+/* --- Inline Editor & Floating Add Button Styles --- */
+.inline-edit-image {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: box-shadow 0.15s ease, transform 0.12s ease;
+}
+.inline-edit-image:hover {
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.image-resizer-overlay input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,#60a5fa,#7c3aed);
+}
+
+/* Drag handle (grapple) shown on hover; hidden in print */
+.drag-handle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    cursor: grab;
+    font-weight: 700;
+    color: #374151;
+    opacity: 0;
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 20;
+    user-select: none;
+}
+.inline-item:hover .drag-handle { opacity: 1; transform: translateY(-1px); }
+.drag-handle:active { cursor: grabbing; }
+
+@media print {
+    .drag-handle { display: none !important; }
+}
+
+/* Floating add menu default styles (menu created dynamically) */
+#floating-add-menu button:hover { background: #f3f4f6; }
+
+/* Ensure inline preview looks like the recipe preview */
+#inline-preview .recipe-text-block { margin: 0.75rem 0; }
+
+/* Global font-style helper classes so inline preview headings respect settings */
+.font-style-display { font-family: '"Baloo 2"', cursive !important; }
+.font-style-serif { font-family: 'Merriweather', serif !important; }
+.font-style-sans { font-family: 'Lexend', sans-serif !important; }
+
+/* New text outline to make freshly added text visible */
+.new-text-outline {
+    outline: 2px dashed rgba(59,130,246,0.6); /* blue-500-ish */
+    padding: 2px;
+    border-radius: 4px;
+}
+
+/* Inline item wrapper */
+.inline-item {
+    cursor: grab;
+}
+.inline-item.dragging {
+    opacity: 0.5;
+}
+.inline-item.drop-target {
+    outline: 2px solid rgba(79,70,229,0.25);
+}
+

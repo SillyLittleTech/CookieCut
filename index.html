@@ -4,23 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CookieCut Builder</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Load Google Font from original file + new playful fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Added Baloo 2, Kalam, Lexend, and Merriweather -->
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
-    
-    <!-- === NEW: Load Material Icons === -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
-    <!-- Load external CSS -->
-    <link rel="stylesheet" href="styles.css">
-    
-    <style>
-        /* Configure Tailwind to use Lexend */
+    <!-- Configure Tailwind (must be JS, not CSS) -->
+    <script>
         tailwind.config = {
             theme: {
                 extend: {
@@ -49,6 +34,25 @@
                 },
             },
         };
+    </script>
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load Google Font from original file + new playful fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Added Baloo 2, Kalam, Lexend, and Merriweather -->
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- === NEW: Load Material Icons === -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Load external CSS -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        /* Tailwind is configured via the earlier <script> block before loading the CDN; no CSS needed here. */
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -172,7 +176,7 @@
 
             <div class="grid grid-cols-1 gap-4">
                 <button id="text-type-heading" class="w-full text-left p-4 rounded-lg border-2 border-sky-500 bg-sky-50 hover:bg-sky-100 transition-all">
-                    <span class="text-xl font-bold font-display text-sky-700"><h2> Heading</h2></span>
+                    <span class="text-xl font-bold font-display text-sky-700">Heading</span>
                     <p class="text-sky-600 text-sm mt-1">Add a new section heading.</p>
                 </button>
                 <button id="text-type-step" class="w-full text-left p-4 rounded-lg border-2 border-gray-500 bg-gray-50 hover:bg-gray-100 transition-all">
@@ -236,6 +240,14 @@
                     </select>
                     <p class="text-xs text-gray-500 mt-1">Controls the font for the main title and all headings.</p>
                 </div>
+                <div>
+                    <label for="editor-mode-select" class="block text-sm font-medium text-gray-700 mb-1">Editor Mode</label>
+                    <select id="editor-mode-select" class="w-full p-2 border border-gray-300 rounded-md bg-white shadow-sm">
+                        <option value="classic">Classic Editor (current)</option>
+                        <option value="inline">Inline Live Editor (experimental)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Inline Live Editor shows a live preview on the page and allows editing by clicking. Not enabled by default.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -244,5 +256,10 @@
 
     <!-- Load external JavaScript -->
     <script src="app.js"></script>
+    <!-- Floating add button for inline editor (hidden by default) -->
+    <button id="floating-add-btn" class="hidden fixed z-40 bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-2xl">+</button>
+
+    <!-- Inline preview container (for Inline Live Editor) -->
+    <div id="inline-preview" class="hidden max-w-3xl mx-auto p-6 md:p-8 rounded-lg shadow-lg bg-white mt-6"></div>
 </body>
 </html>

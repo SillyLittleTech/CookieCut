@@ -6,7 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
         description: '',
         items: [],
         settings: {
-            fontStyle: 'display'
+            fontStyle: 'display',
+            editorMode: 'classic' // 'classic' or 'inline'
         }
     };
 
@@ -74,6 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModalOverlay = document.getElementById('settings-modal-overlay');
     const closeSettingsModalBtn = document.getElementById('close-settings-modal-btn');
     const globalFontStyleSelect = document.getElementById('global-font-style-select');
+    const editorModeSelect = document.getElementById('editor-mode-select');
+    const floatingAddBtn = document.getElementById('floating-add-btn');
+    const inlinePreview = document.getElementById('inline-preview');
 
 
     // --- RENDER FUNCTIONS ---
@@ -163,6 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             contentInputs.appendChild(el);
         });
+        // If inline editor is active, update its preview too
+        if (recipeData.settings && recipeData.settings.editorMode === 'inline') {
+            renderInlinePreview();
+        }
     }
 
     /**
@@ -236,6 +244,391 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /** Inline editor rendering (live, editable preview on same page) */
+    function renderInlinePreview() {
+        if (!inlinePreview) return;
+        inlinePreview.innerHTML = '';
+
+        const fontStyle = recipeData.settings.fontStyle || 'display';
+
+        // Title (editable)
+        const h1 = document.createElement('h1');
+        h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`;
+        h1.contentEditable = true;
+        h1.dataset.key = 'title';
+        h1.innerHTML = renderIconCodes(recipeData.title);
+        // Outline for empty title so users notice it's editable
+        if (!recipeData.title || recipeData.title.trim() === '') {
+            h1.classList.add('new-text-outline');
+            const removeOutline = () => { h1.classList.remove('new-text-outline'); h1.removeEventListener('input', removeOutline); };
+            h1.addEventListener('input', removeOutline);
+            setTimeout(() => h1.focus(), 20);
+        }
+        inlinePreview.appendChild(h1);
+
+        // Description (editable)
+        const p = document.createElement('p');
+        p.className = 'text-gray-600 italic mb-4';
+        p.contentEditable = true;
+        p.dataset.key = 'description';
+        p.innerHTML = renderIconCodes(recipeData.description);
+        // Outline for empty description
+        if (!recipeData.description || recipeData.description.trim() === '') {
+            p.classList.add('new-text-outline');
+            const removeOutlineDesc = () => { p.classList.remove('new-text-outline'); p.removeEventListener('input', removeOutlineDesc); };
+            p.addEventListener('input', removeOutlineDesc);
+        }
+        inlinePreview.appendChild(p);
+
+    // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
+    let currentList = null; // for grouping contiguous steps into an ordered list
+    recipeData.items.forEach(item => {
+            let el; 
+            const contentWithIcons = renderIconCodes(item.content || '');
+
+            switch (item.type) {
+                case 'heading':
+                    el = document.createElement('h2');
+                    el.className = `font-style-${fontStyle} text-2xl font-bold mt-6`;
+                    el.contentEditable = true;
+                    el.dataset.id = item.id;
+                    el.dataset.key = 'content';
+                    el.innerHTML = contentWithIcons;
+                    break;
+                case 'step':
+                    el = document.createElement('li');
+                    el.contentEditable = true;
+                    el.dataset.id = item.id;
+                    el.dataset.key = 'content';
+                    el.innerHTML = contentWithIcons;
+                    break;
+                case 'text':
+                    el = document.createElement('p');
+                    el.className = 'recipe-text-block';
+                    el.contentEditable = true;
+                    el.dataset.id = item.id;
+                    el.dataset.key = 'content';
+                    el.innerHTML = contentWithIcons;
+                    break;
+                case 'image':
+                    el = document.createElement('img');
+                    el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview';
+                    el.alt = item.alt || '';
+                    el.style.maxWidth = `${item.size}px`;
+                    el.dataset.id = item.id;
+                    el.className = 'inline-edit-image';
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openImageResizer(el, item);
+                    });
+                    break;
+                case 'bubble':
+                    el = document.createElement('div');
+                    el.className = 'toast-base';
+                    switch(item.subtype) {
+                        case 'tip': el.classList.add('toast-tip'); break;
+                        case 'warning': el.classList.add('toast-warning'); break;
+                        default: el.classList.add('toast-note');
+                    }
+                    el.contentEditable = true;
+                    el.dataset.id = item.id;
+                    el.dataset.key = 'content';
+                    el.innerHTML = contentWithIcons;
+                    break;
+            }
+
+            if (!el) return;
+
+            // Wrap non-li items
+            if (item.type === 'step') {
+                // group contiguous steps: create a new ol when needed
+                if (!currentList) {
+                    currentList = document.createElement('ol');
+                    inlinePreview.appendChild(currentList);
+                }
+                // make li act as inline-item; dragging will be handled by a small drag handle
+                el.classList.add('inline-item');
+                el.draggable = false; // disable direct dragging to avoid selection interference
+                el.style.position = el.style.position || 'relative';
+                currentList.appendChild(el);
+
+                // outline empty steps so they're visible
+                if (!item.content || item.content.trim() === '') {
+                    el.classList.add('new-text-outline');
+                    const onFirstInputStep = () => { el.classList.remove('new-text-outline'); el.removeEventListener('input', onFirstInputStep); };
+                    el.addEventListener('input', onFirstInputStep);
+                    setTimeout(() => el.focus(), 20);
+                }
+
+                // dblclick to remove
+                el.addEventListener('dblclick', (ev) => {
+                    ev.stopPropagation();
+                    if (confirm('Remove this item?')) {
+                        recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    }
+                });
+
+                // provide li-level drop behavior (highlight on dragover; insertion handled centrally)
+                el.addEventListener('dragover', (ev) => { ev.preventDefault(); el.classList.add('drop-target'); });
+                el.addEventListener('dragleave', (ev) => { el.classList.remove('drop-target'); });
+                el.addEventListener('drop', (ev) => {
+                    ev.preventDefault();
+                    const dragId = ev.dataTransfer.getData('text/plain');
+                    if (!dragId) return;
+                    insertDraggedAtClientY(dragId, ev.clientY);
+                    renderBuilderInputs();
+                    renderInlinePreview();
+                });
+
+                // create and attach a drag handle for this li so users can drag without selecting text
+                const liHandle = document.createElement('div');
+                liHandle.className = 'drag-handle';
+                liHandle.textContent = '≡';
+                liHandle.setAttribute('aria-hidden', 'true');
+                liHandle.setAttribute('contenteditable', 'false');
+                liHandle.draggable = true;
+                liHandle.addEventListener('click', (ev) => ev.stopPropagation());
+                liHandle.addEventListener('dragstart', (ev) => {
+                    ev.dataTransfer.setData('text/plain', String(item.id));
+                    try { const c = document.createElement('canvas'); c.width=1; c.height=1; ev.dataTransfer.setDragImage(c,0,0); } catch(err){}
+                    ev.dataTransfer.effectAllowed = 'move';
+                    el.classList.add('dragging');
+                });
+                liHandle.addEventListener('dragend', (ev) => { el.classList.remove('dragging'); inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n=>n.classList.remove('drop-target')); });
+                liHandle.addEventListener('mousedown', (ev) => ev.preventDefault());
+                el.appendChild(liHandle);
+            } else {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'inline-item';
+                wrapper.dataset.id = item.id;
+                wrapper.draggable = false; // use handle for dragging to avoid interfering with text selection
+                wrapper.style.position = wrapper.style.position || 'relative';
+                wrapper.appendChild(el);
+                // add a drag handle for non-step items
+                const handle = document.createElement('div');
+                handle.className = 'drag-handle';
+                handle.textContent = '≡';
+                handle.setAttribute('aria-hidden', 'true');
+                handle.setAttribute('contenteditable', 'false');
+                handle.draggable = true;
+                handle.addEventListener('click', (ev) => ev.stopPropagation());
+                handle.addEventListener('dragstart', (ev) => {
+                    ev.dataTransfer.setData('text/plain', String(item.id));
+                    try { const c = document.createElement('canvas'); c.width=1;c.height=1; ev.dataTransfer.setDragImage(c,0,0); } catch(err){}
+                    ev.dataTransfer.effectAllowed = 'move';
+                    wrapper.classList.add('dragging');
+                });
+                handle.addEventListener('dragend', (ev) => { wrapper.classList.remove('dragging'); inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n=>n.classList.remove('drop-target')); });
+                handle.addEventListener('mousedown', (ev) => ev.preventDefault());
+                wrapper.appendChild(handle);
+                // mark new text with outline to make it visible
+                if ((item.type === 'text' || item.type === 'heading' || item.type === 'step') && (!item.content || item.content.trim() === '')) {
+                    el.classList.add('new-text-outline');
+                    // remove outline on first input
+                    const onFirstInput = () => { el.classList.remove('new-text-outline'); el.removeEventListener('input', onFirstInput); };
+                    el.addEventListener('input', onFirstInput);
+                    // focus newly empty elements so the user can type
+                    setTimeout(() => el.focus(), 20);
+                }
+                inlinePreview.appendChild(wrapper);
+
+                // dblclick to remove
+                wrapper.addEventListener('dblclick', (ev) => {
+                    ev.stopPropagation();
+                    if (confirm('Remove this item?')) {
+                        recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    }
+                });
+
+                // drop handlers (dragstart/drageend handled by the handle element)
+                wrapper.addEventListener('dragover', (ev) => { ev.preventDefault(); wrapper.classList.add('drop-target'); });
+                wrapper.addEventListener('dragleave', (ev) => { wrapper.classList.remove('drop-target'); });
+                wrapper.addEventListener('drop', (ev) => {
+                    ev.preventDefault();
+                    const dragId = ev.dataTransfer.getData('text/plain');
+                    if (!dragId) return;
+                    insertDraggedAtClientY(dragId, ev.clientY);
+                    renderBuilderInputs();
+                    renderInlinePreview();
+                });
+            }
+        });
+
+        // Attach input listeners for editable regions
+        inlinePreview.querySelectorAll('[contenteditable=true]').forEach(node => {
+            node.addEventListener('input', handleInlineInput);
+            node.addEventListener('blur', handleInlineBlur);
+        });
+        // container-level drag/drop: drop to append at end
+        inlinePreview.ondragover = function(e) { e.preventDefault(); };
+        inlinePreview.ondrop = function(e) {
+            e.preventDefault();
+            const dragId = e.dataTransfer.getData('text/plain');
+            if (!dragId) return;
+            insertDraggedAtClientY(dragId, e.clientY);
+            renderBuilderInputs();
+            renderInlinePreview();
+        };
+    }
+
+    function handleInlineInput(e) {
+        const el = e.target;
+        const key = el.dataset.key;
+        const id = el.dataset.id;
+
+        if (!key) return;
+
+        if (key === 'title' || key === 'description') {
+            // Update main title/description live
+            const text = el.textContent || '';
+            if (key === 'title') recipeData.title = text;
+            else recipeData.description = text;
+            // keep the builder inputs in sync
+            titleInput.value = recipeData.title;
+            descInput.value = recipeData.description;
+            // also update preview title/desc if needed
+            titlePreview.innerHTML = renderIconCodes(recipeData.title);
+            descPreview.innerHTML = renderIconCodes(recipeData.description);
+            return;
+        }
+
+        // content for items
+        const item = recipeData.items.find(i => String(i.id) === String(id));
+        if (!item) return;
+        item.content = el.innerText;
+        // reflect changes into builder inputs if present
+        const itemEl = contentInputs.querySelector(`[data-id="${item.id}"]`);
+        if (itemEl) {
+            const input = itemEl.querySelector('[data-key="content"]');
+            if (input) input.value = item.content;
+        }
+    }
+
+    function handleInlineBlur(e) {
+        // On blur, sanitize or re-render parts if required
+        const el = e.target;
+        if (!el) return;
+        const newHtml = renderIconCodes(el.innerText || '');
+        el.innerHTML = newHtml;
+    }
+
+    // Simple image resizer overlay
+    let currentResizer = null;
+    function openImageResizer(imgEl, item) {
+        closeImageResizer();
+        const resizer = document.createElement('div');
+        resizer.className = 'image-resizer-overlay';
+        resizer.style.position = 'fixed';
+        resizer.style.left = '50%';
+        resizer.style.transform = 'translateX(-50%)';
+        resizer.style.bottom = '20px';
+        resizer.style.zIndex = 60;
+        resizer.style.background = 'white';
+        resizer.style.padding = '8px 12px';
+        resizer.style.borderRadius = '8px';
+        resizer.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = 100;
+        input.max = 1200;
+        input.step = 1;
+        input.value = item.size || 350;
+        input.style.width = '300px';
+        const label = document.createElement('span');
+        label.textContent = `${input.value}px`;
+        label.style.marginLeft = '10px';
+
+        input.addEventListener('input', () => {
+            const v = input.value;
+            item.size = Number(v);
+            imgEl.style.maxWidth = `${v}px`;
+            label.textContent = `${v}px`;
+            // update builder input display if visible
+            const itemEl = contentInputs.querySelector(`[data-id="${item.id}"]`);
+            if (itemEl) {
+                const display = itemEl.querySelector('[data-role="size-display"]');
+                const slider = itemEl.querySelector('[data-key="size"]');
+                if (display) display.textContent = `${v}px`;
+                if (slider) slider.value = v;
+            }
+        });
+
+        // URL and alt inputs
+        const urlLabel = document.createElement('label');
+        urlLabel.textContent = 'Image URL';
+        urlLabel.style.display = 'block';
+        urlLabel.style.marginTop = '8px';
+        const urlInput = document.createElement('input');
+        urlInput.type = 'url';
+        urlInput.value = item.src || '';
+        urlInput.placeholder = 'https://...';
+        urlInput.style.width = '420px';
+        urlInput.style.display = 'block';
+        urlInput.style.marginTop = '4px';
+
+        const altLabel = document.createElement('label');
+        altLabel.textContent = 'Alt text';
+        altLabel.style.display = 'block';
+        altLabel.style.marginTop = '6px';
+        const altInput = document.createElement('input');
+        altInput.type = 'text';
+        altInput.value = item.alt || '';
+        altInput.style.width = '420px';
+        altInput.style.display = 'block';
+        altInput.style.marginTop = '4px';
+
+        const applyBtn = document.createElement('button');
+        applyBtn.textContent = 'Apply';
+        applyBtn.className = 'ml-3 px-3 py-1 bg-blue-600 text-white rounded';
+        applyBtn.addEventListener('click', () => {
+            // apply URL and alt
+            const newUrl = urlInput.value.trim();
+            const newAlt = altInput.value.trim();
+            if (newUrl) {
+                item.src = newUrl;
+                imgEl.src = newUrl;
+            }
+            item.alt = newAlt;
+            imgEl.alt = newAlt;
+            // update builder inputs if visible
+            const itemEl = contentInputs.querySelector(`[data-id="${item.id}"]`);
+            if (itemEl) {
+                const srcInput = itemEl.querySelector('[data-key="src"]');
+                const altInputEl = itemEl.querySelector('[data-key="alt"]');
+                if (srcInput) srcInput.value = item.src;
+                if (altInputEl) altInputEl.value = item.alt;
+            }
+        });
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Done';
+        closeBtn.className = 'ml-3 px-3 py-1 bg-gray-100 rounded';
+        closeBtn.addEventListener('click', closeImageResizer);
+
+        resizer.appendChild(input);
+        resizer.appendChild(label);
+        resizer.appendChild(urlLabel);
+        resizer.appendChild(urlInput);
+        resizer.appendChild(altLabel);
+        resizer.appendChild(altInput);
+        resizer.appendChild(applyBtn);
+        resizer.appendChild(closeBtn);
+        document.body.appendChild(resizer);
+        currentResizer = resizer;
+    }
+
+    function closeImageResizer() {
+        if (currentResizer) {
+            currentResizer.remove();
+            currentResizer = null;
+        }
+    }
+
     // --- EVENT HANDLERS ---
     
     function handleUpdateMain(e) {
@@ -304,6 +697,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (actionTaken) {
             renderBuilderInputs();
+            if (recipeData.settings && recipeData.settings.editorMode === 'inline') renderInlinePreview();
+        }
+    }
+
+    function isInlineMode() {
+        return recipeData.settings && recipeData.settings.editorMode === 'inline';
+    }
+
+    function enableInlineEditor() {
+        if (!inlinePreview || !floatingAddBtn) return;
+        inlinePreview.classList.remove('hidden');
+        floatingAddBtn.classList.remove('hidden');
+        renderInlinePreview();
+        toggleOldUIVisibility(true);
+    }
+
+    function disableInlineEditor() {
+        if (!inlinePreview || !floatingAddBtn) return;
+        inlinePreview.classList.add('hidden');
+        floatingAddBtn.classList.add('hidden');
+        closeImageResizer();
+        toggleOldUIVisibility(false);
+    }
+
+    function toggleOldUIVisibility(hide) {
+        // Hide most of the old controls when inline mode is active,
+        // but keep the badges (icon-key-btn) and settings (settings-btn).
+        const elementsToToggle = [
+            addTextBtn,
+            addImageBtn,
+            addToastBtn,
+            previewBtn,
+            editBtn,
+            printBtn,
+            contentInputs,
+            titleInput,
+            descInput
+        ];
+        elementsToToggle.forEach(el => {
+            if (!el) return;
+            if (hide) el.classList.add('hidden');
+            else el.classList.remove('hidden');
+        });
+    }
+
+    // Reorder helper: move the dragged item so it appears before the target item
+    function reorderItems(dragId, targetId, insertAfter = false) {
+        const dragIndex = recipeData.items.findIndex(i => String(i.id) === String(dragId));
+        if (dragIndex === -1) return;
+        const [dragItem] = recipeData.items.splice(dragIndex, 1);
+        // find current index of target (after removal)
+        const newTargetIndex = recipeData.items.findIndex(i => String(i.id) === String(targetId));
+        if (newTargetIndex === -1) {
+            // append to end
+            recipeData.items.push(dragItem);
+        } else {
+            const insertIndex = insertAfter ? newTargetIndex + 1 : newTargetIndex;
+            recipeData.items.splice(insertIndex, 0, dragItem);
+        }
+    }
+
+    // Insert dragged item at a position determined by clientY relative to current rendered items.
+    function insertDraggedAtClientY(dragId, clientY) {
+        const dragIndex = recipeData.items.findIndex(i => String(i.id) === String(dragId));
+        if (dragIndex === -1) return;
+        const [dragItem] = recipeData.items.splice(dragIndex, 1);
+
+        // Build an array of visible item elements in DOM order mapped to their ids
+        const domElements = [];
+        // include wrappers and list items
+        inlinePreview.querySelectorAll('.inline-item, ol > li').forEach(el => {
+            const id = el.dataset.id;
+            if (id) domElements.push({ id: String(id), el });
+        });
+
+        // Now find first element whose midpoint is below clientY
+        let inserted = false;
+        for (let i = 0; i < domElements.length; i++) {
+            const { id, el } = domElements[i];
+            const rect = el.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            if (clientY < mid) {
+                // insert before the item with id
+                const idx = recipeData.items.findIndex(it => String(it.id) === String(id));
+                if (idx === -1) {
+                    recipeData.items.splice(0, 0, dragItem);
+                } else {
+                    recipeData.items.splice(idx, 0, dragItem);
+                }
+                inserted = true;
+                break;
+            }
+        }
+
+        if (!inserted) {
+            // append to end
+            recipeData.items.push(dragItem);
         }
     }
 
@@ -371,6 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openSettingsModal() {
         globalFontStyleSelect.value = recipeData.settings.fontStyle;
+        if (editorModeSelect) editorModeSelect.value = recipeData.settings.editorMode || 'classic';
         settingsModal.classList.remove('hidden');
     }
     function closeSettingsModal() {
@@ -378,6 +869,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function handleGlobalFontChange(e) {
         recipeData.settings.fontStyle = e.target.value;
+        // Immediately update both preview and inline preview so changes are visible
+        try {
+            renderPreview();
+        } catch (err) {
+            console.error('Error rendering preview after font change', err);
+        }
+        if (recipeData.settings.editorMode === 'inline') {
+            try {
+                renderInlinePreview();
+            } catch (err) {
+                console.error('Error rendering inline preview after font change', err);
+            }
+        }
     }
 
     function addItem(type, subtype = null) {
@@ -518,6 +1022,62 @@ document.addEventListener('DOMContentLoaded', () => {
         closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
         settingsModalOverlay.addEventListener('click', closeSettingsModal);
         globalFontStyleSelect.addEventListener('change', handleGlobalFontChange);
+        // Editor Mode select
+        if (editorModeSelect) {
+            editorModeSelect.addEventListener('change', (e) => {
+                recipeData.settings.editorMode = e.target.value;
+                if (recipeData.settings.editorMode === 'inline') {
+                    enableInlineEditor();
+                } else {
+                    disableInlineEditor();
+                }
+            });
+            // set UI to current mode
+            editorModeSelect.value = recipeData.settings.editorMode || 'classic';
+        }
+
+        // Floating add button behavior
+        if (floatingAddBtn) {
+            floatingAddBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // toggle small menu
+                let menu = document.getElementById('floating-add-menu');
+                if (menu) { menu.remove(); return; }
+                menu = document.createElement('div');
+                menu.id = 'floating-add-menu';
+                menu.style.position = 'fixed';
+                menu.style.right = '96px';
+                menu.style.bottom = '24px';
+                menu.style.zIndex = 70;
+                menu.style.background = 'white';
+                menu.style.padding = '8px';
+                menu.style.borderRadius = '8px';
+                menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+
+                const makeBtn = (label, cb) => {
+                    const b = document.createElement('button');
+                    b.textContent = label;
+                    b.className = 'px-3 py-2 block w-full text-left';
+                    b.addEventListener('click', () => { cb(); menu.remove(); });
+                    return b;
+                };
+
+                menu.appendChild(makeBtn('Add Text', () => openTextModal()));
+                menu.appendChild(makeBtn('Add Image', () => addItem('image')));
+                menu.appendChild(makeBtn('Add Toast', () => openToastModal()));
+                menu.appendChild(makeBtn('Print', () => window.print()));
+
+                document.body.appendChild(menu);
+                // click outside to close
+                setTimeout(() => {
+                    document.addEventListener('click', function _close(e) {
+                        const m = document.getElementById('floating-add-menu');
+                        if (m && !m.contains(e.target) && e.target !== floatingAddBtn) m.remove();
+                        document.removeEventListener('click', _close);
+                    });
+                }, 10);
+            });
+        }
 
         // === CORRECTED Dynamic item handlers ===
         // This single 'input' listener handles all live updates smoothly.
@@ -540,6 +1100,12 @@ document.addEventListener('DOMContentLoaded', () => {
         descPreview.innerHTML = renderIconCodes(recipeData.description);
         globalFontStyleSelect.value = recipeData.settings.fontStyle;
         titlePreview.className = `font-style-${recipeData.settings.fontStyle}`;
+        // Initialize editor mode (inline is experimental and OFF by default)
+        if (recipeData.settings.editorMode === 'inline') {
+            enableInlineEditor();
+        } else {
+            disableInlineEditor();
+        }
     }
 
     init();
