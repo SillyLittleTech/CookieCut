@@ -179,6 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPreview() {
         const fontStyle = recipeData.settings.fontStyle || 'display';
 
+    // Counter for step numbering in the inline preview
+    let stepCounter = 0;
+
         titlePreview.innerHTML = renderIconCodes(recipeData.title);
         titlePreview.className = `font-style-${fontStyle}`; 
         
@@ -295,11 +298,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.innerHTML = contentWithIcons;
                     break;
                 case 'step':
+                    // Numbered step: create a list item with a non-editable numeric badge
+                    stepCounter += 1;
                     el = document.createElement('li');
-                    el.contentEditable = true;
+                    el.className = 'inline-item';
                     el.dataset.id = item.id;
-                    el.dataset.key = 'content';
-                    el.innerHTML = contentWithIcons;
+                    el.draggable = true;
+
+                    // Badge (number) - non-editable
+                    const badge = document.createElement('span');
+                    badge.className = 'step-badge';
+                    badge.textContent = String(stepCounter);
+
+                    // Editable content span inside the li so the badge itself isn't editable
+                    const contentSpan = document.createElement('span');
+                    contentSpan.className = 'step-content';
+                    contentSpan.contentEditable = true;
+                    contentSpan.dataset.id = item.id;
+                    contentSpan.dataset.key = 'content';
+                    contentSpan.innerHTML = contentWithIcons;
+
+                    el.appendChild(badge);
+                    el.appendChild(contentSpan);
                     break;
                 case 'text':
                     el = document.createElement('p');
@@ -462,22 +482,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (key === 'title' || key === 'description') {
             // Update main title/description live
-            const text = el.textContent || '';
-            if (key === 'title') recipeData.title = text;
-            else recipeData.description = text;
-            // keep the builder inputs in sync
-            titleInput.value = recipeData.title;
-            descInput.value = recipeData.description;
-            // also update preview title/desc if needed
-            titlePreview.innerHTML = renderIconCodes(recipeData.title);
-            descPreview.innerHTML = renderIconCodes(recipeData.description);
+            // Extract the user's text but convert any icon spans back to :icon: tokens
+                const { text, caret } = getTextAndCaret(el);
+                if (key === 'title') recipeData.title = text;
+                else recipeData.description = text;
+                // keep the builder inputs in sync
+                titleInput.value = recipeData.title;
+                descInput.value = recipeData.description;
+                // also update preview title/desc if needed
+                titlePreview.innerHTML = renderIconCodes(recipeData.title);
+                descPreview.innerHTML = renderIconCodes(recipeData.description);
+                // update the editable node's HTML to show icons and restore caret
+                const newHtml = renderIconCodes(text);
+                el.innerHTML = newHtml;
+                setCaretPosition(el, caret);
             return;
         }
 
         // content for items
         const item = recipeData.items.find(i => String(i.id) === String(id));
         if (!item) return;
-        item.content = el.innerText;
+    // Preserve caret and extract code-text where icon spans become :icon: tokens
+    const { text: codeText, caret: newCaret } = getTextAndCaret(el);
+    item.content = codeText || '';
+    const newHtml = renderIconCodes(item.content);
+    el.innerHTML = newHtml;
+    // restore caret to approximately the same character offset within code-text
+    setCaretPosition(el, newCaret);
+
         // reflect changes into builder inputs if present
         const itemEl = contentInputs.querySelector(`[data-id="${item.id}"]`);
         if (itemEl) {
@@ -486,11 +518,171 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Returns the caret (character) offset within an element
+     * Source pattern: compute length of range from start of element to caret
+     */
+    function getCaretCharacterOffsetWithin(element) {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return 0;
+        const range = sel.getRangeAt(0).cloneRange();
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(element);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+        return preCaretRange.toString().length;
+    }
+
+    /**
+     * Walk the editable element and return a plain "code text" where
+     * icon spans are represented as :icon: tokens, plus the caret offset
+     * (character index) inside that code text corresponding to the current
+     * selection end.
+     */
+    function getTextAndCaret(rootEl) {
+        const sel = window.getSelection();
+        let focusNode = null, focusOffset = 0;
+        if (sel && sel.rangeCount > 0) {
+            focusNode = sel.getRangeAt(0).endContainer;
+            focusOffset = sel.getRangeAt(0).endOffset;
+        }
+
+        let text = '';
+        let caret = 0;
+        let foundCaret = false;
+
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const nodeText = node.nodeValue || '';
+                if (!foundCaret && node === focusNode) {
+                    caret = text.length + Math.min(focusOffset, nodeText.length);
+                    foundCaret = true;
+                }
+                text += nodeText;
+                return;
+            }
+
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node;
+                // If this element is an icon span, represent it as :name:
+                if (el.classList && el.classList.contains('material-icons')) {
+                    const token = `:${(el.textContent || '').trim()}:`;
+                    // If focus is inside this element (or the element itself), approximate caret
+                    if (!foundCaret && (el === focusNode || el.contains(focusNode))) {
+                        // If focusNode is the element itself, use focusOffset to choose before/after
+                        if (focusNode === el) {
+                            caret = text.length + (focusOffset === 0 ? 0 : token.length);
+                        } else {
+                            // if focus is inside a descendant text node, walk that descendant to set caret
+                            // but here we simply set caret to end of token to be safe
+                            caret = text.length + token.length;
+                        }
+                        foundCaret = true;
+                    }
+                    text += token;
+                    return;
+                }
+
+                // Normal element: walk children
+                for (let i = 0; i < el.childNodes.length; i++) {
+                    walk(el.childNodes[i]);
+                }
+            }
+        }
+
+        walk(rootEl);
+
+        if (!foundCaret) caret = text.length;
+        return { text, caret };
+    }
+
+    /**
+     * Set caret (character) position within an element. Walk text nodes until
+     * we locate the correct offset and set the range there.
+     */
+    function setCaretPosition(element, chars) {
+        if (typeof chars !== 'number' || chars < 0) return;
+        const selection = window.getSelection();
+        const range = document.createRange();
+        let nodeStack = [element];
+        let node, found = false;
+        let charCount = 0;
+
+        while (nodeStack.length && !found) {
+            node = nodeStack.shift();
+            if (node.nodeType === 3) { // text node
+                const nextCharCount = charCount + node.length;
+                if (chars <= nextCharCount) {
+                    range.setStart(node, Math.max(0, chars - charCount));
+                    range.collapse(true);
+                    found = true;
+                    break;
+                }
+                charCount = nextCharCount;
+            } else {
+                // push child nodes in order
+                for (let i = 0; i < node.childNodes.length; i++) {
+                    nodeStack.push(node.childNodes[i]);
+                }
+            }
+        }
+
+        if (!found) {
+            range.selectNodeContents(element);
+            range.collapse(false);
+        }
+
+        // If the computed start is inside a material-icons span, move it to after that span
+        try {
+            let sc = range.startContainer;
+            // If the start is a text node, get its parent element
+            let ancestor = sc.nodeType === Node.TEXT_NODE ? sc.parentElement : sc;
+            while (ancestor && ancestor !== element && !(ancestor.classList && ancestor.classList.contains && ancestor.classList.contains('material-icons'))) {
+                ancestor = ancestor.parentElement;
+            }
+            if (ancestor && ancestor !== element && ancestor.classList && ancestor.classList.contains('material-icons')) {
+                // place caret after the icon element
+                range.setStartAfter(ancestor);
+                range.collapse(true);
+            }
+        } catch (err) {
+            // ignore and use original range
+        }
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
     function handleInlineBlur(e) {
-        // On blur, sanitize or re-render parts if required
+        // On blur, sanitize or re-render parts if required and update model
         const el = e.target;
         if (!el) return;
-        const newHtml = renderIconCodes(el.innerText || '');
+        // Extract code-text (preserving :icon: tokens) and update model
+        const { text } = getTextAndCaret(el);
+        // Update the appropriate model field
+        const key = el.dataset.key;
+        const id = el.dataset.id;
+        if (key === 'title') {
+            recipeData.title = text;
+            titleInput.value = recipeData.title;
+            titlePreview.innerHTML = renderIconCodes(recipeData.title);
+        } else if (key === 'description') {
+            recipeData.description = text;
+            descInput.value = recipeData.description;
+            descPreview.innerHTML = renderIconCodes(recipeData.description);
+        } else if (id) {
+            const item = recipeData.items.find(i => String(i.id) === String(id));
+            if (item) {
+                item.content = text;
+                // reflect changes into builder inputs if present
+                const itemEl = contentInputs.querySelector(`[data-id="${item.id}"]`);
+                if (itemEl) {
+                    const input = itemEl.querySelector('[data-key="content"]');
+                    if (input) input.value = item.content;
+                }
+            }
+        }
+
+        const newHtml = renderIconCodes(text || '');
         el.innerHTML = newHtml;
     }
 
@@ -906,7 +1098,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 result += p.innerHTML.replace(/\n/g, '<br>');
             } else {
                 if (COMMON_ICONS.includes(parts[i])) {
-                    result += `<span class="material-icons">${parts[i]}</span>`;
+                    // Render icons as non-editable spans so the caret cannot be placed inside them
+                    result += `<span class="material-icons" contenteditable="false" data-icon="${parts[i]}">${parts[i]}</span>`;
                 } else {
                     const p = document.createElement('p');
                     p.textContent = `:${parts[i]}:`;

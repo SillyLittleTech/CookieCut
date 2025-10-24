@@ -260,8 +260,8 @@
     .toast-tip::before { content: 'Tip: '; }
     .toast-warning::before { content: 'Warning: '; }
 
-    /* --- NEW: Hide icons in print --- */
-    .material-icons {
+    /* --- NEW: Hide icons in print only for UI chrome areas (not the recipe preview) --- */
+    .no-print .material-icons, .builder-panel .material-icons, .preview-controls .material-icons {
         display: none !important;
     }
 
@@ -355,6 +355,22 @@
     outline: 2px solid rgba(79,70,229,0.25);
 }
 
+/* Step badge styling (numbered prefix for inline steps) */
+.step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: #f3f4f6; /* gray-100 */
+    color: #111827; /* gray-900 */
+    font-weight: 700;
+    margin-right: 10px;
+    flex: 0 0 32px;
+}
+.step-content { display: inline; }
+
 
 /* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only
    we make only the chosen preview visible for printing. This prevents UI chrome
@@ -375,42 +391,4 @@
     .new-text-outline { outline: none !important; padding: 0 !important; }
     #floating-add-btn, #icon-key-btn, #settings-btn { display: none !important; }
 }
-
-/* Inline side toolbar (visible only in inline editor mode) */
-#inline-side-toolbar {
-    position: fixed;
-    right: 16px;
-    top: 40%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: rgba(255,255,255,0.95);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 8px 24px rgba(16,24,40,0.12);
-    min-width: 120px;
-}
-
-.inline-toolbar-btn {
-    background: #ffffff;
-    border: 1px solid #e5e7eb; /* gray-200 */
-    color: #111827; /* gray-900 */
-    padding: 8px 10px;
-    border-radius: 8px;
-    text-align: left;
-    font-size: 14px;
-    cursor: pointer;
-}
-.inline-toolbar-btn:hover {
-    background: #f8fafc; /* gray-50 */
-    transform: translateX(-4px);
-}
-
-/* Collapse toolbar on small screens to avoid covering content */
-@media (max-width: 640px) {
-    #inline-side-toolbar { right: 8px; top: auto; bottom: 16px; transform: none; flex-direction: row; min-width: auto; padding: 6px; gap: 6px; }
-    .inline-toolbar-btn { padding: 8px 10px; font-size: 13px; }
-}
-
 
