@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CookieCut Builder</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Google Font from original file + new playful fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Added Baloo 2, Kalam, Lexend, and Merriweather -->
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- === NEW: Load Material Icons === -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        /* Configure Tailwind to use Lexend */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Lexend', 'Arial', 'sans-serif'],
+                        /* Added new font families */
+                        display: ['"Baloo 2"', 'cursive'],
+                        note: ['Kalam', 'cursive'],
+                        serif: ['Merriweather', 'serif'] /* NEW: Added serif font */
+                    },
+                    /* Added fade-in animation */
+                    animation: {
+                        'fade-in-down': 'fadeInDown 0.3s ease-out forwards',
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInDown: {
+                            '0%': { opacity: 0, transform: 'translateY(-10px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 }
+                        }
+                    }
+                },
+            },
+        };
+
+        /* --- Base Styles (from user's original file) --- */
+        .recipe-preview-content {
+            font-family: 'Lexend', Arial, 'sans-serif';
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        /* --- UPDATED: Font styling for headings --- */
+        /* h1 (title) and h3 (unused) base styles */
+        .recipe-preview-content h1, 
+        .recipe-preview-content h3 {
+            /* font-family removed, will be applied by class */
+            font-weight: 700;
+            color: #222;
+        }
+        .recipe-preview-content h1 {
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            font-size: 2.25rem; /* Tailwind text-4xl */
+        }
+        /* h2 (dynamic headings) gets base styles */
+        .recipe-preview-content h2 {
+            font-weight: 700;
+            color: #222;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            font-size: 1.875rem; /* Tailwind text-3xl */
+        }
+        
+        /* NEW: Dynamic font classes for h1 AND h2 */
+        .recipe-preview-content h1.font-style-display,
+        .recipe-preview-content h2.font-style-display { font-family: '"Baloo 2"', cursive; }
+        
+        .recipe-preview-content h1.font-style-serif,
+        .recipe-preview-content h2.font-style-serif { font-family: 'Merriweather', serif; }
+        
+        .recipe-preview-content h1.font-style-sans,
+        .recipe-preview-content h2.font-style-sans { font-family: 'Lexend', sans-serif; }
+
+
+        .recipe-preview-content h3 {
+            margin-top: 25px;
+            font-style: normal;
+            font-weight: 700;
+            font-size: 1.5rem; /* Tailwind text-2xl */
+        }
+        /* --- End of heading font update --- */
+
+        .recipe-preview-content ul, 
+        .recipe-preview-content ol {
+            padding-left: 30px;
+            list-style-position: outside;
+        }
+        .recipe-preview-content ol {
+            list-style-type: decimal;
+        }
+        .recipe-preview-content li {
+            margin-bottom: 10px;
+        }
+        .recipe-preview-content img {
+            display: block;
+            /* max-width and max-height removed from base to be controlled by size classes */
+            width: auto;
+            height: auto;
+            margin: 20px auto;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+            object-fit: cover;
+        }
+        /* --- NEW: Image Size Classes --- */
+        .recipe-preview-content img.img-small {
+            max-width: 200px;
+            max-height: 200px;
+        }
+        .recipe-preview-content img.img-medium {
+            max-width: 350px;
+            max-height: 350px;
+        }
+        .recipe-preview-content img.img-large {
+            max-width: 600px; /* Can be larger, up to container width */
+            max-height: 600px;
+        }
+
+        .recipe-preview-content p#recipe-desc-preview {
+            text-align: center;
+            font-style: italic;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        /* --- End of Original Styles --- */
+        
+        /* --- New Plain Text Block Style --- */
+        .recipe-text-block {
+            text-align: left;
+            font-style: normal;
+            color: #333;
+            margin: 1rem 0;
+            line-height: 1.6;
+        }
+
+        /* --- New "Text Bubble" Style (Stylized as a sticky note) --- */
+        /* Base style for all "toasts" */
+        .toast-base {
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 20px 0;
+            font-family: 'Kalam', cursive; /* Playful font */
+            font-size: 1.1rem; /* Slightly larger */
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            transform: rotate(-1deg); /* Slight playful tilt */
+        }
+        .toast-base::before {
+            font-weight: 700;
+            font-style: normal;
+        }
+        
+        /* Note Style (Yellow) */
+        .toast-note {
+            background-color: #fefce8; /* yellow-50 */
+            border-left: 5px solid #eab308; /* yellow-500 */
+            color: #713f12; /* yellow-900 */
+        }
+        .toast-note::before {
+            content: '💡 Note: ';
+        }
+
+        /* Tip Style (Blue) */
+        .toast-tip {
+            background-color: #e0f2fe; /* light-blue-100 */
+            border-left: 5px solid #0ea5e9; /* sky-500 */
+            color: #0c4a6e; /* sky-900 */
+        }
+        .toast-tip::before {
+            content: '📘 Tip: ';
+        }
+
+        /* Warning Style (Red) */
+        .toast-warning {
+            background-color: #fef2f2; /* red-50 */
+            border-left: 5px solid #ef4444; /* red-500 */
+            color: #991b1b; /* red-900 */
+        }
+        .toast-warning::before {
+            content: '⚠️ Warning: ';
+        }
+
+
+        /* --- Builder & Print Styles --- */
+        /* Base style for all item buttons (move, delete) */
+        .item-btn {
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+            transition: all 0.2s ease;
+        }
+        
+        /* New Move Button Styles */
+        .move-up-btn, .move-down-btn {
+            color: #3b82f6; /* blue-500 */
+        }
+        .move-up-btn:hover, .move-down-btn:hover {
+            color: #1d4ed8; /* blue-700 */
+            transform: scale(1.25);
+        }
+        /* Class to hide arrows when at top/bottom */
+        .hidden-arrow {
+            visibility: hidden;
+            cursor: default;
+        }
+        .hidden-arrow:hover {
+            transform: none;
+            color: inherit;
+        }
+
+        .delete-btn {
+            color: #ef4444; /* red-500 */
+        }
+        .delete-btn:hover {
+            color: #b91c1c; /* red-700 */
+            transform: scale(1.25) rotate(10deg); /* Added playful hover */
+        }
+
+        /* --- NEW: Material Icons Base Style --- */
+        .material-icons {
+          font-family: 'Material Icons';
+          font-weight: normal;
+          font-style: normal;
+          font-size: 24px;  /* Default icon size */
+          display: inline-block;
+          line-height: 1;
+          text-transform: none;
+          letter-spacing: normal;
+          word-wrap: normal;
+          white-space: nowrap;
+          direction: ltr;
+          -webkit-font-smoothing: antialiased;
+          text-rendering: optimizeLegibility;
+          -moz-osx-font-smoothing: grayscale;
+          font-feature-settings: 'liga';
+        }
+
+        /* --- NEW: Inline Icon Style for Preview --- */
+        .recipe-preview-content .material-icons {
+            font-size: 1.1em; /* Make icon match text size */
+            vertical-align: -0.15em; /* Align icon nicely with text */
+            line-height: 1;
+        }
+
+        @media print {
+            /* Hide the builder panel and all buttons */
+            .builder-panel, .no-print, .preview-controls {
+                display: none !important;
+            }
+
+            /* Make the recipe panel take full width */
+            .recipe-panel {
+                width: 100%;
+                padding: 0;
+                margin: 0;
+                display: block !important; /* Ensure it's visible for print */
+            }
+
+            body {
+                background-color: #ffffff;
+                margin: 0;
+                padding: 0;
+                font-family: 'Lexend', sans-serif;
+                color: #000;
+            }
+
+            /* Reset recipe container for printing */
+            .recipe-preview-content.container {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+            }
+
+            /* Ensure images print well */
+            .recipe-preview-content img {
+                max-width: 500px !important; /* Default to a reasonable print size */
+                max-height: none !important;
+                height: auto;
+                display: block;
+                margin: 20px auto;
+                page-break-inside: avoid;
+            }
+            /* Adjust print size based on selection if needed, though 'medium' is good */
+            .recipe-preview-content img.img-small { max-width: 200px !important; }
+            .recipe-preview-content img.img-medium { max-width: 350px !important; }
+            .recipe-preview-content img.img-large { max-width: 500px !important; }
+
+
+            /* Style text bubble for print */
+            .text-bubble, .toast-base {
+                background-color: #f8f8f8 !important;
+                border: 1px solid #ddd !important;
+                color: #333 !important;
+                font-family: 'Lexend', sans-serif !important; /* Reset font for print */
+                font-style: italic;
+                font-size: 1rem;
+                transform: rotate(0deg); /* Straighten for print */
+                page-break-inside: avoid;
+            }
+            .text-bubble::before, .toast-base::before {
+                color: #000 !important;
+                font-family: 'Lexend', sans-serif !important;
+            }
+            /* Specific print "before" content */
+            .toast-note::before { content: 'Note: '; }
+            .toast-tip::before { content: 'Tip: '; }
+            .toast-warning::before { content: 'Warning: '; }
+
+            /* --- NEW: Hide icons in print --- */
+            .material-icons {
+                display: none !important;
+            }
+
+            /* General print typography */
+            .recipe-preview-content h1, 
+            .recipe-preview-content h3 {
+                color: #000;
+                /* font-family applied by class */
+            }
+            /* UPDATED: h1/h2 print styles */
+            .recipe-preview-content h1,
+            .recipe-preview-content h2 { color: #000; }
+            
+            .recipe-preview-content h1.font-style-display,
+            .recipe-preview-content h2.font-style-display { font-family: '"Baloo 2"', cursive; }
+            
+            .recipe-preview-content h1.font-style-serif,
+            .recipe-preview-content h2.font-style-serif { font-family: 'Merriweather', serif; }
+            
+            .recipe-preview-content h1.font-style-sans,
+            .recipe-preview-content h2.font-style-sans { font-family: 'Lexend', sans-serif; }
+
+
+            .recipe-preview-content p#recipe-desc-preview, 
+            .recipe-preview-content li,
+            .recipe-text-block {
+                color: #000;
+            }
+ 
+            .recipe-preview-content li {
+                color: #000;
+            }
+
+            /* Prevent page breaks where we don't want them */
+            .recipe-preview-content li, 
+            .recipe-preview-content h2, 
+            .recipe-preview-content h3 {
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+            .recipe-preview-content h1 {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <!-- Single column layout -->
+    <div class="max-w-3xl mx-auto p-6">
+        
+        <!-- === BUILDER PANEL (VISIBLE BY DEFAULT) === -->
+        <div id="builder-panel" class="builder-panel w-full bg-white p-6 md:p-8 rounded-lg shadow-lg animate-fade-in">
+            <!-- Added playful font -->
+            <h1 class="text-4xl font-bold mb-6 text-gray-900 font-display">Recipe Builder</h1>
+            
+            <!-- Basic Info -->
+            <div class="space-y-4">
+                <div>
+                    <label for="recipe-title-input" class="block text-sm font-medium text-gray-700 mb-1">Recipe Title</label>
+                    <input type="text" id="recipe-title-input" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" value="">
+                </div>
+                <div>
+                    <label for="recipe-desc-input" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="recipe-desc-input" rows="3" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Add Content Buttons (Stylized) -->
+            <div class="mt-6 flex flex-wrap gap-4 border-t border-gray-200 pt-6">
+                <button id="add-text-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Text ✏️</button>
+                <button id="add-image-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Image 🖼️</button>
+                <button id="add-toast-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Toast 🍞</button>
+                <button id="icon-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Icon Key 🔑</button>
+                <!-- === NEW: Settings Button === -->
+                <button id="settings-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Settings ⚙️</button>
+            </div>
+            
+            <!-- Dynamic Content Inputs -->
+            <h2 class="text-2xl font-bold mt-8 mb-4 font-display">Recipe Content</h2>
+            <div id="content-inputs" class="space-y-6">
+                <!-- JS will populate this area with input fields -->
+            </div>
+
+            <!-- Preview Button (NEW) -->
+            <button id="preview-btn" class="no-print mt-10 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
+                Preview Recipe
+            </button>
+        </div>
+
+        <!-- === RECIPE PREVIEW PANEL (HIDDEN BY DEFAULT) === -->
+        <div id="recipe-panel" class="recipe-panel w-full hidden animate-fade-in">
+            <!-- This container uses the styles from the original file -->
+            <div class="recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg" id="recipe-preview">
+                
+                <!-- Main Title & Description -->
+                <h1 id="recipe-title-preview" class="font-style-display"></h1> <!-- UPDATED: Added base class -->
+                <p id="recipe-desc-preview"></p>
+                
+                <!-- Dynamic Content Area -->
+                <div id="recipe-content-preview">
+                    <!-- JS will populate this area with recipe content -->
+                </div>
+
+            </div>
+
+            <!-- Preview Control Buttons (NEW) -->
+            <div class="preview-controls mt-6 flex gap-4">
+                <button id="edit-btn" class="no-print w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
+                    Back to Editor
+                </button>
+                <button id="print-btn" class="no-print w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
+                    Print Recipe
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- === NEW: Toast Type Modal === -->
+    <div id="toast-modal" class="hidden no-print fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Overlay -->
+        <div id="modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white w-full max-w-md p-6 rounded-lg shadow-xl font-sans animate-fade-in-down">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold font-display text-gray-900">Select Toast Type</h3>
+                <button id="close-modal-btn" class="item-btn delete-btn" title="Close">&times;</button>
+            </div>
+            <p class="mb-6 text-gray-600">What kind of toast would you like to add?</p>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <button id="toast-type-tip" class="w-full text-left p-4 rounded-lg border-2 border-sky-500 bg-sky-50 hover:bg-sky-100 transition-all">
+                    <span class="text-xl font-bold font-display text-sky-700">📘 Tip</span>
+                    <p class="text-sky-600 text-sm mt-1">Add a helpful tip, trick, or variation.</p>
+                </button>
+                <button id="toast-type-warning" class="w-full text-left p-4 rounded-lg border-2 border-red-500 bg-red-50 hover:bg-red-100 transition-all">
+                    <span class="text-xl font-bold font-display text-red-700">⚠️ Warning</span>
+                    <p class="text-red-600 text-sm mt-1">Add an important warning or caution.</p>
+                </button>
+                <button id="toast-type-note" class="w-full text-left p-4 rounded-lg border-2 border-yellow-500 bg-yellow-50 hover:bg-yellow-100 transition-all">
+                    <span class="text-xl font-bold font-display text-yellow-700">💡 Note</span>
+                    <p class="text-yellow-600 text-sm mt-1">Add a general side note or observation.</p>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- === End of Modal === -->
+
+    <!-- === UPDATED: Text Type Modal === -->
+    <div id="text-modal" class="hidden no-print fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Overlay -->
+        <div id="modal-overlay-text" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white w-full max-w-md p-6 rounded-lg shadow-xl font-sans animate-fade-in-down">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold font-display text-gray-900">Select Text Type</h3>
+                <button id="close-text-modal-btn" class="item-btn delete-btn" title="Close">&times;</button>
+            </div>
+            <p class="mb-6 text-gray-600">What kind of text would you like to add?</p>
+            
+            <!-- REMOVED: Font style dropdown -->
+
+            <div class="grid grid-cols-1 gap-4">
+                <button id="text-type-heading" class="w-full text-left p-4 rounded-lg border-2 border-sky-500 bg-sky-50 hover:bg-sky-100 transition-all">
+                    <span class="text-xl font-bold font-display text-sky-700"><h2> Heading</h2></span>
+                    <p class="text-sky-600 text-sm mt-1">Add a new section heading.</p>
+                </button>
+                <button id="text-type-step" class="w-full text-left p-4 rounded-lg border-2 border-gray-500 bg-gray-50 hover:bg-gray-100 transition-all">
+                    <span class="text-xl font-bold font-display text-gray-700">1. Step</span>
+                    <p class="text-gray-600 text-sm mt-1">Add a numbered step to a list.</p>
+                </button>
+                <button id="text-type-text" class="w-full text-left p-4 rounded-lg border-2 border-gray-500 bg-gray-50 hover:bg-gray-100 transition-all">
+                    <span class="text-xl font-bold font-display text-gray-700">¶ Text</span>
+                    <p class="text-gray-600 text-sm mt-1">Add a plain paragraph of text.</p>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- === End of Modal === -->
+
+    <!-- === NEW: Icon Key Modal === -->
+    <div id="icon-key-modal" class="hidden no-print fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Overlay -->
+        <div id="icon-key-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white w-full max-w-lg p-6 rounded-lg shadow-xl font-sans animate-fade-in-down flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                <h3 class="text-2xl font-bold font-display text-gray-900">Icon Key</h3>
+                <button id="close-icon-key-modal-btn" class="item-btn delete-btn" title="Close">&times;</button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="mb-4">
+                <label for="icon-search-input" class="sr-only">Search icons</label>
+                <input type="search" id="icon-search-input" placeholder="Search icons... (e.g., 'timer')" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <!-- Icon List Container -->
+            <div id="icon-list-container" class="flex-grow overflow-y-auto space-y-2 pr-2">
+                <!-- JS will populate this -->
+            </div>
+        </div>
+    </div>
+    <!-- === End of Modal === -->
+
+    <!-- === NEW: Settings Modal === -->
+    <div id="settings-modal" class="hidden no-print fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Overlay -->
+        <div id="settings-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white w-full max-w-md p-6 rounded-lg shadow-xl font-sans animate-fade-in-down">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold font-display text-gray-900">Settings</h3>
+                <button id="close-settings-modal-btn" class="item-btn delete-btn" title="Close">&times;</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="global-font-style-select" class="block text-sm font-medium text-gray-700 mb-1">Global Heading Font</label>
+                    <select id="global-font-style-select" class="w-full p-2 border border-gray-300 rounded-md bg-white shadow-sm">
+                        <option value="display">Playful (Baloo 2)</option>
+                        <option value="serif">Serif (Merriweather)</option>
+                        <option value="sans">Sans-Serif (Lexend)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Controls the font for the main title and all headings.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- === End of Modal === -->
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- STATE ---
+            let recipeData = {
+                title: '', // Set to blank
+                description: '', // Set to blank
+                items: [],
+                settings: { // NEW: Global settings
+                    fontStyle: 'display'
+                }
+            };
+
+            // --- UPDATED: Icon List ---
+            const COMMON_ICONS = [
+                // General
+                'home', 'settings', 'search', 'add', 'delete', 'edit', 'check', 'close', 'menu', 'star', 'favorite', 'lightbulb', 'info', 'warning', 'error', 'list_alt', 'menu_book', 'restaurant_menu',
+                // Food & Drink
+                'restaurant', 'local_dining', 'local_bar', 'local_cafe', 'kitchen', 'cake', 'fastfood', 'icecream', 'ramen_dining', 'brunch_dining', 'dinner_dining', 'lunch_dining', 'local_pizza', 'set_meal', 'bakery_dining', 'cookie', 'egg', 'egg_alt', 'rice_bowl', 'food_bank', 'takeout_dining', 'tapas', 'kebab_dining', 'breakfast_dining', 'emoji_food_beverage', 'coffee_maker', 'coffee', 'liquor', 'wine_bar', 'local_drink', 'water_drop',
+                // Utensils & Tools
+                'oven', 'microwave', 'blender', 'countertops', 'skillet', 'soup_kitchen', 'cutting_board', 'room_service', 'outdoor_grill', 'dining', 'flatware', 'pan_tool', 'microwave_gen',
+                // Time & Temp
+                'timer', 'schedule', 'hourglass_empty', 'hourglass_full', 'history', 'watch_later', 'thermostat', 'device_thermostat', 'local_fire_department', 'whatshot', 'bolt', 'ac_unit', 'severe_cold',
+                // Misc
+                'eco', 'grass', 'science', 'receipt_long', 'shopping_cart', 'storefront', 'payment', 'credit_card', 'sell', 'account_circle', 'person', 'people', 'group', 'share', 'link', 'public', 'visibility', 'visibility_off', 'lock', 'key', 'print', 'download', 'upload', 'save', 'content_copy', 'content_paste', 'cut', 'flag', 'report', 'mail', 'phone', 'location_on', 'place', 'map', 'explore', 'pets', 'park', 'forest', 'hiking', 'nightlife', 'celebration', 'emoji_nature', 'emoji_objects', 'emoji_people'
+            ];
+
+
+            // --- DOM ELEMENTS ---
+            const builderPanel = document.getElementById('builder-panel');
+            const recipePanel = document.getElementById('recipe-panel');
+            
+            const titleInput = document.getElementById('recipe-title-input');
+            const descInput = document.getElementById('recipe-desc-input');
+            const titlePreview = document.getElementById('recipe-title-preview');
+            const descPreview = document.getElementById('recipe-desc-preview');
+            
+            const contentInputs = document.getElementById('content-inputs');
+            const contentPreview = document.getElementById('recipe-content-preview');
+
+            const addTextBtn = document.getElementById('add-text-btn');
+            const addImageBtn = document.getElementById('add-image-btn');
+            const addToastBtn = document.getElementById('add-toast-btn');
+            
+            const previewBtn = document.getElementById('preview-btn');
+            const editBtn = document.getElementById('edit-btn');
+            const printBtn = document.getElementById('print-btn');
+
+            // --- Modal DOM Elements ---
+            const toastModal = document.getElementById('toast-modal');
+            const toastModalOverlay = document.getElementById('modal-overlay');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const toastTypeTipBtn = document.getElementById('toast-type-tip');
+            const toastTypeWarningBtn = document.getElementById('toast-type-warning');
+            const toastTypeNoteBtn = document.getElementById('toast-type-note');
+
+            const textModal = document.getElementById('text-modal');
+            const textModalOverlay = document.getElementById('modal-overlay-text');
+            const closeTextModalBtn = document.getElementById('close-text-modal-btn');
+            const textTypeHeadingBtn = document.getElementById('text-type-heading');
+            const textTypeStepBtn = document.getElementById('text-type-step');
+            const textTypeTextBtn = document.getElementById('text-type-text');
+            // REMOVED: headingFontStyleSelect
+
+            // --- NEW: Icon Key Modal DOM Elements ---
+            const iconKeyBtn = document.getElementById('icon-key-btn');
+            const iconKeyModal = document.getElementById('icon-key-modal');
+            const iconKeyModalOverlay = document.getElementById('icon-key-modal-overlay');
+            const closeIconKeyModalBtn = document.getElementById('close-icon-key-modal-btn');
+            const iconSearchInput = document.getElementById('icon-search-input');
+            const iconListContainer = document.getElementById('icon-list-container');
+
+            // --- NEW: Settings Modal DOM Elements ---
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const settingsModalOverlay = document.getElementById('settings-modal-overlay');
+            const closeSettingsModalBtn = document.getElementById('close-settings-modal-btn');
+            const globalFontStyleSelect = document.getElementById('global-font-style-select');
+
+
+            // --- RENDER FUNCTIONS ---
+
+            /**
+             * Re-draws the entire builder input form based on recipeData
+             */
+            function renderBuilderInputs() {
+                contentInputs.innerHTML = ''; // Clear existing inputs
+                
+                recipeData.items.forEach((item, index) => {
+                    const el = document.createElement('div');
+                    el.setAttribute('data-id', item.id);
+                    // Added animation class
+                    el.className = 'p-4 bg-white border border-gray-300 rounded-lg shadow-sm animate-fade-in-down';
+                    
+                    let inputHtml = '';
+                    let itemLabel = '';
+
+                    switch (item.type) {
+                        case 'heading':
+                            itemLabel = 'Heading (H2)';
+                            // REMOVED: fontSelectHtml
+                            inputHtml = `
+                                <input type="text" data-key="content" value="${escapeHTML(item.content)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Enter heading text">
+                            `;
+                            break;
+                        case 'step':
+                            itemLabel = 'Step';
+                            inputHtml = `
+                                <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Enter step instructions">${escapeHTML(item.content)}</textarea>
+                            `;
+                            break;
+                        case 'text':
+                            itemLabel = 'Text (Paragraph)';
+                            inputHtml = `
+                                <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Enter plain text">${escapeHTML(item.content)}</textarea>
+                            `;
+                            break;
+                        case 'image':
+                            itemLabel = 'Image';
+                            inputHtml = `
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-medium text-gray-600">Image URL</label>
+                                    <input type="url" data-key="src" value="${escapeHTML(item.src)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="https://...">
+                                    <label class="block text-xs font-medium text-gray-600">Alt Text (for accessibility)</label>
+                                    <input type="text" data-key="alt" value="${escapeHTML(item.alt)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="e.g., 'A bowl of pasta'">
+                                    
+                                    <label class="block text-xs font-medium text-gray-600 mt-2">Image Size</label>
+                                    <select data-key="size" class="w-full p-2 border border-gray-300 rounded-md bg-white">
+                                        <option value="small" ${item.size === 'small' ? 'selected' : ''}>Small</option>
+                                        <option value="medium" ${item.size === 'medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="large" ${item.size === 'large' ? 'selected' : ''}>Large</option>
+                                    </select>
+                                </div>
+                            `;
+                            break;
+                        case 'bubble':
+                            switch(item.subtype) {
+                                case 'tip': itemLabel = 'Toast (Tip)'; break;
+                                case 'warning': itemLabel = 'Toast (Warning)'; break;
+                                default: itemLabel = 'Toast (Note)';
+                            }
+                            inputHtml = `
+                                <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="2" placeholder="Enter tip or note">${escapeHTML(item.content)}</textarea>
+                            `;
+                            break;
+                    }
+
+                    const isFirst = index === 0;
+                    const isLast = index === recipeData.items.length - 1;
+
+                    el.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-bold text-gray-700">${itemLabel}</label>
+                            <div class="flex items-center space-x-3">
+                                <button type="button" class="item-btn move-up-btn ${isFirst ? 'hidden-arrow' : ''}" title="Move up">▲</button>
+                                <button type="button" class="item-btn move-down-btn ${isLast ? 'hidden-arrow' : ''}" title="Move down">▼</button>
+                                <button type="button" class="item-btn delete-btn no-print" title="Delete item">&times;</button>
+                            </div>
+                        </div>
+                        ${inputHtml}
+                    `;
+                    contentInputs.appendChild(el);
+                });
+            }
+
+            /**
+             * Re-draws the entire recipe preview based on recipeData
+             */
+            function renderPreview() {
+                // NEW: Get global font style
+                const fontStyle = recipeData.settings.fontStyle || 'display';
+
+                // Update simple fields
+                titlePreview.innerHTML = renderIconCodes(escapeHTML(recipeData.title));
+                titlePreview.className = `font-style-${fontStyle}`; // Apply global font class
+                
+                descPreview.innerHTML = renderIconCodes(escapeHTML(recipeData.description));
+
+                // Render dynamic content
+                contentPreview.innerHTML = ''; // Clear existing preview
+                
+                let currentList = null; // To group steps in <ol>
+
+                recipeData.items.forEach(item => {
+                    // If this item is not a step and we have an open list, close it.
+                    if (item.type !== 'step' && currentList) {
+                        contentPreview.appendChild(currentList);
+                        currentList = null;
+                    }
+
+                    let el;
+                    // Note: Escaping is now done in the renderBuilderInputs, but we still
+                    // want to escape it here for rendering to preview just in case.
+                    // The icon renderer relies on the text *not* being escaped, so we
+                    // pass the raw text to it, and it will escape around the icons.
+                    let contentWithIcons = renderIconCodes(item.content || '');
+
+                    switch (item.type) {
+                        case 'heading':
+                            el = document.createElement('h2');
+                            el.innerHTML = contentWithIcons;
+                            // UPDATED: Apply global font style class
+                            el.className = `font-style-${fontStyle}`;
+                            contentPreview.appendChild(el);
+                            break;
+                        
+                        case 'step':
+                            // If we don't have an open list, create one
+                            if (!currentList) {
+                                currentList = document.createElement('ol');
+                            }
+                            el = document.createElement('li');
+                            el.innerHTML = contentWithIcons;
+                            currentList.appendChild(el);
+                            break;
+                        
+                        case 'text':
+                            el = document.createElement('p');
+                            el.className = 'recipe-text-block';
+                            el.innerHTML = contentWithIcons;
+                            contentPreview.appendChild(el);
+                            break;
+
+                        case 'image':
+                            el = document.createElement('img');
+                            el.src = item.src || 'https://placehold.co/300x300?text=Image+Preview';
+                            el.alt = item.alt;
+                            el.className = `img-${item.size || 'medium'}`; // Default to medium
+                            el.onerror = function() { this.src='https://placehold.co/300x300?text=Invalid+Image'; this.onerror=null; };
+                            contentPreview.appendChild(el);
+                            break;
+                        
+                        case 'bubble':
+                            el = document.createElement('div');
+                            el.className = 'toast-base'; // Base class for all
+                            switch(item.subtype) {
+                                case 'tip': el.classList.add('toast-tip'); break;
+                                case 'warning': el.classList.add('toast-warning'); break;
+                                default: el.classList.add('toast-note');
+                            }
+                            el.innerHTML = contentWithIcons;
+                            contentPreview.appendChild(el);
+                            break;
+                    }
+                });
+
+                // If we finished the loop and still have an open list, append it.
+                if (currentList) {
+                    contentPreview.appendChild(currentList);
+                }
+            }
+
+            // --- EVENT HANDLERS ---
+            
+            function handleUpdateMain(e) {
+                recipeData[e.target.id === 'recipe-title-input' ? 'title' : 'description'] = e.target.value;
+                // No need to render preview constantly, only on "Preview" click
+            }
+
+            function handleUpdateItem(e) {
+                const id = e.target.closest('[data-id]').dataset.id;
+                const key = e.target.dataset.key;
+                const value = e.target.value;
+
+                const item = recipeData.items.find(i => i.id == id);
+
+                if (item) {
+                    item[key] = value;
+                    // No need to render preview constantly
+                }
+            }
+
+            /**
+             * Swaps an item with its neighbor in the recipeData.items array
+             */
+            function moveItem(id, direction) {
+                const index = recipeData.items.findIndex(i => i.id == id);
+                
+                if (direction === 'up' && index > 0) {
+                    // Swap with item above
+                    [recipeData.items[index], recipeData.items[index - 1]] = [recipeData.items[index - 1], recipeData.items[index]];
+                } else if (direction === 'down' && index < recipeData.items.length - 1) {
+                    // Swap with item below
+                    [recipeData.items[index], recipeData.items[index + 1]] = [recipeData.items[index + 1], recipeData.items[index]];
+                }
+            }
+
+            /**
+             * Handles clicks on the dynamic content inputs, specifically for move/delete buttons
+             */
+            function handleContentInputClick(e) {
+                const itemEl = e.target.closest('[data-id]');
+                if (!itemEl) return; // Clicked outside an item
+                
+                const id = itemEl.dataset.id;
+                
+                const deleteBtn = e.target.closest('.delete-btn');
+                const moveUpBtn = e.target.closest('.move-up-btn');
+                const moveDownBtn = e.target.closest('.move-down-btn');
+
+                let actionTaken = false;
+
+                if (deleteBtn) {
+                    recipeData.items = recipeData.items.filter(i => i.id != id);
+                    actionTaken = true;
+                } else if (moveUpBtn) {
+                    moveItem(id, 'up');
+                    actionTaken = true;
+                } else if (moveDownBtn) {
+                    moveItem(id, 'down');
+                    actionTaken = true;
+                }
+
+                if (actionTaken) {
+                    // Re-render only the builder
+                    renderBuilderInputs();
+                }
+            }
+
+            // --- Modal Open/Close Functions ---
+            function openToastModal() {
+                toastModal.classList.remove('hidden');
+            }
+            function closeToastModal() {
+                toastModal.classList.add('hidden');
+            }
+            function handleToastSelection(subtype) {
+                closeToastModal();
+                addItem('bubble', subtype);
+            }
+
+            // --- Text Modal Open/Close Functions ---
+            function openTextModal() {
+                textModal.classList.remove('hidden');
+            }
+            function closeTextModal() {
+                textModal.classList.add('hidden');
+            }
+            // UPDATED: Now only accepts type
+            function handleTextSelection(type) {
+                closeTextModal();
+                addItem(type);
+            }
+
+            // --- NEW: Icon Key Modal Functions ---
+            function openIconKeyModal() {
+                renderIconList(); // Render full list
+                iconKeyModal.classList.remove('hidden');
+                iconSearchInput.focus();
+            }
+            function closeIconKeyModal() {
+                iconKeyModal.classList.add('hidden');
+                iconSearchInput.value = ''; // Clear search
+            }
+            
+            /**
+             * Renders the icon list in the modal, optionally filtering by search
+             */
+            function renderIconList(filter = '') {
+                iconListContainer.innerHTML = '';
+                const lowerFilter = filter.toLowerCase();
+                // Use the expanded COMMON_ICONS list
+                const filteredIcons = COMMON_ICONS.filter(icon => icon.includes(lowerFilter));
+
+                if (filteredIcons.length === 0) {
+                    iconListContainer.innerHTML = `<p class="text-gray-500 italic">No icons found.</p>`;
+                    return;
+                }
+
+                filteredIcons.forEach(icon => {
+                    const code = `:${icon}:`;
+                    const el = document.createElement('div');
+                    el.className = 'flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors duration-100';
+                    el.innerHTML = `
+                        <span class="material-icons text-gray-700">${icon}</span>
+                        <code class="text-sm text-gray-900 font-mono">${code}</code>
+                        <button 
+                            class="copy-icon-btn ml-auto text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-2 rounded-md transition-all duration-150 active:scale-95" 
+                            data-code="${code}"
+                        >
+                            Copy
+                        </button>
+                    `;
+                    iconListContainer.appendChild(el);
+                });
+            }
+
+            /**
+             * Handles clicks inside the icon list (for copy buttons)
+             */
+            function handleIconListClick(e) {
+                const copyBtn = e.target.closest('.copy-icon-btn');
+                if (copyBtn) {
+                    const code = copyBtn.dataset.code;
+                    copyToClipboard(code);
+                    copyBtn.textContent = 'Copied!';
+                    copyBtn.classList.add('bg-green-200', 'text-green-800');
+                    setTimeout(() => { 
+                        copyBtn.textContent = 'Copy'; 
+                        copyBtn.classList.remove('bg-green-200', 'text-green-800');
+                    }, 1500);
+                }
+            }
+
+            // --- NEW: Settings Modal Functions ---
+            function openSettingsModal() {
+                globalFontStyleSelect.value = recipeData.settings.fontStyle;
+                settingsModal.classList.remove('hidden');
+            }
+            function closeSettingsModal() {
+                settingsModal.classList.add('hidden');
+            }
+            function handleGlobalFontChange(e) {
+                recipeData.settings.fontStyle = e.target.value;
+            }
+
+            // --- UPDATED: addItem ---
+            function addItem(type, subtype = null) {
+                const newItem = { id: Date.now() };
+                switch (type) {
+                    case 'heading':
+                        newItem.type = 'heading';
+                        newItem.content = 'New Heading';
+                        // REMOVED: fontStyle
+                        break;
+                    case 'step':
+                        newItem.type = 'step';
+                        newItem.content = '';
+                        break;
+                    case 'text':
+                        newItem.type = 'text';
+                        newItem.content = '';
+                        break;
+                    case 'image':
+                        newItem.type = 'image';
+                        newItem.src = '';
+                        newItem.alt = '';
+                        newItem.size = 'medium'; 
+                        break;
+                    case 'bubble':
+                        newItem.type = 'bubble';
+                        newItem.subtype = subtype || 'note'; // Default to note
+                        newItem.content = '';
+                        break;
+                }
+                recipeData.items.push(newItem);
+                renderBuilderInputs();
+                
+                // Focus the new input
+                const newEl = contentInputs.querySelector(`[data-id="${newItem.id}"]`);
+                if (newEl) {
+                    const input = newEl.querySelector('input, textarea');
+                    if (input) input.focus();
+                }
+            }
+
+            // --- NEW: View Toggling Functions ---
+            function showPreview() {
+                renderPreview(); // Render the preview just before showing it
+                builderPanel.classList.add('hidden');
+                recipePanel.classList.remove('hidden');
+                window.scrollTo(0, 0); // Scroll to top
+            }
+
+            function showEditor() {
+                builderPanel.classList.remove('hidden');
+                recipePanel.classList.add('hidden');
+                window.scrollTo(0, 0); // Scroll to top
+            }
+
+            // --- NEW: Helper Functions ---
+
+            /**
+             * Safely escapes HTML from a string
+             */
+            function escapeHTML(str) {
+                if (typeof str !== 'string') return '';
+                const p = document.createElement('p');
+                p.textContent = str;
+                // Replace newlines with <br> after escaping
+                return p.innerHTML.replace(/\n/g, '<br>');
+            }
+
+            /**
+             * Replaces :icon_codes: with <span> tags
+             * This function now escapes the text *around* the icons.
+             */
+            function renderIconCodes(text) {
+                if (typeof text !== 'string') return '';
+                
+                // Regex to find :word_with_underscores:
+                // We split the string by the icon codes, escape the text parts,
+                // and then re-join them with the icon HTML.
+                const parts = text.split(/:([a-z0-9_]+):/g);
+                
+                let result = '';
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 0) {
+                        // This is a text part, escape it
+                        result += escapeHTML(parts[i]);
+                    } else {
+                        // This is an icon name part, check if it's valid
+                        if (COMMON_ICONS.includes(parts[i])) {
+                            result += `<span class="material-icons">${parts[i]}</span>`;
+                        } else {
+                            // Not a valid icon, treat it as text
+                            result += escapeHTML(`:${parts[i]}:`);
+                        }
+                    }
+                }
+                return result;
+            }
+
+            /**
+             * Copies text to the clipboard (with fallback)
+             */
+            function copyToClipboard(text) {
+                // Use new clipboard API if available
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).catch(err => {
+                        console.warn('Clipboard API failed, falling back...', err);
+                        copyFallback(text);
+                    });
+                } else {
+                    // Fallback for insecure contexts (like some iframes) or old browsers
+                    copyFallback(text);
+                }
+            }
+            
+            function copyFallback(text) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'absolute';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed: ', err);
+                }
+                document.body.removeChild(ta);
+            }
+
+
+            // --- INITIALIZE ---
+            
+            function init() {
+                // Main info
+                titleInput.addEventListener('input', handleUpdateMain);
+                descInput.addEventListener('input', handleUpdateMain);
+
+                // "Add" buttons
+                addTextBtn.addEventListener('click', openTextModal);
+                addImageBtn.addEventListener('click', () => addItem('image'));
+                addToastBtn.addEventListener('click', openToastModal);
+
+                // --- Modal Listeners ---
+                closeModalBtn.addEventListener('click', closeToastModal);
+                toastModalOverlay.addEventListener('click', closeToastModal);
+                toastTypeTipBtn.addEventListener('click', () => handleToastSelection('tip'));
+                toastTypeWarningBtn.addEventListener('click', () => handleToastSelection('warning'));
+                toastTypeNoteBtn.addEventListener('click', () => handleToastSelection('note'));
+
+                // --- Text Modal Listeners ---
+                closeTextModalBtn.addEventListener('click', closeTextModal);
+                textModalOverlay.addEventListener('click', closeTextModal);
+                
+                // UPDATED: textTypeHeadingBtn
+                textTypeHeadingBtn.addEventListener('click', () => handleTextSelection('heading'));
+                textTypeStepBtn.addEventListener('click', () => handleTextSelection('step'));
+                textTypeTextBtn.addEventListener('click', () => handleTextSelection('text'));
+
+                // --- NEW: Icon Key Modal Listeners ---
+                iconKeyBtn.addEventListener('click', openIconKeyModal);
+                closeIconKeyModalBtn.addEventListener('click', closeIconKeyModal);
+                iconKeyModalOverlay.addEventListener('click', closeIconKeyModal);
+                // *** THIS IS THE FIX: e.targe.value -> e.target.value ***
+                iconSearchInput.addEventListener('input', (e) => renderIconList(e.target.value)); 
+                iconListContainer.addEventListener('click', handleIconListClick);
+
+                // --- NEW: Settings Modal Listeners ---
+                settingsBtn.addEventListener('click', openSettingsModal);
+                closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
+                settingsModalOverlay.addEventListener('click', closeSettingsModal);
+                globalFontStyleSelect.addEventListener('change', handleGlobalFontChange);
+
+                // Dynamic item handlers
+                contentInputs.addEventListener('input', handleUpdateItem);
+                contentInputs.addEventListener('click', handleContentInputClick);
+
+                // --- NEW: View Toggle Listeners ---
+                previewBtn.addEventListener('click', showPreview);
+                editBtn.addEventListener('click', showEditor);
+                printBtn.addEventListener('click', () => window.print());
+
+                // Initial render
+                renderBuilderInputs();
+                // Also update the preview-side inputs to match the blank state
+                titleInput.value = recipeData.title;
+                descInput.value = recipeData.description;
+                titlePreview.innerHTML = renderIconCodes(recipeData.title);
+                descPreview.innerHTML = renderIconCodes(recipeData.description);
+                // Set initial font styles
+                globalFontStyleSelect.value = recipeData.settings.fontStyle;
+                titlePreview.className = `font-style-${recipeData.settings.fontStyle}`;
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
+
