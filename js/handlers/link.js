@@ -1,5 +1,30 @@
 import { escapeHTML } from '../helpers.js';
 
+const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
+
+/**
+ * Normalize and validate a link href, allowing only safe URL schemes.
+ * Falls back to '#' if the URL is invalid or uses a disallowed scheme.
+ * @param {string} href
+ * @returns {string}
+ */
+function sanitizeHref(href) {
+    if (!href) {
+        return '#';
+    }
+
+    try {
+        const url = new URL(href, window.location.origin);
+        if (ALLOWED_LINK_SCHEMES.includes(url.protocol)) {
+            return url.href;
+        }
+    } catch (e) {
+        // Invalid URL, fall through to return '#'
+    }
+
+    return '#';
+}
+
 /**
  * Returns the builder input configuration for a link item.
  * @param {object} item
@@ -33,7 +58,7 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
     icon.textContent = 'link';
 
     const a = document.createElement('a');
-    a.href = item.href || '#';
+    a.href = sanitizeHref(item.href);
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.className = 'underline text-blue-600 hover:text-blue-800';
@@ -60,7 +85,7 @@ export function renderInlineElement(item, fontStyle, contentWithIcons) {
     icon.textContent = 'link';
 
     const a = document.createElement('a');
-    a.href = item.href || '#';
+    a.href = sanitizeHref(item.href);
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.className = 'underline text-blue-600 hover:text-blue-800';
