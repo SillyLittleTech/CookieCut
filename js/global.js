@@ -3,7 +3,7 @@ import { dom } from './dom.js';
 import { renderIconCodes, copyToClipboard } from './helpers.js';
 import { COMMON_ICONS } from './constants.js';
 import { renderBuilderInputs, renderPreview } from './builders/classic.js';
-import { renderInlinePreview, closeImageResizer } from './builders/inline.js';
+import { renderInlinePreview, closeImageResizer, closeLinkEditor } from './builders/inline.js';
 
 // --- ACTIONS ---
 let nextItemId = Date.now();
@@ -129,6 +129,7 @@ export function disableInlineEditor() {
     if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden');
     closeFloatingAddMenu();
     closeImageResizer();
+    closeLinkEditor();
     toggleOldUIVisibility(false);
 }
 

@@ -12,9 +12,39 @@ import * as linkHandler from '../handlers/link.js';
 
 // --- Image Resizer State ---
 let currentResizer = null;
+let currentLinkEditor = null;
+let linkEditorInputIdCounter = 0;
+
+function closeActiveInlineEditors() {
+    closeImageResizer();
+    closeLinkEditor();
+}
+
+function syncLinkInputs(item) {
+    const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`);
+    if (!itemEl) return;
+    const contentInput = itemEl.querySelector('[data-key="content"]');
+    const hrefInput = itemEl.querySelector('[data-key="href"]');
+    if (contentInput) contentInput.value = item.content || '';
+    if (hrefInput) hrefInput.value = item.href || '';
+}
+
+function persistLinkChanges(item, text, href) {
+    item.content = text.trim();
+    item.href = href.trim();
+    syncLinkInputs(item);
+}
+
+function saveLinkAndRerender(item, text, href) {
+    persistLinkChanges(item, text, href);
+    closeLinkEditor();
+    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+        renderBuilderInputs();
+    });
+}
 
 export function openImageResizer(imgEl, item) {
-    closeImageResizer();
+    closeActiveInlineEditors();
     const resizer = document.createElement('div');
     resizer.className = 'image-resizer-overlay';
     resizer.style.position = 'fixed';
@@ -123,6 +153,105 @@ export function closeImageResizer() {
     }
 }
 
+export function openLinkEditor(item) {
+    closeActiveInlineEditors();
+    const editor = document.createElement('div');
+    editor.className = 'inline-link-editor-overlay';
+    editor.style.position = 'fixed';
+    editor.style.left = '50%';
+    editor.style.transform = 'translateX(-50%)';
+    editor.style.bottom = '20px';
+    editor.style.zIndex = 61;
+    editor.style.background = 'white';
+    editor.style.padding = '12px';
+    editor.style.borderRadius = '8px';
+    editor.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+    editor.style.width = 'min(560px, calc(100vw - 32px))';
+
+    const title = document.createElement('p');
+    title.textContent = 'Edit link';
+    title.style.fontWeight = '700';
+    title.style.marginBottom = '8px';
+    title.style.fontSize = '14px';
+
+    const textLabel = document.createElement('label');
+    textLabel.textContent = 'Link text';
+    textLabel.style.display = 'block';
+    textLabel.style.fontSize = '12px';
+    textLabel.style.color = '#374151';
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.value = item.content || '';
+    textInput.placeholder = 'Link text';
+    textInput.style.width = '100%';
+    textInput.style.marginTop = '4px';
+    textInput.style.marginBottom = '8px';
+
+    const hrefLabel = document.createElement('label');
+    hrefLabel.textContent = 'URL';
+    hrefLabel.style.display = 'block';
+    hrefLabel.style.fontSize = '12px';
+    hrefLabel.style.color = '#374151';
+
+    const hrefInput = document.createElement('input');
+    const hrefInputId = 'link-editor-href-' + (++linkEditorInputIdCounter);
+    hrefInput.type = 'url';
+    hrefInput.id = hrefInputId;
+    hrefInput.value = item.href || '';
+    hrefInput.placeholder = 'https://example.com';
+    hrefInput.style.width = '100%';
+    hrefInput.style.marginTop = '4px';
+    hrefInput.style.marginBottom = '10px';
+    hrefLabel.htmlFor = hrefInputId;
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.justifyContent = 'flex-end';
+    actions.style.gap = '8px';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'px-3 py-1 bg-gray-100 rounded';
+    cancelBtn.addEventListener('click', closeLinkEditor);
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.className = 'px-3 py-1 bg-blue-600 text-white rounded';
+    saveBtn.addEventListener('click', () => {
+        saveLinkAndRerender(item, textInput.value, hrefInput.value);
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    editor.appendChild(title);
+    editor.appendChild(textLabel);
+    editor.appendChild(textInput);
+    editor.appendChild(hrefLabel);
+    editor.appendChild(hrefInput);
+    editor.appendChild(actions);
+
+    const handleKeyboardSave = (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            saveLinkAndRerender(item, textInput.value, hrefInput.value);
+        }
+    };
+    textInput.addEventListener('keydown', handleKeyboardSave);
+    hrefInput.addEventListener('keydown', handleKeyboardSave);
+
+    document.body.appendChild(editor);
+    currentLinkEditor = editor;
+    textInput.focus();
+}
+
+export function closeLinkEditor() {
+    if (currentLinkEditor) {
+        currentLinkEditor.remove();
+        currentLinkEditor = null;
+    }
+}
+
 // --- Drag/Drop Reorder Helper ---
 
 function reorderItems(dragId, targetId) {
@@ -216,6 +345,7 @@ export function handleInlineBlur(e) {
 export function renderInlinePreview() {
     if (!dom.inlinePreview) return;
     if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') return;
+    closeLinkEditor();
     dom.inlinePreview.innerHTML = '';
 
     const fontStyle = recipeData.settings.fontStyle || 'display';
@@ -333,6 +463,21 @@ export function renderInlinePreview() {
                     break;
                 case 'link':
                     el = linkHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    const anchorEl = el.querySelector('a');
+                    if (anchorEl) {
+                        anchorEl.classList.add('inline-edit-link');
+                        // Disable native dragging on the anchor so the wrapper remains the drag source.
+                        anchorEl.draggable = false;
+                        anchorEl.addEventListener('dragstart', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+                        anchorEl.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openLinkEditor(item);
+                        });
+                    }
                     break;
             }
 
