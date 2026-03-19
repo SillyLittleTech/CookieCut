@@ -358,6 +358,14 @@
     outline: 2px solid rgba(79,70,229,0.25);
 }
 
+/* Remove default list markers for inline preview lists using custom badges */
+#inline-preview ul,
+#inline-preview ol {
+    list-style: none;
+    padding-left: 0;
+    margin-left: 0;
+}
+
 /* Step badge styling (numbered prefix for inline steps) */
 .step-badge {
     display: inline-flex;
@@ -386,6 +394,7 @@
     font-size: 1.25rem;
     margin-right: 10px;
     flex: 0 0 32px;
+    margin-right: 10px;
 }
 .bullet-content { display: inline; }
 
