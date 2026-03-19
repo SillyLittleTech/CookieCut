@@ -158,17 +158,17 @@ export function openImageResizer(imgEl, item) {
     label.style.marginLeft = '10px';
 
     input.addEventListener('input', () => {
-        const v = input.value;
-        item.size = Number(v);
-        imgEl.style.maxWidth = `${v}px`;
-        label.textContent = `${v}px`;
+        const sizeValue = input.value;
+        item.size = Number(sizeValue);
+        imgEl.style.maxWidth = `${sizeValue}px`;
+        label.textContent = `${sizeValue}px`;
         // update builder input display if visible
         const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`);
         if (itemEl) {
             const display = itemEl.querySelector('[data-role="size-display"]');
             const slider = itemEl.querySelector('[data-key="size"]');
-            if (display) display.textContent = `${v}px`;
-            if (slider) slider.value = v;
+            if (display) display.textContent = `${sizeValue}px`;
+            if (slider) slider.value = sizeValue;
         }
     });
 
@@ -455,18 +455,21 @@ export function renderInlinePreview() {
     dom.inlinePreview.appendChild(h1);
 
     // Description (editable)
-    const p = document.createElement('p');
-    p.className = 'text-gray-600 italic mb-4';
-    p.contentEditable = true;
-    p.dataset.key = 'description';
-    p.innerHTML = renderIconCodes(recipeData.description);
+    const descriptionParagraph = document.createElement('p');
+    descriptionParagraph.className = 'text-gray-600 italic mb-4';
+    descriptionParagraph.contentEditable = true;
+    descriptionParagraph.dataset.key = 'description';
+    descriptionParagraph.innerHTML = renderIconCodes(recipeData.description);
     // Outline for empty description
     if (!recipeData.description || recipeData.description.trim() === '') {
-        p.classList.add('new-text-outline');
-        const removeOutlineDesc = () => { p.classList.remove('new-text-outline'); p.removeEventListener('input', removeOutlineDesc); };
-        p.addEventListener('input', removeOutlineDesc);
+        descriptionParagraph.classList.add('new-text-outline');
+        const removeOutlineDesc = () => {
+            descriptionParagraph.classList.remove('new-text-outline');
+            descriptionParagraph.removeEventListener('input', removeOutlineDesc);
+        };
+        descriptionParagraph.addEventListener('input', removeOutlineDesc);
     }
-    dom.inlinePreview.appendChild(p);
+    dom.inlinePreview.appendChild(descriptionParagraph);
 
     // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
     // stepCounter persists across the entire forEach to track consecutive step numbers correctly
@@ -531,28 +534,28 @@ export function renderInlinePreview() {
                 }
             });
         } else {
-            let el;
+            let renderedElement = null;
 
             switch (item.type) {
                 case 'heading':
-                    el = headingHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = headingHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
                 case 'text':
-                    el = textHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = textHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
                 case 'image':
-                    el = imageHandler.renderInlineElement(item, fontStyle, contentWithIcons);
-                    el.addEventListener('click', (e) => {
+                    renderedElement = imageHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        openImageResizer(el, item);
+                        openImageResizer(renderedElement, item);
                     });
                     break;
                 case 'bubble':
-                    el = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
                 case 'link': {
-                    el = renderInlineLinkElement(item, fontStyle, contentWithIcons);
-                    const anchorEl = el.querySelector('a');
+                    renderedElement = renderInlineLinkElement(item, fontStyle, contentWithIcons);
+                    const anchorEl = renderedElement.querySelector('a');
                     if (anchorEl) {
                         anchorEl.classList.add('inline-edit-link');
                         // Disable native dragging on the anchor so the wrapper remains the drag source.
@@ -569,22 +572,27 @@ export function renderInlinePreview() {
                     }
                     break;
                 }
+                default:
+                    break;
             }
 
-            if (!el) return;
+            if (!renderedElement) return;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'inline-item';
             wrapper.dataset.id = item.id;
             wrapper.draggable = true;
-            wrapper.appendChild(el);
+            wrapper.appendChild(renderedElement);
 
             // mark new text with outline to make it visible
             if ((item.type === 'text' || item.type === 'heading') && (!item.content || item.content.trim() === '')) {
-                el.classList.add('new-text-outline');
-                const onFirstInput = () => { el.classList.remove('new-text-outline'); el.removeEventListener('input', onFirstInput); };
-                el.addEventListener('input', onFirstInput);
-                setTimeout(() => el.focus(), 20);
+                renderedElement.classList.add('new-text-outline');
+                const onFirstInput = () => {
+                    renderedElement.classList.remove('new-text-outline');
+                    renderedElement.removeEventListener('input', onFirstInput);
+                };
+                renderedElement.addEventListener('input', onFirstInput);
+                setTimeout(() => renderedElement.focus(), 20);
             }
             dom.inlinePreview.appendChild(wrapper);
 
