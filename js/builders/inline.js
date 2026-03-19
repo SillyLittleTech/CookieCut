@@ -311,9 +311,14 @@ export function renderInlinePreview() {
                 }
             });
         } else if (item.type === 'bullet') {
-            // ensure an unordered list container exists
-            let ul = dom.inlinePreview.querySelector('ul');
-            if (!ul) {
+            // Ensure an unordered list container exists for this bullet sequence.
+            // Reuse the last <ul> in the preview only if it is the last element,
+            // so that non-contiguous bullet groups do not get merged.
+            let ul = null;
+            const lastChild = dom.inlinePreview.lastElementChild;
+            if (lastChild && lastChild.tagName === 'UL') {
+                ul = lastChild;
+            } else {
                 ul = document.createElement('ul');
                 dom.inlinePreview.appendChild(ul);
             }
