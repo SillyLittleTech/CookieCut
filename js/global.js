@@ -3,7 +3,7 @@ import { dom } from './dom.js';
 import { renderIconCodes, copyToClipboard } from './helpers.js';
 import { COMMON_ICONS } from './constants.js';
 import { renderBuilderInputs, renderPreview } from './builders/classic.js';
-import { renderInlinePreview, closeImageResizer, handleInlineInput, handleInlineBlur } from './builders/inline.js';
+import { renderInlinePreview, closeImageResizer, closeLinkEditor, handleInlineInput, handleInlineBlur } from './builders/inline.js';
 
 // --- ACTIONS ---
 
@@ -101,6 +101,7 @@ export function disableInlineEditor() {
     dom.inlinePreview.classList.add('hidden');
     dom.floatingAddBtn.classList.add('hidden');
     closeImageResizer();
+    closeLinkEditor();
     toggleOldUIVisibility(false);
 }
 
