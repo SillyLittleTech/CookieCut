@@ -3,7 +3,7 @@ import { dom } from '../dom.js';
 import { renderIconCodes, getTextAndCaret, setCaretPosition } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
-import * as bulletHandler from '../handlers/bullet.js';
+import { renderInlineElement as renderInlineBulletElement } from '../handlers/bullet.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
@@ -552,7 +552,7 @@ export function renderInlinePreview() {
             li.dataset.id = item.id;
             li.draggable = true;
 
-            const { badge, contentSpan } = bulletHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+            const { badge, contentSpan } = renderInlineBulletElement(item, fontStyle, contentWithIcons);
             li.appendChild(badge);
             li.appendChild(contentSpan);
             list.appendChild(li);

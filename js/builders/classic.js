@@ -3,7 +3,7 @@ import { dom } from '../dom.js';
 import { renderIconCodes } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
-import * as bulletHandler from '../handlers/bullet.js';
+import { getBuilderInput as getBulletBuilderInput, renderPreviewElement as renderBulletPreviewElement } from '../handlers/bullet.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
@@ -40,7 +40,7 @@ export function renderBuilderInputs() {
                 break;
             }
             case 'bullet': {
-                const result = bulletHandler.getBuilderInput(item);
+                const result = getBulletBuilderInput(item);
                 itemLabel = result.label;
                 inputHtml = result.inputHtml;
                 break;
@@ -158,7 +158,7 @@ export function renderPreview() {
                     currentList = document.createElement('ul');
                     currentListType = 'bullet';
                 }
-                const el = bulletHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
+                const el = renderBulletPreviewElement(item, fontStyle, contentWithIcons);
                 currentList.appendChild(el);
                 break;
             }
