@@ -13,6 +13,7 @@ import * as linkHandler from '../handlers/link.js';
 // --- Image Resizer State ---
 let currentResizer = null;
 let currentLinkEditor = null;
+let linkEditorInputIdCounter = 0;
 
 function closeActiveInlineEditors() {
     closeImageResizer();
@@ -194,12 +195,15 @@ export function openLinkEditor(item) {
     hrefLabel.style.color = '#374151';
 
     const hrefInput = document.createElement('input');
+    const hrefInputId = 'link-editor-href-' + (++linkEditorInputIdCounter);
     hrefInput.type = 'url';
+    hrefInput.id = hrefInputId;
     hrefInput.value = item.href || '';
     hrefInput.placeholder = 'https://example.com';
     hrefInput.style.width = '100%';
     hrefInput.style.marginTop = '4px';
     hrefInput.style.marginBottom = '10px';
+    hrefLabel.htmlFor = hrefInputId;
 
     const actions = document.createElement('div');
     actions.style.display = 'flex';
