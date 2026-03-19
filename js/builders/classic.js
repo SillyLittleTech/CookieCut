@@ -6,6 +6,7 @@ import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
+import * as linkHandler from '../handlers/link.js';
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 
@@ -50,6 +51,12 @@ export function renderBuilderInputs() {
             }
             case 'bubble': {
                 const result = bubbleHandler.getBuilderInput(item);
+                itemLabel = result.label;
+                inputHtml = result.inputHtml;
+                break;
+            }
+            case 'link': {
+                const result = linkHandler.getBuilderInput(item);
                 itemLabel = result.label;
                 inputHtml = result.inputHtml;
                 break;
@@ -130,6 +137,11 @@ export function renderPreview() {
             }
             case 'bubble': {
                 const el = bubbleHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
+                dom.contentPreview.appendChild(el);
+                break;
+            }
+            case 'link': {
+                const el = linkHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
                 dom.contentPreview.appendChild(el);
                 break;
             }

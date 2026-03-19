@@ -30,6 +30,11 @@ export function addItem(type, subtype = null) {
             newItem.subtype = subtype || 'note';
             newItem.content = '';
             break;
+        case 'link':
+            newItem.type = 'link';
+            newItem.content = '';
+            newItem.href = '';
+            break;
     }
     recipeData.items.push(newItem);
     renderBuilderInputs();
@@ -288,6 +293,7 @@ export function init() {
     dom.textTypeHeadingBtn.addEventListener('click', () => handleTextSelection('heading'));
     dom.textTypeStepBtn.addEventListener('click', () => handleTextSelection('step'));
     dom.textTypeTextBtn.addEventListener('click', () => handleTextSelection('text'));
+    dom.textTypeLinkBtn.addEventListener('click', () => handleTextSelection('link'));
 
     // Icon Key Modal Listeners
     dom.iconKeyBtn.addEventListener('click', openIconKeyModal);
