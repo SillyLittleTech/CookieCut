@@ -15,7 +15,7 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           expires: 1d
-          projectId: sillylittlefiles
+          projectId: slf-cookiecutter
       - if: ${{ failure() }}
         uses: mshick/add-pr-comment@v2
         with:
