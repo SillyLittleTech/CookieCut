@@ -40,7 +40,6 @@ export function addItem(type, subtype = null) {
     }
     recipeData.items.push(newItem);
     renderBuilderInputs();
-    if (isInlineMode()) renderInlinePreview();
 
     const newEl = dom.contentInputs.querySelector(`[data-id="${newItem.id}"]`);
     if (newEl) {
