@@ -7,6 +7,7 @@ import { renderInlinePreview, closeImageResizer } from './builders/inline.js';
 
 // --- ACTIONS ---
 let nextItemId = Date.now();
+let floatingAddMenuCloseHandler = null;
 
 function createItemId() {
     nextItemId = Math.max(nextItemId + 1, Date.now());
@@ -66,6 +67,11 @@ function isInlineMode() {
 function closeFloatingAddMenu() {
     const menu = document.getElementById('floating-add-menu');
     if (menu) menu.remove();
+
+    if (floatingAddMenuCloseHandler) {
+        document.removeEventListener('click', floatingAddMenuCloseHandler);
+        floatingAddMenuCloseHandler = null;
+    }
 }
 
 function toggleOldUIVisibility(hide) {
