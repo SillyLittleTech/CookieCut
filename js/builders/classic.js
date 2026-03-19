@@ -6,7 +6,7 @@ import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
-import * as linkHandler from '../handlers/link.js';
+import { getBuilderInput as getLinkBuilderInput, renderPreviewElement as renderLinkPreviewElement } from '../handlers/link.js';
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 let inlineRenderRequestId = 0;
@@ -57,7 +57,7 @@ export function renderBuilderInputs() {
                 break;
             }
             case 'link': {
-                const result = linkHandler.getBuilderInput(item);
+                const result = getLinkBuilderInput(item);
                 itemLabel = result.label;
                 inputHtml = result.inputHtml;
                 break;
@@ -85,7 +85,7 @@ export function renderBuilderInputs() {
     if (recipeData.settings && recipeData.settings.editorMode === 'inline') {
         const requestId = ++inlineRenderRequestId;
         // Import lazily to avoid circular dependency at evaluation time
-        import('../builders/inline.js').then(({ renderInlinePreview }) => {
+        import('./inline.js').then(({ renderInlinePreview }) => {
             if (requestId !== inlineRenderRequestId) return;
             if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') return;
             renderInlinePreview();
@@ -155,7 +155,7 @@ export function renderPreview() {
                 break;
             }
             case 'link': {
-                const el = linkHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
+                const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons);
                 dom.contentPreview.appendChild(el);
                 break;
             }

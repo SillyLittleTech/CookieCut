@@ -6,7 +6,7 @@ import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
-import * as linkHandler from '../handlers/link.js';
+import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js';
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -38,7 +38,7 @@ function persistLinkChanges(item, text, href) {
 function saveLinkAndRerender(item, text, href) {
     persistLinkChanges(item, text, href);
     closeLinkEditor();
-    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+    import('./classic.js').then(({ renderBuilderInputs }) => {
         renderBuilderInputs();
     });
 }
@@ -195,7 +195,7 @@ export function openLinkEditor(item) {
     hrefLabel.style.color = '#374151';
 
     const hrefInput = document.createElement('input');
-    const hrefInputId = 'link-editor-href-' + (++linkEditorInputIdCounter);
+    const hrefInputId = `link-editor-href-${++linkEditorInputIdCounter}`;
     hrefInput.type = 'url';
     hrefInput.id = hrefInputId;
     hrefInput.value = item.href || '';
@@ -411,7 +411,7 @@ export function renderInlinePreview() {
                 if (confirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     // Import lazily to avoid circular dependency at evaluation time
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -435,7 +435,7 @@ export function renderInlinePreview() {
                 const targetId = li.dataset.id;
                 if (dragId && targetId && dragId !== targetId) {
                     reorderItems(dragId, targetId);
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -461,8 +461,8 @@ export function renderInlinePreview() {
                 case 'bubble':
                     el = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
-                case 'link':
-                    el = linkHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                case 'link': {
+                    el = renderInlineLinkElement(item, fontStyle, contentWithIcons);
                     const anchorEl = el.querySelector('a');
                     if (anchorEl) {
                         anchorEl.classList.add('inline-edit-link');
@@ -479,6 +479,7 @@ export function renderInlinePreview() {
                         });
                     }
                     break;
+                }
             }
 
             if (!el) return;
@@ -503,7 +504,7 @@ export function renderInlinePreview() {
                 ev.stopPropagation();
                 if (confirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -527,7 +528,7 @@ export function renderInlinePreview() {
                 const targetId = wrapper.dataset.id;
                 if (dragId && targetId && dragId !== targetId) {
                     reorderItems(dragId, targetId);
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -552,7 +553,7 @@ export function renderInlinePreview() {
         if (idx === -1) return;
         const [draggedItem] = recipeData.items.splice(idx, 1);
         recipeData.items.push(draggedItem);
-        import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+        import('./classic.js').then(({ renderBuilderInputs }) => {
             renderBuilderInputs();
             renderInlinePreview();
         });

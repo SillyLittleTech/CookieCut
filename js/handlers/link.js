@@ -18,7 +18,7 @@ function sanitizeHref(href) {
         if (ALLOWED_LINK_SCHEMES.includes(url.protocol)) {
             return url.href;
         }
-    } catch (e) {
+    } catch {
         // Invalid URL, fall through to return '#'
     }
 
@@ -57,15 +57,15 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
     icon.className = 'material-icons text-base align-middle';
     icon.textContent = 'link';
 
-    const a = document.createElement('a');
-    a.href = sanitizeHref(item.href);
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'underline text-blue-600 hover:text-blue-800';
-    a.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
+    const anchorElement = document.createElement('a');
+    anchorElement.href = sanitizeHref(item.href);
+    anchorElement.target = '_blank';
+    anchorElement.rel = 'noopener noreferrer';
+    anchorElement.className = 'underline text-blue-600 hover:text-blue-800';
+    anchorElement.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
 
     wrapper.appendChild(icon);
-    wrapper.appendChild(a);
+    wrapper.appendChild(anchorElement);
     return wrapper;
 }
 
@@ -84,14 +84,14 @@ export function renderInlineElement(item, fontStyle, contentWithIcons) {
     icon.className = 'material-icons text-base align-middle';
     icon.textContent = 'link';
 
-    const a = document.createElement('a');
-    a.href = sanitizeHref(item.href);
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'underline text-blue-600 hover:text-blue-800';
-    a.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
+    const anchorElement = document.createElement('a');
+    anchorElement.href = sanitizeHref(item.href);
+    anchorElement.target = '_blank';
+    anchorElement.rel = 'noopener noreferrer';
+    anchorElement.className = 'underline text-blue-600 hover:text-blue-800';
+    anchorElement.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
 
     wrapper.appendChild(icon);
-    wrapper.appendChild(a);
+    wrapper.appendChild(anchorElement);
     return wrapper;
 }
