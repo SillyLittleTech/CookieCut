@@ -109,6 +109,14 @@ export function enableInlineEditor() {
         renderInlinePreview();
     } catch (err) {
         console.error('Inline preview render failed while enabling inline mode:', err);
+        // Fall back to classic editor so the user is not left with a broken inline UI.
+        try {
+            setEditorMode('classic');
+        } catch (fallbackErr) {
+            console.error('Failed to fall back to classic editor mode after inline render failure:', fallbackErr);
+            // As a last resort, at least restore the classic UI visibility.
+            disableInlineEditor();
+        }
     }
 }
 
