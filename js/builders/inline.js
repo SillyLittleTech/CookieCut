@@ -6,6 +6,7 @@ import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
+import * as linkHandler from '../handlers/link.js';
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -329,6 +330,9 @@ export function renderInlinePreview() {
                     break;
                 case 'bubble':
                     el = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    break;
+                case 'link':
+                    el = linkHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
             }
 
