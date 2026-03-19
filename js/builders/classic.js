@@ -9,6 +9,18 @@ import * as bubbleHandler from '../handlers/bubble.js';
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 
+const DEBUG_LOG_PATH = '/opt/cursor/logs/debug.log';
+function appendDebugLog(payload) {
+    try {
+        if (typeof process === 'undefined' || !process.versions?.node) return;
+        import('node:fs')
+            .then(({ appendFileSync }) => {
+                appendFileSync(DEBUG_LOG_PATH, `${JSON.stringify({ ...payload, timestamp: Date.now() })}\n`);
+            })
+            .catch(() => {});
+    } catch (_) {}
+}
+
 /**
  * Re-draws the entire builder input form based on recipeData.
  */
@@ -75,8 +87,30 @@ export function renderBuilderInputs() {
 
     // If inline editor is active, update its preview too
     if (recipeData.settings && recipeData.settings.editorMode === 'inline') {
+        // #region agent log
+        appendDebugLog({
+            hypothesisId: 'A',
+            location: 'classic.js:renderBuilderInputs:91',
+            message: 'Scheduling inline preview rerender from classic',
+            data: {
+                modeAtSchedule: recipeData.settings?.editorMode,
+                itemCount: recipeData.items.length
+            }
+        });
+        // #endregion
         // Import lazily to avoid circular dependency at evaluation time
         import('../builders/inline.js').then(({ renderInlinePreview }) => {
+            // #region agent log
+            appendDebugLog({
+                hypothesisId: 'A',
+                location: 'classic.js:renderBuilderInputs:103',
+                message: 'Inline rerender callback firing from classic',
+                data: {
+                    modeAtCallback: recipeData.settings?.editorMode,
+                    itemCount: recipeData.items.length
+                }
+            });
+            // #endregion
             renderInlinePreview();
         });
     }

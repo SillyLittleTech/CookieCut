@@ -5,6 +5,18 @@ import { COMMON_ICONS } from './constants.js';
 import { renderBuilderInputs, renderPreview } from './builders/classic.js';
 import { renderInlinePreview, closeImageResizer, handleInlineInput, handleInlineBlur } from './builders/inline.js';
 
+const DEBUG_LOG_PATH = '/opt/cursor/logs/debug.log';
+function appendDebugLog(payload) {
+    try {
+        if (typeof process === 'undefined' || !process.versions?.node) return;
+        import('node:fs')
+            .then(({ appendFileSync }) => {
+                appendFileSync(DEBUG_LOG_PATH, `${JSON.stringify({ ...payload, timestamp: Date.now() })}\n`);
+            })
+            .catch(() => {});
+    } catch (_) {}
+}
+
 // --- ACTIONS ---
 
 export function addItem(type, subtype = null) {
@@ -32,6 +44,20 @@ export function addItem(type, subtype = null) {
             break;
     }
     recipeData.items.push(newItem);
+    // #region agent log
+    appendDebugLog({
+        hypothesisId: 'D',
+        location: 'global.js:addItem:34',
+        message: 'Item pushed before builder render',
+        data: {
+            type,
+            subtype,
+            itemId: newItem.id,
+            mode: recipeData.settings?.editorMode,
+            itemCount: recipeData.items.length
+        }
+    });
+    // #endregion
     renderBuilderInputs();
 
     const newEl = dom.contentInputs.querySelector(`[data-id="${newItem.id}"]`);
@@ -85,18 +111,70 @@ function toggleOldUIVisibility(hide) {
 
 export function enableInlineEditor() {
     if (!dom.inlinePreview || !dom.floatingAddBtn) return;
+    // #region agent log
+    appendDebugLog({
+        hypothesisId: 'B',
+        location: 'global.js:enableInlineEditor:88',
+        message: 'Enable inline entry state',
+        data: {
+            mode: recipeData.settings?.editorMode,
+            inlineHidden: dom.inlinePreview.classList.contains('hidden'),
+            floatingHidden: dom.floatingAddBtn.classList.contains('hidden'),
+            contentHidden: dom.contentInputs?.classList.contains('hidden')
+        }
+    });
+    // #endregion
     dom.inlinePreview.classList.remove('hidden');
     dom.floatingAddBtn.classList.remove('hidden');
     renderInlinePreview();
     toggleOldUIVisibility(true);
+    // #region agent log
+    appendDebugLog({
+        hypothesisId: 'B',
+        location: 'global.js:enableInlineEditor:104',
+        message: 'Enable inline exit state',
+        data: {
+            mode: recipeData.settings?.editorMode,
+            inlineHidden: dom.inlinePreview.classList.contains('hidden'),
+            floatingHidden: dom.floatingAddBtn.classList.contains('hidden'),
+            contentHidden: dom.contentInputs?.classList.contains('hidden')
+        }
+    });
+    // #endregion
 }
 
 export function disableInlineEditor() {
     if (!dom.inlinePreview || !dom.floatingAddBtn) return;
+    // #region agent log
+    appendDebugLog({
+        hypothesisId: 'B',
+        location: 'global.js:disableInlineEditor:112',
+        message: 'Disable inline entry state',
+        data: {
+            mode: recipeData.settings?.editorMode,
+            inlineHidden: dom.inlinePreview.classList.contains('hidden'),
+            floatingHidden: dom.floatingAddBtn.classList.contains('hidden'),
+            contentHidden: dom.contentInputs?.classList.contains('hidden')
+        }
+    });
+    // #endregion
     dom.inlinePreview.classList.add('hidden');
     dom.floatingAddBtn.classList.add('hidden');
     closeImageResizer();
     toggleOldUIVisibility(false);
+    // #region agent log
+    appendDebugLog({
+        hypothesisId: 'B',
+        location: 'global.js:disableInlineEditor:128',
+        message: 'Disable inline exit state',
+        data: {
+            mode: recipeData.settings?.editorMode,
+            inlineHidden: dom.inlinePreview.classList.contains('hidden'),
+            floatingHidden: dom.floatingAddBtn.classList.contains('hidden'),
+            contentHidden: dom.contentInputs?.classList.contains('hidden')
+        }
+    });
+    // #endregion
 }
 
 // --- VIEW TOGGLE ---
@@ -305,6 +383,19 @@ export function init() {
     // Editor Mode select
     if (dom.editorModeSelect) {
         dom.editorModeSelect.addEventListener('change', (e) => {
+            // #region agent log
+            appendDebugLog({
+                hypothesisId: 'C',
+                location: 'global.js:editorModeChange:336',
+                message: 'Mode select changed',
+                data: {
+                    from: recipeData.settings?.editorMode,
+                    to: e.target.value,
+                    inlineHidden: dom.inlinePreview?.classList.contains('hidden'),
+                    contentHidden: dom.contentInputs?.classList.contains('hidden')
+                }
+            });
+            // #endregion
             recipeData.settings.editorMode = e.target.value;
             if (recipeData.settings.editorMode === 'inline') {
                 enableInlineEditor();
