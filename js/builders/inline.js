@@ -214,6 +214,7 @@ export function handleInlineBlur(e) {
 
 export function renderInlinePreview() {
     if (!dom.inlinePreview) return;
+    if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') return;
     dom.inlinePreview.innerHTML = '';
 
     const fontStyle = recipeData.settings.fontStyle || 'display';

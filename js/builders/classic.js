@@ -1,6 +1,6 @@
 import { recipeData } from '../state.js';
 import { dom } from '../dom.js';
-import { renderIconCodes, escapeHTML } from '../helpers.js';
+import { renderIconCodes } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
@@ -8,6 +8,7 @@ import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
+let inlineRenderRequestId = 0;
 
 /**
  * Re-draws the entire builder input form based on recipeData.
@@ -75,10 +76,23 @@ export function renderBuilderInputs() {
 
     // If inline editor is active, update its preview too
     if (recipeData.settings && recipeData.settings.editorMode === 'inline') {
+        const requestId = ++inlineRenderRequestId;
         // Import lazily to avoid circular dependency at evaluation time
         import('../builders/inline.js').then(({ renderInlinePreview }) => {
+            if (requestId !== inlineRenderRequestId) return;
+            if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') return;
             renderInlinePreview();
+        }).catch((error) => {
+            // Handle failures to load the inline builder module gracefully
+            console.error('Failed to load inline builder module:', error);
+            // Invalidate this request if it is still the active one
+            if (requestId === inlineRenderRequestId) {
+                inlineRenderRequestId += 1;
+            }
         });
+    } else {
+        // invalidate queued inline rerenders after mode flips to classic
+        inlineRenderRequestId += 1;
     }
 }
 

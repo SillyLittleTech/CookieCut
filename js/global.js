@@ -3,12 +3,19 @@ import { dom } from './dom.js';
 import { renderIconCodes, copyToClipboard } from './helpers.js';
 import { COMMON_ICONS } from './constants.js';
 import { renderBuilderInputs, renderPreview } from './builders/classic.js';
-import { renderInlinePreview, closeImageResizer, handleInlineInput, handleInlineBlur } from './builders/inline.js';
+import { renderInlinePreview, closeImageResizer } from './builders/inline.js';
 
 // --- ACTIONS ---
+let nextItemId = Date.now();
+let floatingAddMenuCloseHandler = null;
+
+function createItemId() {
+    nextItemId = Math.max(nextItemId + 1, Date.now());
+    return nextItemId;
+}
 
 export function addItem(type, subtype = null) {
-    const newItem = { id: Date.now() };
+    const newItem = { id: createItemId() };
     switch (type) {
         case 'heading':
             newItem.type = 'heading';
@@ -56,6 +63,16 @@ function isInlineMode() {
     return recipeData.settings && recipeData.settings.editorMode === 'inline';
 }
 
+function closeFloatingAddMenu() {
+    const menu = document.getElementById('floating-add-menu');
+    if (menu) menu.remove();
+
+    if (floatingAddMenuCloseHandler) {
+        document.removeEventListener('click', floatingAddMenuCloseHandler);
+        floatingAddMenuCloseHandler = null;
+    }
+}
+
 function toggleOldUIVisibility(hide) {
     // Hide most of the old controls when inline mode is active,
     // but keep the badges (icon-key-btn) and settings (settings-btn).
@@ -84,19 +101,40 @@ function toggleOldUIVisibility(hide) {
 }
 
 export function enableInlineEditor() {
-    if (!dom.inlinePreview || !dom.floatingAddBtn) return;
-    dom.inlinePreview.classList.remove('hidden');
-    dom.floatingAddBtn.classList.remove('hidden');
-    renderInlinePreview();
+    if (dom.inlinePreview) dom.inlinePreview.classList.remove('hidden');
+    if (dom.floatingAddBtn) dom.floatingAddBtn.classList.remove('hidden');
     toggleOldUIVisibility(true);
+    try {
+        renderInlinePreview();
+    } catch (err) {
+        console.error('Inline preview render failed while enabling inline mode:', err);
+        // Fall back to classic editor so the user is not left with a broken inline UI.
+        try {
+            setEditorMode('classic');
+        } catch (fallbackErr) {
+            console.error('Failed to fall back to classic editor mode after inline render failure:', fallbackErr);
+            // As a last resort, at least restore the classic UI visibility.
+            disableInlineEditor();
+        }
+    }
 }
 
 export function disableInlineEditor() {
-    if (!dom.inlinePreview || !dom.floatingAddBtn) return;
-    dom.inlinePreview.classList.add('hidden');
-    dom.floatingAddBtn.classList.add('hidden');
+    if (dom.inlinePreview) dom.inlinePreview.classList.add('hidden');
+    if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden');
+    closeFloatingAddMenu();
     closeImageResizer();
     toggleOldUIVisibility(false);
+}
+
+function setEditorMode(mode) {
+    const normalizedMode = mode === 'inline' ? 'inline' : 'classic';
+    recipeData.settings.editorMode = normalizedMode;
+    if (dom.editorModeSelect && dom.editorModeSelect.value !== normalizedMode) {
+        dom.editorModeSelect.value = normalizedMode;
+    }
+    if (normalizedMode === 'inline') enableInlineEditor();
+    else disableInlineEditor();
 }
 
 // --- VIEW TOGGLE ---
@@ -305,12 +343,7 @@ export function init() {
     // Editor Mode select
     if (dom.editorModeSelect) {
         dom.editorModeSelect.addEventListener('change', (e) => {
-            recipeData.settings.editorMode = e.target.value;
-            if (recipeData.settings.editorMode === 'inline') {
-                enableInlineEditor();
-            } else {
-                disableInlineEditor();
-            }
+            setEditorMode(e.target.value);
         });
         dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic';
     }
@@ -375,9 +408,5 @@ export function init() {
     dom.globalFontStyleSelect.value = recipeData.settings.fontStyle;
     dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`;
     // Initialize editor mode (inline is experimental and OFF by default)
-    if (recipeData.settings.editorMode === 'inline') {
-        enableInlineEditor();
-    } else {
-        disableInlineEditor();
-    }
+    setEditorMode(recipeData.settings.editorMode);
 }
