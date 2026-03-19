@@ -462,6 +462,12 @@ export function renderInlinePreview() {
                     const anchorEl = el.querySelector('a');
                     if (anchorEl) {
                         anchorEl.classList.add('inline-edit-link');
+                        // Disable native dragging on the anchor so the wrapper remains the drag source.
+                        anchorEl.draggable = false;
+                        anchorEl.addEventListener('dragstart', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
                         anchorEl.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
