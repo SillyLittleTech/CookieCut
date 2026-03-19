@@ -56,6 +56,9 @@
 .recipe-preview-content ol {
     list-style-type: decimal;
 }
+.recipe-preview-content ul {
+    list-style-type: disc;
+}
 .recipe-preview-content li {
     margin-bottom: 10px;
 }
@@ -376,6 +379,36 @@
     flex: 0 0 32px;
 }
 .step-content { display: inline; }
+.bullet-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: #f3f4f6; /* gray-100 */
+    color: #111827; /* gray-900 */
+    font-size: 1.6rem;
+    line-height: 1;
+    margin-right: 10px;
+    flex: 0 0 32px;
+}
+.bullet-content { display: inline; }
+
+#inline-preview .inline-step-list,
+#inline-preview .inline-bullet-list {
+    list-style: none;
+    margin: 0.75rem 0;
+    padding-left: 0;
+}
+#inline-preview .inline-list-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+#inline-preview .inline-list-item:last-child {
+    margin-bottom: 0;
+}
 
 
 /* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only

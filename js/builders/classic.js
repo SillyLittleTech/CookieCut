@@ -3,6 +3,7 @@ import { dom } from '../dom.js';
 import { renderIconCodes } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
+import * as bulletHandler from '../handlers/bullet.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
@@ -34,6 +35,12 @@ export function renderBuilderInputs() {
             }
             case 'step': {
                 const result = stepHandler.getBuilderInput(item);
+                itemLabel = result.label;
+                inputHtml = result.inputHtml;
+                break;
+            }
+            case 'bullet': {
+                const result = bulletHandler.getBuilderInput(item);
                 itemLabel = result.label;
                 inputHtml = result.inputHtml;
                 break;
@@ -118,11 +125,15 @@ export function renderPreview() {
     dom.contentPreview.innerHTML = '';
 
     let currentList = null;
+    let currentListType = null;
 
     recipeData.items.forEach(item => {
-        if (item.type !== 'step' && currentList) {
+        const isListItem = item.type === 'step' || item.type === 'bullet';
+
+        if ((!isListItem || currentListType !== item.type) && currentList) {
             dom.contentPreview.appendChild(currentList);
             currentList = null;
+            currentListType = null;
         }
 
         const contentWithIcons = renderIconCodes(item.content || '');
@@ -136,8 +147,18 @@ export function renderPreview() {
             case 'step': {
                 if (!currentList) {
                     currentList = document.createElement('ol');
+                    currentListType = 'step';
                 }
                 const el = stepHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
+                currentList.appendChild(el);
+                break;
+            }
+            case 'bullet': {
+                if (!currentList) {
+                    currentList = document.createElement('ul');
+                    currentListType = 'bullet';
+                }
+                const el = bulletHandler.renderPreviewElement(item, fontStyle, contentWithIcons);
                 currentList.appendChild(el);
                 break;
             }

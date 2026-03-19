@@ -22,6 +22,7 @@ export function addItem(type, subtype = null) {
             newItem.content = 'New Heading';
             break;
         case 'step':
+        case 'bullet':
         case 'text':
             newItem.type = type;
             newItem.content = '';
@@ -337,6 +338,7 @@ export function init() {
     dom.textModalOverlay.addEventListener('click', closeTextModal);
     dom.textTypeHeadingBtn.addEventListener('click', () => handleTextSelection('heading'));
     dom.textTypeStepBtn.addEventListener('click', () => handleTextSelection('step'));
+    dom.textTypeBulletBtn.addEventListener('click', () => handleTextSelection('bullet'));
     dom.textTypeTextBtn.addEventListener('click', () => handleTextSelection('text'));
     dom.textTypeLinkBtn.addEventListener('click', () => handleTextSelection('link'));
 

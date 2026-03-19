@@ -3,6 +3,7 @@ import { dom } from '../dom.js';
 import { renderIconCodes, getTextAndCaret, setCaretPosition } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
+import * as bulletHandler from '../handlers/bullet.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
@@ -472,68 +473,98 @@ export function renderInlinePreview() {
     dom.inlinePreview.appendChild(descriptionParagraph);
 
     // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
-    // stepCounter persists across the entire forEach to track consecutive step numbers correctly
+    let currentList = null;
+    let currentListType = null;
     let stepCounter = 0;
+
+    const rerenderAllEditors = () => {
+        import('./classic.js').then(({ renderBuilderInputs }) => {
+            renderBuilderInputs();
+            renderInlinePreview();
+        });
+    };
+
+    const attachInlineItemInteractions = (node, itemId) => {
+        node.addEventListener('dblclick', async (ev) => {
+            ev.stopPropagation();
+            if (await openInlineDeleteConfirm('Remove this item?')) {
+                recipeData.items = recipeData.items.filter(i => String(i.id) !== String(itemId));
+                rerenderAllEditors();
+            }
+        });
+
+        node.addEventListener('dragstart', (ev) => {
+            ev.dataTransfer.setData('text/plain', String(itemId));
+            node.classList.add('dragging');
+        });
+        node.addEventListener('dragend', () => {
+            node.classList.remove('dragging');
+            dom.inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
+        });
+        node.addEventListener('dragover', (ev) => { ev.preventDefault(); node.classList.add('drop-target'); });
+        node.addEventListener('dragleave', () => { node.classList.remove('drop-target'); });
+        node.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            const dragId = ev.dataTransfer.getData('text/plain');
+            const targetId = node.dataset.id;
+            if (dragId && targetId && dragId !== targetId) {
+                reorderItems(dragId, targetId);
+                rerenderAllEditors();
+            }
+        });
+    };
+
+    const ensureListContainer = (type) => {
+        if (currentList && currentListType === type) return currentList;
+
+        currentList = document.createElement(type === 'step' ? 'ol' : 'ul');
+        currentList.className = type === 'step' ? 'inline-step-list' : 'inline-bullet-list';
+        currentListType = type;
+        dom.inlinePreview.appendChild(currentList);
+        return currentList;
+    };
 
     recipeData.items.forEach(item => {
         const contentWithIcons = renderIconCodes(item.content || '');
 
         if (item.type === 'step') {
+            if (currentListType !== 'step') stepCounter = 0;
             stepCounter += 1;
-            // ensure an ordered list container exists
-            let ol = dom.inlinePreview.querySelector('ol');
-            if (!ol) {
-                ol = document.createElement('ol');
-                dom.inlinePreview.appendChild(ol);
-            }
 
+            const list = ensureListContainer('step');
             const li = document.createElement('li');
-            li.className = 'inline-item';
+            li.className = 'inline-item inline-list-item';
             li.dataset.id = item.id;
             li.draggable = true;
 
             const { badge, contentSpan } = stepHandler.renderInlineElement(item, fontStyle, contentWithIcons, stepCounter);
             li.appendChild(badge);
             li.appendChild(contentSpan);
-            ol.appendChild(li);
+            list.appendChild(li);
+            attachInlineItemInteractions(li, item.id);
+            return;
+        }
 
-            // dblclick to remove
-            li.addEventListener('dblclick', async (ev) => {
-                ev.stopPropagation();
-                if (await openInlineDeleteConfirm('Remove this item?')) {
-                    recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
-                    // Import lazily to avoid circular dependency at evaluation time
-                    import('./classic.js').then(({ renderBuilderInputs }) => {
-                        renderBuilderInputs();
-                        renderInlinePreview();
-                    });
-                }
-            });
+        if (item.type === 'bullet') {
+            const list = ensureListContainer('bullet');
+            const li = document.createElement('li');
+            li.className = 'inline-item inline-list-item';
+            li.dataset.id = item.id;
+            li.draggable = true;
 
-            // drag handlers for li
-            li.addEventListener('dragstart', (ev) => {
-                ev.dataTransfer.setData('text/plain', String(item.id));
-                li.classList.add('dragging');
-            });
-            li.addEventListener('dragend', () => {
-                li.classList.remove('dragging');
-                dom.inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
-            });
-            li.addEventListener('dragover', (ev) => { ev.preventDefault(); li.classList.add('drop-target'); });
-            li.addEventListener('dragleave', () => { li.classList.remove('drop-target'); });
-            li.addEventListener('drop', (ev) => {
-                ev.preventDefault();
-                const dragId = ev.dataTransfer.getData('text/plain');
-                const targetId = li.dataset.id;
-                if (dragId && targetId && dragId !== targetId) {
-                    reorderItems(dragId, targetId);
-                    import('./classic.js').then(({ renderBuilderInputs }) => {
-                        renderBuilderInputs();
-                        renderInlinePreview();
-                    });
-                }
-            });
-        } else {
+            const { badge, contentSpan } = bulletHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+            li.appendChild(badge);
+            li.appendChild(contentSpan);
+            list.appendChild(li);
+            attachInlineItemInteractions(li, item.id);
+            return;
+        }
+
+        currentList = null;
+        currentListType = null;
+        stepCounter = 0;
+
+        {
             let renderedElement = null;
 
             switch (item.type) {
@@ -596,41 +627,7 @@ export function renderInlinePreview() {
             }
             dom.inlinePreview.appendChild(wrapper);
 
-            // dblclick to remove
-            wrapper.addEventListener('dblclick', async (ev) => {
-                ev.stopPropagation();
-                if (await openInlineDeleteConfirm('Remove this item?')) {
-                    recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
-                    import('./classic.js').then(({ renderBuilderInputs }) => {
-                        renderBuilderInputs();
-                        renderInlinePreview();
-                    });
-                }
-            });
-
-            // drag handlers
-            wrapper.addEventListener('dragstart', (ev) => {
-                ev.dataTransfer.setData('text/plain', String(item.id));
-                wrapper.classList.add('dragging');
-            });
-            wrapper.addEventListener('dragend', () => {
-                wrapper.classList.remove('dragging');
-                dom.inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
-            });
-            wrapper.addEventListener('dragover', (ev) => { ev.preventDefault(); wrapper.classList.add('drop-target'); });
-            wrapper.addEventListener('dragleave', () => { wrapper.classList.remove('drop-target'); });
-            wrapper.addEventListener('drop', (ev) => {
-                ev.preventDefault();
-                const dragId = ev.dataTransfer.getData('text/plain');
-                const targetId = wrapper.dataset.id;
-                if (dragId && targetId && dragId !== targetId) {
-                    reorderItems(dragId, targetId);
-                    import('./classic.js').then(({ renderBuilderInputs }) => {
-                        renderBuilderInputs();
-                        renderInlinePreview();
-                    });
-                }
-            });
+            attachInlineItemInteractions(wrapper, item.id);
         }
     });
 
