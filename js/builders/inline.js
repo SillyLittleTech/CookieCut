@@ -14,10 +14,99 @@ import { renderInlineElement as renderInlineLinkElement } from '../handlers/link
 let currentResizer = null;
 let currentLinkEditor = null;
 let linkEditorInputIdCounter = 0;
+let currentDeleteConfirm = null;
+let currentDeleteResolve = null;
+let currentDeleteKeydownHandler = null;
+
+function closeInlineDeleteConfirm(confirmed = false) {
+    if (currentDeleteConfirm) {
+        currentDeleteConfirm.remove();
+        currentDeleteConfirm = null;
+    }
+    if (currentDeleteKeydownHandler) {
+        document.removeEventListener('keydown', currentDeleteKeydownHandler);
+        currentDeleteKeydownHandler = null;
+    }
+    if (currentDeleteResolve) {
+        const resolve = currentDeleteResolve;
+        currentDeleteResolve = null;
+        resolve(Boolean(confirmed));
+    }
+}
+
+function openInlineDeleteConfirm(message = 'Remove this item?') {
+    closeInlineDeleteConfirm(false);
+
+    return new Promise((resolve) => {
+        currentDeleteResolve = resolve;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'inline-delete-confirm-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = 62;
+        overlay.style.background = 'rgba(0,0,0,0.45)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '16px';
+
+        const dialog = document.createElement('div');
+        dialog.style.background = 'white';
+        dialog.style.width = 'min(360px, calc(100vw - 32px))';
+        dialog.style.borderRadius = '10px';
+        dialog.style.boxShadow = '0 14px 30px rgba(0,0,0,0.18)';
+        dialog.style.padding = '14px';
+
+        const title = document.createElement('p');
+        title.textContent = message;
+        title.style.marginBottom = '12px';
+        title.style.fontSize = '14px';
+        title.style.color = '#111827';
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.justifyContent = 'flex-end';
+        actions.style.gap = '8px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'px-3 py-1 bg-gray-100 rounded';
+        cancelBtn.addEventListener('click', () => closeInlineDeleteConfirm(false));
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.className = 'px-3 py-1 bg-red-600 text-white rounded';
+        removeBtn.addEventListener('click', () => closeInlineDeleteConfirm(true));
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(removeBtn);
+        dialog.appendChild(title);
+        dialog.appendChild(actions);
+        overlay.appendChild(dialog);
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeInlineDeleteConfirm(false);
+        });
+
+        currentDeleteKeydownHandler = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeInlineDeleteConfirm(false);
+            }
+        };
+        document.addEventListener('keydown', currentDeleteKeydownHandler);
+
+        document.body.appendChild(overlay);
+        currentDeleteConfirm = overlay;
+        removeBtn.focus();
+    });
+}
 
 function closeActiveInlineEditors() {
     closeImageResizer();
     closeLinkEditor();
+    closeInlineDeleteConfirm(false);
 }
 
 function syncLinkInputs(item) {
@@ -406,9 +495,9 @@ export function renderInlinePreview() {
             ol.appendChild(li);
 
             // dblclick to remove
-            li.addEventListener('dblclick', (ev) => {
+            li.addEventListener('dblclick', async (ev) => {
                 ev.stopPropagation();
-                if (confirm('Remove this item?')) {
+                if (await openInlineDeleteConfirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     // Import lazily to avoid circular dependency at evaluation time
                     import('./classic.js').then(({ renderBuilderInputs }) => {
@@ -500,9 +589,9 @@ export function renderInlinePreview() {
             dom.inlinePreview.appendChild(wrapper);
 
             // dblclick to remove
-            wrapper.addEventListener('dblclick', (ev) => {
+            wrapper.addEventListener('dblclick', async (ev) => {
                 ev.stopPropagation();
-                if (confirm('Remove this item?')) {
+                if (await openInlineDeleteConfirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
