@@ -299,6 +299,10 @@ function closeSettingsModal() {
 }
 function handleGlobalFontChange(e) {
     recipeData.settings.fontStyle = e.target.value;
+    dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`;
+    if (isInlineMode()) {
+        renderInlinePreview();
+    }
 }
 
 // --- INIT ---
