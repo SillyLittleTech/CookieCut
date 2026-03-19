@@ -12,8 +12,9 @@ enabled = true
 name = "shell"
 enabled = true
 
-[exclude_patterns]
-patterns = [
+exclude_patterns = [
     "**/node_modules/**",
-    "**/test-results/**"
+    "**/test-results/**",
+    "**/build/**",
+    "**/dist/**"
 ]
