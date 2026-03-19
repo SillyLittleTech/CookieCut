@@ -43,13 +43,12 @@ export function getBuilderInput(item) {
 }
 
 /**
- * Creates and returns a link preview DOM element.
+ * Build a shared link block used by preview + inline renderers.
  * @param {object} item
- * @param {string} fontStyle
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
+function createLinkBlock(item, contentWithIcons) {
     const wrapper = document.createElement('p');
     wrapper.className = 'recipe-text-block flex items-center gap-1';
 
@@ -70,6 +69,17 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
 }
 
 /**
+ * Creates and returns a link preview DOM element.
+ * @param {object} item
+ * @param {string} fontStyle
+ * @param {string} contentWithIcons - pre-rendered HTML with icon spans
+ * @returns {HTMLElement}
+ */
+export function renderPreviewElement(item, fontStyle, contentWithIcons) {
+    return createLinkBlock(item, contentWithIcons);
+}
+
+/**
  * Creates and returns an inline-editable link element.
  * @param {object} item
  * @param {string} fontStyle
@@ -77,21 +87,5 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
  * @returns {HTMLElement}
  */
 export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    const wrapper = document.createElement('p');
-    wrapper.className = 'recipe-text-block flex items-center gap-1';
-
-    const icon = document.createElement('span');
-    icon.className = 'material-icons text-base align-middle';
-    icon.textContent = 'link';
-
-    const anchorElement = document.createElement('a');
-    anchorElement.href = sanitizeHref(item.href);
-    anchorElement.target = '_blank';
-    anchorElement.rel = 'noopener noreferrer';
-    anchorElement.className = 'underline text-blue-600 hover:text-blue-800';
-    anchorElement.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
-
-    wrapper.appendChild(icon);
-    wrapper.appendChild(anchorElement);
-    return wrapper;
+    return createLinkBlock(item, contentWithIcons);
 }
