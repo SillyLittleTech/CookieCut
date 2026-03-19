@@ -82,6 +82,13 @@ export function renderBuilderInputs() {
             if (requestId !== inlineRenderRequestId) return;
             if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') return;
             renderInlinePreview();
+        }).catch((error) => {
+            // Handle failures to load the inline builder module gracefully
+            console.error('Failed to load inline builder module:', error);
+            // Invalidate this request if it is still the active one
+            if (requestId === inlineRenderRequestId) {
+                inlineRenderRequestId += 1;
+            }
         });
     } else {
         // invalidate queued inline rerenders after mode flips to classic
