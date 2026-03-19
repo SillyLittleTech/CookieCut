@@ -3,7 +3,7 @@ import { dom } from './dom.js';
 import { renderIconCodes, copyToClipboard } from './helpers.js';
 import { COMMON_ICONS } from './constants.js';
 import { renderBuilderInputs, renderPreview } from './builders/classic.js';
-import { renderInlinePreview, closeImageResizer } from './builders/inline.js';
+import { renderInlinePreview, closeImageResizer, closeLinkEditor } from './builders/inline.js';
 
 // --- ACTIONS ---
 let nextItemId = Date.now();
@@ -36,6 +36,13 @@ export function addItem(type, subtype = null) {
             newItem.type = 'bubble';
             newItem.subtype = subtype || 'note';
             newItem.content = '';
+            break;
+        case 'link':
+            newItem.type = 'link';
+            newItem.content = '';
+            newItem.href = '';
+            break;
+        default:
             break;
     }
     recipeData.items.push(newItem);
@@ -124,6 +131,7 @@ export function disableInlineEditor() {
     if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden');
     closeFloatingAddMenu();
     closeImageResizer();
+    closeLinkEditor();
     toggleOldUIVisibility(false);
 }
 
@@ -330,6 +338,7 @@ export function init() {
     dom.textTypeHeadingBtn.addEventListener('click', () => handleTextSelection('heading'));
     dom.textTypeStepBtn.addEventListener('click', () => handleTextSelection('step'));
     dom.textTypeTextBtn.addEventListener('click', () => handleTextSelection('text'));
+    dom.textTypeLinkBtn.addEventListener('click', () => handleTextSelection('link'));
 
     // Icon Key Modal Listeners
     dom.iconKeyBtn.addEventListener('click', openIconKeyModal);
@@ -385,9 +394,9 @@ export function init() {
             document.body.appendChild(menu);
             // click outside to close
             setTimeout(() => {
-                document.addEventListener('click', function _close(e) {
+                document.addEventListener('click', function _close(ev) {
                     const m = document.getElementById('floating-add-menu');
-                    if (m && !m.contains(e.target) && e.target !== dom.floatingAddBtn) m.remove();
+                    if (m && !m.contains(ev.target) && ev.target !== dom.floatingAddBtn) m.remove();
                     document.removeEventListener('click', _close);
                 });
             }, 10);

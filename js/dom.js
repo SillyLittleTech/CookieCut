@@ -29,6 +29,7 @@ export const dom = {
     textTypeHeadingBtn: null,
     textTypeStepBtn: null,
     textTypeTextBtn: null,
+    textTypeLinkBtn: null,
     // Icon Key Modal
     iconKeyBtn: null,
     iconKeyModal: null,
@@ -77,6 +78,7 @@ export function initDom() {
     dom.textTypeHeadingBtn = document.getElementById('text-type-heading');
     dom.textTypeStepBtn = document.getElementById('text-type-step');
     dom.textTypeTextBtn = document.getElementById('text-type-text');
+    dom.textTypeLinkBtn = document.getElementById('text-type-link');
     // Icon Key Modal
     dom.iconKeyBtn = document.getElementById('icon-key-btn');
     dom.iconKeyModal = document.getElementById('icon-key-modal');

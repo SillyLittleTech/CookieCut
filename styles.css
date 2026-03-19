@@ -331,6 +331,12 @@
 
 /* Ensure inline preview looks like the recipe preview */
 #inline-preview .recipe-text-block { margin: 0.75rem 0; }
+#inline-preview .inline-edit-link {
+    cursor: pointer;
+}
+#inline-preview .inline-edit-link:hover {
+    text-decoration-style: dashed;
+}
 
 /* Global font-style helper classes so inline preview headings respect settings */
 .font-style-display { font-family: '"Baloo 2"', cursive !important; }
