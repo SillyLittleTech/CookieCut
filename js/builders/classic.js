@@ -62,6 +62,8 @@ export function renderBuilderInputs() {
                 inputHtml = result.inputHtml;
                 break;
             }
+            default:
+                break;
         }
 
         const isFirst = index === 0;
@@ -159,6 +161,8 @@ export function renderPreview() {
                 dom.contentPreview.appendChild(el);
                 break;
             }
+            default:
+                break;
         }
     });
 

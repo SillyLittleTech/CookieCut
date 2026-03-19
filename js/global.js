@@ -42,6 +42,8 @@ export function addItem(type, subtype = null) {
             newItem.content = '';
             newItem.href = '';
             break;
+        default:
+            break;
     }
     recipeData.items.push(newItem);
     renderBuilderInputs();
@@ -392,9 +394,9 @@ export function init() {
             document.body.appendChild(menu);
             // click outside to close
             setTimeout(() => {
-                document.addEventListener('click', function _close(e) {
+                document.addEventListener('click', function _close(ev) {
                     const m = document.getElementById('floating-add-menu');
-                    if (m && !m.contains(e.target) && e.target !== dom.floatingAddBtn) m.remove();
+                    if (m && !m.contains(ev.target) && ev.target !== dom.floatingAddBtn) m.remove();
                     document.removeEventListener('click', _close);
                 });
             }, 10);
