@@ -18,7 +18,7 @@ function sanitizeHref(href) {
         if (ALLOWED_LINK_SCHEMES.includes(url.protocol)) {
             return url.href;
         }
-    } catch (e) {
+    } catch {
         // Invalid URL, fall through to return '#'
     }
 
@@ -43,13 +43,12 @@ export function getBuilderInput(item) {
 }
 
 /**
- * Creates and returns a link preview DOM element.
+ * Build a shared link block used by preview + inline renderers.
  * @param {object} item
- * @param {string} fontStyle
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
+function createLinkBlock(item, contentWithIcons) {
     const wrapper = document.createElement('p');
     wrapper.className = 'recipe-text-block flex items-center gap-1';
 
@@ -57,16 +56,27 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
     icon.className = 'material-icons text-base align-middle';
     icon.textContent = 'link';
 
-    const a = document.createElement('a');
-    a.href = sanitizeHref(item.href);
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'underline text-blue-600 hover:text-blue-800';
-    a.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
+    const anchorElement = document.createElement('a');
+    anchorElement.href = sanitizeHref(item.href);
+    anchorElement.target = '_blank';
+    anchorElement.rel = 'noopener noreferrer';
+    anchorElement.className = 'underline text-blue-600 hover:text-blue-800';
+    anchorElement.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
 
     wrapper.appendChild(icon);
-    wrapper.appendChild(a);
+    wrapper.appendChild(anchorElement);
     return wrapper;
+}
+
+/**
+ * Creates and returns a link preview DOM element.
+ * @param {object} item
+ * @param {string} fontStyle
+ * @param {string} contentWithIcons - pre-rendered HTML with icon spans
+ * @returns {HTMLElement}
+ */
+export function renderPreviewElement(item, fontStyle, contentWithIcons) {
+    return createLinkBlock(item, contentWithIcons);
 }
 
 /**
@@ -77,21 +87,5 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
  * @returns {HTMLElement}
  */
 export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    const wrapper = document.createElement('p');
-    wrapper.className = 'recipe-text-block flex items-center gap-1';
-
-    const icon = document.createElement('span');
-    icon.className = 'material-icons text-base align-middle';
-    icon.textContent = 'link';
-
-    const a = document.createElement('a');
-    a.href = sanitizeHref(item.href);
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'underline text-blue-600 hover:text-blue-800';
-    a.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
-
-    wrapper.appendChild(icon);
-    wrapper.appendChild(a);
-    return wrapper;
+    return createLinkBlock(item, contentWithIcons);
 }

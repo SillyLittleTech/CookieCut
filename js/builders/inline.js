@@ -6,7 +6,7 @@ import * as stepHandler from '../handlers/step.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
-import * as linkHandler from '../handlers/link.js';
+import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js';
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -14,10 +14,99 @@ import * as linkHandler from '../handlers/link.js';
 let currentResizer = null;
 let currentLinkEditor = null;
 let linkEditorInputIdCounter = 0;
+let currentDeleteConfirm = null;
+let currentDeleteResolve = null;
+let currentDeleteKeydownHandler = null;
+
+function closeInlineDeleteConfirm(confirmed = false) {
+    if (currentDeleteConfirm) {
+        currentDeleteConfirm.remove();
+        currentDeleteConfirm = null;
+    }
+    if (currentDeleteKeydownHandler) {
+        document.removeEventListener('keydown', currentDeleteKeydownHandler);
+        currentDeleteKeydownHandler = null;
+    }
+    if (currentDeleteResolve) {
+        const resolve = currentDeleteResolve;
+        currentDeleteResolve = null;
+        resolve(Boolean(confirmed));
+    }
+}
+
+function openInlineDeleteConfirm(message = 'Remove this item?') {
+    closeInlineDeleteConfirm(false);
+
+    return new Promise((resolve) => {
+        currentDeleteResolve = resolve;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'inline-delete-confirm-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = 62;
+        overlay.style.background = 'rgba(0,0,0,0.45)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '16px';
+
+        const dialog = document.createElement('div');
+        dialog.style.background = 'white';
+        dialog.style.width = 'min(360px, calc(100vw - 32px))';
+        dialog.style.borderRadius = '10px';
+        dialog.style.boxShadow = '0 14px 30px rgba(0,0,0,0.18)';
+        dialog.style.padding = '14px';
+
+        const title = document.createElement('p');
+        title.textContent = message;
+        title.style.marginBottom = '12px';
+        title.style.fontSize = '14px';
+        title.style.color = '#111827';
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.justifyContent = 'flex-end';
+        actions.style.gap = '8px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'px-3 py-1 bg-gray-100 rounded';
+        cancelBtn.addEventListener('click', () => closeInlineDeleteConfirm(false));
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.className = 'px-3 py-1 bg-red-600 text-white rounded';
+        removeBtn.addEventListener('click', () => closeInlineDeleteConfirm(true));
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(removeBtn);
+        dialog.appendChild(title);
+        dialog.appendChild(actions);
+        overlay.appendChild(dialog);
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeInlineDeleteConfirm(false);
+        });
+
+        currentDeleteKeydownHandler = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeInlineDeleteConfirm(false);
+            }
+        };
+        document.addEventListener('keydown', currentDeleteKeydownHandler);
+
+        document.body.appendChild(overlay);
+        currentDeleteConfirm = overlay;
+        removeBtn.focus();
+    });
+}
 
 function closeActiveInlineEditors() {
     closeImageResizer();
     closeLinkEditor();
+    closeInlineDeleteConfirm(false);
 }
 
 function syncLinkInputs(item) {
@@ -38,7 +127,7 @@ function persistLinkChanges(item, text, href) {
 function saveLinkAndRerender(item, text, href) {
     persistLinkChanges(item, text, href);
     closeLinkEditor();
-    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+    import('./classic.js').then(({ renderBuilderInputs }) => {
         renderBuilderInputs();
     });
 }
@@ -69,17 +158,17 @@ export function openImageResizer(imgEl, item) {
     label.style.marginLeft = '10px';
 
     input.addEventListener('input', () => {
-        const v = input.value;
-        item.size = Number(v);
-        imgEl.style.maxWidth = `${v}px`;
-        label.textContent = `${v}px`;
+        const sizeValue = input.value;
+        item.size = Number(sizeValue);
+        imgEl.style.maxWidth = `${sizeValue}px`;
+        label.textContent = `${sizeValue}px`;
         // update builder input display if visible
         const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`);
         if (itemEl) {
             const display = itemEl.querySelector('[data-role="size-display"]');
             const slider = itemEl.querySelector('[data-key="size"]');
-            if (display) display.textContent = `${v}px`;
-            if (slider) slider.value = v;
+            if (display) display.textContent = `${sizeValue}px`;
+            if (slider) slider.value = sizeValue;
         }
     });
 
@@ -195,7 +284,7 @@ export function openLinkEditor(item) {
     hrefLabel.style.color = '#374151';
 
     const hrefInput = document.createElement('input');
-    const hrefInputId = 'link-editor-href-' + (++linkEditorInputIdCounter);
+    const hrefInputId = `link-editor-href-${++linkEditorInputIdCounter}`;
     hrefInput.type = 'url';
     hrefInput.id = hrefInputId;
     hrefInput.value = item.href || '';
@@ -366,18 +455,21 @@ export function renderInlinePreview() {
     dom.inlinePreview.appendChild(h1);
 
     // Description (editable)
-    const p = document.createElement('p');
-    p.className = 'text-gray-600 italic mb-4';
-    p.contentEditable = true;
-    p.dataset.key = 'description';
-    p.innerHTML = renderIconCodes(recipeData.description);
+    const descriptionParagraph = document.createElement('p');
+    descriptionParagraph.className = 'text-gray-600 italic mb-4';
+    descriptionParagraph.contentEditable = true;
+    descriptionParagraph.dataset.key = 'description';
+    descriptionParagraph.innerHTML = renderIconCodes(recipeData.description);
     // Outline for empty description
     if (!recipeData.description || recipeData.description.trim() === '') {
-        p.classList.add('new-text-outline');
-        const removeOutlineDesc = () => { p.classList.remove('new-text-outline'); p.removeEventListener('input', removeOutlineDesc); };
-        p.addEventListener('input', removeOutlineDesc);
+        descriptionParagraph.classList.add('new-text-outline');
+        const removeOutlineDesc = () => {
+            descriptionParagraph.classList.remove('new-text-outline');
+            descriptionParagraph.removeEventListener('input', removeOutlineDesc);
+        };
+        descriptionParagraph.addEventListener('input', removeOutlineDesc);
     }
-    dom.inlinePreview.appendChild(p);
+    dom.inlinePreview.appendChild(descriptionParagraph);
 
     // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
     // stepCounter persists across the entire forEach to track consecutive step numbers correctly
@@ -406,12 +498,12 @@ export function renderInlinePreview() {
             ol.appendChild(li);
 
             // dblclick to remove
-            li.addEventListener('dblclick', (ev) => {
+            li.addEventListener('dblclick', async (ev) => {
                 ev.stopPropagation();
-                if (confirm('Remove this item?')) {
+                if (await openInlineDeleteConfirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     // Import lazily to avoid circular dependency at evaluation time
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -435,35 +527,35 @@ export function renderInlinePreview() {
                 const targetId = li.dataset.id;
                 if (dragId && targetId && dragId !== targetId) {
                     reorderItems(dragId, targetId);
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
                 }
             });
         } else {
-            let el;
+            let renderedElement = null;
 
             switch (item.type) {
                 case 'heading':
-                    el = headingHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = headingHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
                 case 'text':
-                    el = textHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = textHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
                 case 'image':
-                    el = imageHandler.renderInlineElement(item, fontStyle, contentWithIcons);
-                    el.addEventListener('click', (e) => {
+                    renderedElement = imageHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        openImageResizer(el, item);
+                        openImageResizer(renderedElement, item);
                     });
                     break;
                 case 'bubble':
-                    el = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+                    renderedElement = bubbleHandler.renderInlineElement(item, fontStyle, contentWithIcons);
                     break;
-                case 'link':
-                    el = linkHandler.renderInlineElement(item, fontStyle, contentWithIcons);
-                    const anchorEl = el.querySelector('a');
+                case 'link': {
+                    renderedElement = renderInlineLinkElement(item, fontStyle, contentWithIcons);
+                    const anchorEl = renderedElement.querySelector('a');
                     if (anchorEl) {
                         anchorEl.classList.add('inline-edit-link');
                         // Disable native dragging on the anchor so the wrapper remains the drag source.
@@ -479,31 +571,37 @@ export function renderInlinePreview() {
                         });
                     }
                     break;
+                }
+                default:
+                    break;
             }
 
-            if (!el) return;
+            if (!renderedElement) return;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'inline-item';
             wrapper.dataset.id = item.id;
             wrapper.draggable = true;
-            wrapper.appendChild(el);
+            wrapper.appendChild(renderedElement);
 
             // mark new text with outline to make it visible
             if ((item.type === 'text' || item.type === 'heading') && (!item.content || item.content.trim() === '')) {
-                el.classList.add('new-text-outline');
-                const onFirstInput = () => { el.classList.remove('new-text-outline'); el.removeEventListener('input', onFirstInput); };
-                el.addEventListener('input', onFirstInput);
-                setTimeout(() => el.focus(), 20);
+                renderedElement.classList.add('new-text-outline');
+                const onFirstInput = () => {
+                    renderedElement.classList.remove('new-text-outline');
+                    renderedElement.removeEventListener('input', onFirstInput);
+                };
+                renderedElement.addEventListener('input', onFirstInput);
+                setTimeout(() => renderedElement.focus(), 20);
             }
             dom.inlinePreview.appendChild(wrapper);
 
             // dblclick to remove
-            wrapper.addEventListener('dblclick', (ev) => {
+            wrapper.addEventListener('dblclick', async (ev) => {
                 ev.stopPropagation();
-                if (confirm('Remove this item?')) {
+                if (await openInlineDeleteConfirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -527,7 +625,7 @@ export function renderInlinePreview() {
                 const targetId = wrapper.dataset.id;
                 if (dragId && targetId && dragId !== targetId) {
                     reorderItems(dragId, targetId);
-                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                    import('./classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
                     });
@@ -552,7 +650,7 @@ export function renderInlinePreview() {
         if (idx === -1) return;
         const [draggedItem] = recipeData.items.splice(idx, 1);
         recipeData.items.push(draggedItem);
-        import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+        import('./classic.js').then(({ renderBuilderInputs }) => {
             renderBuilderInputs();
             renderInlinePreview();
         });
