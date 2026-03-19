@@ -1,0 +1,51 @@
+<!--
+  External resource imports for CookieCut.
+
+  These resources MUST remain in the <head> of index.html, as they need to
+  be available before the page renders. This file serves as a reference for
+  all external dependencies used by the project.
+-->
+
+<!-- Configure Tailwind (must be JS, not CSS) -->
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Lexend', 'Arial', 'sans-serif'],
+                    display: ['"Baloo 2"', 'cursive'],
+                    note: ['Kalam', 'cursive'],
+                    serif: ['Merriweather', 'serif']
+                },
+                animation: {
+                    'fade-in-down': 'fadeInDown 0.3s ease-out forwards',
+                    'fade-in': 'fadeIn 0.3s ease-out forwards',
+                },
+                keyframes: {
+                    fadeInDown: {
+                        '0%': { opacity: 0, transform: 'translateY(-10px)' },
+                        '100%': { opacity: 1, transform: 'translateY(0)' }
+                    },
+                    fadeIn: {
+                        '0%': { opacity: 0 },
+                        '100%': { opacity: 1 }
+                    }
+                }
+            },
+        },
+    };
+</script>
+
+<!-- Load Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts: Baloo 2, Kalam, Lexend, Merriweather -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+
+<!-- Load Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<!-- Load custom CSS -->
+<link rel="stylesheet" href="styles.css">
