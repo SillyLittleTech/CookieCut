@@ -28,6 +28,7 @@ export const dom = {
     closeTextModalBtn: null,
     textTypeHeadingBtn: null,
     textTypeStepBtn: null,
+    textTypeBulletBtn: null,
     textTypeTextBtn: null,
     // Icon Key Modal
     iconKeyBtn: null,
@@ -76,6 +77,7 @@ export function initDom() {
     dom.closeTextModalBtn = document.getElementById('close-text-modal-btn');
     dom.textTypeHeadingBtn = document.getElementById('text-type-heading');
     dom.textTypeStepBtn = document.getElementById('text-type-step');
+    dom.textTypeBulletBtn = document.getElementById('text-type-bullet');
     dom.textTypeTextBtn = document.getElementById('text-type-text');
     // Icon Key Modal
     dom.iconKeyBtn = document.getElementById('icon-key-btn');

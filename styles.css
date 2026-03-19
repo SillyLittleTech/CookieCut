@@ -370,6 +370,15 @@
     flex: 0 0 32px;
 }
 .step-content { display: inline; }
+.bullet-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+}
+.bullet-content { display: inline; }
 
 
 /* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only

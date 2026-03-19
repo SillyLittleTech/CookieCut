@@ -3,6 +3,7 @@ import { dom } from '../dom.js';
 import { renderIconCodes, getTextAndCaret, setCaretPosition } from '../helpers.js';
 import * as headingHandler from '../handlers/heading.js';
 import * as stepHandler from '../handlers/step.js';
+import * as bulletHandler from '../handlers/bullet.js';
 import * as textHandler from '../handlers/text.js';
 import * as imageHandler from '../handlers/image.js';
 import * as bubbleHandler from '../handlers/bubble.js';
@@ -279,6 +280,59 @@ export function renderInlinePreview() {
                 if (confirm('Remove this item?')) {
                     recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     // Import lazily to avoid circular dependency at evaluation time
+                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    });
+                }
+            });
+
+            // drag handlers for li
+            li.addEventListener('dragstart', (ev) => {
+                ev.dataTransfer.setData('text/plain', String(item.id));
+                li.classList.add('dragging');
+            });
+            li.addEventListener('dragend', () => {
+                li.classList.remove('dragging');
+                dom.inlinePreview.querySelectorAll('.inline-item.drop-target').forEach(n => n.classList.remove('drop-target'));
+            });
+            li.addEventListener('dragover', (ev) => { ev.preventDefault(); li.classList.add('drop-target'); });
+            li.addEventListener('dragleave', () => { li.classList.remove('drop-target'); });
+            li.addEventListener('drop', (ev) => {
+                ev.preventDefault();
+                const dragId = ev.dataTransfer.getData('text/plain');
+                const targetId = li.dataset.id;
+                if (dragId && targetId && dragId !== targetId) {
+                    reorderItems(dragId, targetId);
+                    import('../builders/classic.js').then(({ renderBuilderInputs }) => {
+                        renderBuilderInputs();
+                        renderInlinePreview();
+                    });
+                }
+            });
+        } else if (item.type === 'bullet') {
+            // ensure an unordered list container exists
+            let ul = dom.inlinePreview.querySelector('ul');
+            if (!ul) {
+                ul = document.createElement('ul');
+                dom.inlinePreview.appendChild(ul);
+            }
+
+            const li = document.createElement('li');
+            li.className = 'inline-item';
+            li.dataset.id = item.id;
+            li.draggable = true;
+
+            const { badge, contentSpan } = bulletHandler.renderInlineElement(item, fontStyle, contentWithIcons);
+            li.appendChild(badge);
+            li.appendChild(contentSpan);
+            ul.appendChild(li);
+
+            // dblclick to remove
+            li.addEventListener('dblclick', (ev) => {
+                ev.stopPropagation();
+                if (confirm('Remove this item?')) {
+                    recipeData.items = recipeData.items.filter(i => String(i.id) !== String(item.id));
                     import('../builders/classic.js').then(({ renderBuilderInputs }) => {
                         renderBuilderInputs();
                         renderInlinePreview();
