@@ -168,16 +168,28 @@ function setEditorMode (mode) {
 
 // --- VIEW TOGGLE ---
 
+function updateAppLayoutForPreviewMode () {
+  if (!dom.appContainer) return
+
+  const isPagedPreviewVisible =
+    !dom.recipePanel.classList.contains('hidden') &&
+    recipeData.settings.previewMode === 'paged'
+
+  dom.appContainer.classList.toggle('paged-preview-shell', isPagedPreviewVisible)
+}
+
 function showPreview () {
   renderPreview()
   dom.builderPanel.classList.add('hidden')
   dom.recipePanel.classList.remove('hidden')
+  updateAppLayoutForPreviewMode()
   window.scrollTo(0, 0)
 }
 
 function showEditor () {
   dom.builderPanel.classList.remove('hidden')
   dom.recipePanel.classList.add('hidden')
+  updateAppLayoutForPreviewMode()
   window.scrollTo(0, 0)
 }
 
@@ -360,6 +372,7 @@ function handlePreviewModeChange (e) {
   recipeData.settings.previewMode = nextMode
   if (!dom.recipePanel.classList.contains('hidden')) {
     renderPreview()
+    updateAppLayoutForPreviewMode()
   }
 }
 
@@ -438,6 +451,8 @@ export function init () {
     dom.previewModeSelect.value =
       recipeData.settings.previewMode || 'continuous'
   }
+
+  updateAppLayoutForPreviewMode()
 
   // Floating add button behavior
   if (dom.floatingAddBtn) {

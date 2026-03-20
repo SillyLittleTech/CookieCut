@@ -1,6 +1,7 @@
 // --- DOM REFERENCES ---
 // Populated by initDom() after HTML partials are loaded.
 export const dom = {
+  appContainer: null,
   builderPanel: null,
   recipePanel: null,
   titleInput: null,
@@ -59,6 +60,7 @@ export const dom = {
 }
 
 export function initDom () {
+  dom.appContainer = document.getElementById('app-container')
   dom.builderPanel = document.getElementById('builder-panel')
   dom.recipePanel = document.getElementById('recipe-panel')
   dom.titleInput = document.getElementById('recipe-title-input')
