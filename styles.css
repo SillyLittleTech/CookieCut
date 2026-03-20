@@ -285,6 +285,7 @@
 #recipe-panel.paged-preview-active #recipe-flow {
   column-width: var(--preview-page-width);
   column-gap: var(--preview-page-gap);
+  column-fill: auto;
   height: var(--preview-page-height);
   width: 100%;
   max-width: 100%;
@@ -559,6 +560,7 @@
 #inline-preview.inline-paged-preview-active .inline-preview-flow {
   column-width: var(--preview-page-width);
   column-gap: var(--preview-page-gap);
+  column-fill: auto;
   height: var(--preview-page-height);
   width: 100%;
   max-width: 100%;
