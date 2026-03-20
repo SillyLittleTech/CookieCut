@@ -10,7 +10,8 @@ import {
 import {
   renderInlinePreview,
   closeImageResizer,
-  closeLinkEditor
+  closeLinkEditor,
+  refreshInlinePreviewMetrics
 } from './builders/inline.js'
 
 // --- ACTIONS ---
@@ -373,6 +374,10 @@ function handleGlobalFontChange (e) {
 function handlePreviewModeChange (e) {
   const nextMode = e.target.value === 'paged' ? 'paged' : 'continuous'
   recipeData.settings.previewMode = nextMode
+  if (isInlineMode()) {
+    renderInlinePreview()
+    return
+  }
   if (!dom.recipePanel.classList.contains('hidden')) {
     renderPreview()
     updateAppLayoutForPreviewMode()
@@ -518,13 +523,16 @@ export function init () {
 
   let previewResizeTimer = null
   window.addEventListener('resize', () => {
-    const inPagedPreview =
+    const inPagedClassicPreview =
       !dom.recipePanel.classList.contains('hidden') &&
       recipeData.settings.previewMode === 'paged'
-    if (!inPagedPreview) return
+    const inPagedInlinePreview =
+      isInlineMode() && recipeData.settings.previewMode === 'paged'
+    if (!inPagedClassicPreview && !inPagedInlinePreview) return
     clearTimeout(previewResizeTimer)
     previewResizeTimer = setTimeout(() => {
-      refreshPagedPreviewMetrics()
+      if (inPagedClassicPreview) refreshPagedPreviewMetrics()
+      if (inPagedInlinePreview) refreshInlinePreviewMetrics()
     }, 120)
   })
 

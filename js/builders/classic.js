@@ -1,6 +1,6 @@
 import { recipeData } from '../state.js'
 import { dom } from '../dom.js'
-import { renderIconCodes } from '../helpers.js'
+import { renderIconCodes, getDocumentTextStats } from '../helpers.js'
 import * as headingHandler from '../handlers/heading.js'
 import * as stepHandler from '../handlers/step.js'
 import {
@@ -230,34 +230,6 @@ function collectPreviewNodes (fontStyle) {
   return nodes
 }
 
-function getTextStats () {
-  const allText = [
-    recipeData.title || '',
-    recipeData.description || '',
-    ...recipeData.items.map((item) => item.content || '')
-  ]
-    .join(' ')
-    .trim()
-
-  const words = allText.length === 0 ? 0 : allText.split(/\s+/).length
-  const sentenceMatches =
-    allText.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || []
-  const sentences = sentenceMatches
-    .map((sentence) => sentence.trim())
-    .filter(Boolean).length
-
-  const paragraphs = [
-    recipeData.description || '',
-    ...recipeData.items
-      .filter((item) => typeof item.content === 'string')
-      .map((item) => item.content || '')
-  ]
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean).length
-
-  return { words, sentences, paragraphs }
-}
-
 function getPagedPageCount () {
   if (!dom.recipeFlow) return 1
   const styles = window.getComputedStyle(dom.recipeFlow)
@@ -276,7 +248,7 @@ function getPagedPageCount () {
 }
 
 function updatePreviewStats (pageCount = 1) {
-  const stats = getTextStats()
+  const stats = getDocumentTextStats(recipeData)
 
   if (dom.wordCountValue) dom.wordCountValue.textContent = String(stats.words)
   if (dom.sentenceCountValue) {

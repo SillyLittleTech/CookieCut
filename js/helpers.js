@@ -32,6 +32,34 @@ export function renderIconCodes(text) {
     return result;
 }
 
+export function getDocumentTextStats(recipeData) {
+    const allText = [
+        recipeData.title || '',
+        recipeData.description || '',
+        ...(recipeData.items || []).map((item) => item.content || '')
+    ]
+        .join(' ')
+        .trim();
+
+    const words = allText.length === 0 ? 0 : allText.split(/\s+/).length;
+    const sentenceMatches =
+        allText.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || [];
+    const sentences = sentenceMatches
+        .map((sentence) => sentence.trim())
+        .filter(Boolean).length;
+
+    const paragraphs = [
+        recipeData.description || '',
+        ...(recipeData.items || [])
+            .filter((item) => typeof item.content === 'string')
+            .map((item) => item.content || '')
+    ]
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean).length;
+
+    return { words, sentences, paragraphs };
+}
+
 export function copyToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).catch(() => copyFallback(text));
