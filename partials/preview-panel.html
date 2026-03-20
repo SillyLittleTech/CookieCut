@@ -1,16 +1,39 @@
 <!-- === RECIPE PREVIEW PANEL (hidden by default) === -->
 <div id="recipe-panel" class="recipe-panel w-full hidden animate-fade-in">
-    <div class="recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg" id="recipe-preview">
+    <div class="preview-layout" id="preview-layout">
+        <aside id="preview-stats" class="preview-stats hidden">
+            <h2 class="preview-stats-title">Document Stats</h2>
+            <dl class="preview-stats-list">
+                <div class="preview-stats-row">
+                    <dt>Words</dt>
+                    <dd id="word-count-value">0</dd>
+                </div>
+                <div class="preview-stats-row">
+                    <dt>Sentences</dt>
+                    <dd id="sentence-count-value">0</dd>
+                </div>
+                <div class="preview-stats-row">
+                    <dt>Paragraphs</dt>
+                    <dd id="paragraph-count-value">0</dd>
+                </div>
+                <div class="preview-stats-row">
+                    <dt>Pages</dt>
+                    <dd id="page-count-value">1</dd>
+                </div>
+            </dl>
+        </aside>
+        <div class="recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg" id="recipe-preview">
+            <div id="recipe-flow">
+                <!-- Main Title & Description -->
+                <h1 id="recipe-title-preview" class="font-style-display"></h1>
+                <p id="recipe-desc-preview"></p>
 
-        <!-- Main Title & Description -->
-        <h1 id="recipe-title-preview" class="font-style-display"></h1>
-        <p id="recipe-desc-preview"></p>
-
-        <!-- Dynamic Content Area -->
-        <div id="recipe-content-preview">
-            <!-- JS will populate this area with recipe content -->
+                <!-- Dynamic Content Area -->
+                <div id="recipe-content-preview">
+                    <!-- JS will populate this area with recipe content -->
+                </div>
+            </div>
         </div>
-
     </div>
 
     <!-- Preview Control Buttons -->

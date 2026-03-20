@@ -45,9 +45,17 @@ export const dom = {
   closeSettingsModalBtn: null,
   globalFontStyleSelect: null,
   editorModeSelect: null,
+  previewModeSelect: null,
   // Inline editor
   floatingAddBtn: null,
-  inlinePreview: null
+  inlinePreview: null,
+  // Preview mode / stats
+  recipeFlow: null,
+  previewStats: null,
+  wordCountValue: null,
+  sentenceCountValue: null,
+  paragraphCountValue: null,
+  pageCountValue: null
 }
 
 export function initDom () {
@@ -101,7 +109,15 @@ export function initDom () {
     'global-font-style-select'
   )
   dom.editorModeSelect = document.getElementById('editor-mode-select')
+  dom.previewModeSelect = document.getElementById('preview-mode-select')
   // Inline editor
   dom.floatingAddBtn = document.getElementById('floating-add-btn')
   dom.inlinePreview = document.getElementById('inline-preview')
+  // Preview mode / stats
+  dom.recipeFlow = document.getElementById('recipe-flow')
+  dom.previewStats = document.getElementById('preview-stats')
+  dom.wordCountValue = document.getElementById('word-count-value')
+  dom.sentenceCountValue = document.getElementById('sentence-count-value')
+  dom.paragraphCountValue = document.getElementById('paragraph-count-value')
+  dom.pageCountValue = document.getElementById('page-count-value')
 }

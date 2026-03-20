@@ -2,7 +2,11 @@ import { recipeData } from './state.js'
 import { dom } from './dom.js'
 import { renderIconCodes, copyToClipboard } from './helpers.js'
 import { COMMON_ICONS } from './constants.js'
-import { renderBuilderInputs, renderPreview } from './builders/classic.js'
+import {
+  renderBuilderInputs,
+  renderPreview,
+  refreshPagedPreviewMetrics
+} from './builders/classic.js'
 import {
   renderInlinePreview,
   closeImageResizer,
@@ -332,6 +336,9 @@ function openSettingsModal () {
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.value = recipeData.settings.previewMode || 'continuous'
+  }
   dom.settingsModal.classList.remove('hidden')
 }
 function closeSettingsModal () {
@@ -342,12 +349,26 @@ function handleGlobalFontChange (e) {
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   if (isInlineMode()) {
     renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+}
+
+function handlePreviewModeChange (e) {
+  const nextMode = e.target.value === 'paged' ? 'paged' : 'continuous'
+  recipeData.settings.previewMode = nextMode
+  if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
   }
 }
 
 // --- INIT ---
 
 export function init () {
+  if (!recipeData.settings.previewMode) {
+    recipeData.settings.previewMode = 'continuous'
+  }
+
   // Main info
   dom.titleInput.addEventListener('input', handleUpdateMain)
   dom.descInput.addEventListener('input', handleUpdateMain)
@@ -411,6 +432,10 @@ export function init () {
     })
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.addEventListener('change', handlePreviewModeChange)
+    dom.previewModeSelect.value = recipeData.settings.previewMode || 'continuous'
+  }
 
   // Floating add button behavior
   if (dom.floatingAddBtn) {
@@ -470,6 +495,18 @@ export function init () {
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
   dom.printBtn.addEventListener('click', () => handlePrint())
+
+  let previewResizeTimer = null
+  window.addEventListener('resize', () => {
+    const inPagedPreview =
+      !dom.recipePanel.classList.contains('hidden') &&
+      recipeData.settings.previewMode === 'paged'
+    if (!inPagedPreview) return
+    clearTimeout(previewResizeTimer)
+    previewResizeTimer = setTimeout(() => {
+      refreshPagedPreviewMetrics()
+    }, 120)
+  })
 
   // Initial render
   renderBuilderInputs()

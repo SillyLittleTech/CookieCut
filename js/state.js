@@ -5,6 +5,7 @@ export const recipeData = {
     items: [],
     settings: {
         fontStyle: 'display',
-        editorMode: 'classic' // 'classic' or 'inline'
+        editorMode: 'classic', // 'classic' or 'inline'
+        previewMode: 'continuous' // 'continuous' or 'paged'
     }
 };

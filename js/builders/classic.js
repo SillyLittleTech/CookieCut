@@ -129,25 +129,23 @@ export function renderBuilderInputs () {
 /**
  * Re-draws the entire recipe preview based on recipeData.
  */
-export function renderPreview () {
-  const fontStyle = recipeData.settings.fontStyle || 'display'
-
-  dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
-  dom.titlePreview.className = `font-style-${fontStyle}`
-
-  dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
-  dom.contentPreview.innerHTML = ''
-
+function collectPreviewNodes (fontStyle) {
+  const nodes = []
   let currentList = null
   let currentListType = null
+
+  const flushCurrentList = () => {
+    if (!currentList) return
+    nodes.push(currentList)
+    currentList = null
+    currentListType = null
+  }
 
   recipeData.items.forEach((item) => {
     const isListItem = item.type === 'step' || item.type === 'bullet'
 
     if ((!isListItem || currentListType !== item.type) && currentList) {
-      dom.contentPreview.appendChild(currentList)
-      currentList = null
-      currentListType = null
+      flushCurrentList()
     }
 
     const contentWithIcons = renderIconCodes(item.content || '')
@@ -159,7 +157,7 @@ export function renderPreview () {
           fontStyle,
           contentWithIcons
         )
-        dom.contentPreview.appendChild(el)
+        nodes.push(el)
         break
       }
       case 'step': {
@@ -194,7 +192,7 @@ export function renderPreview () {
           fontStyle,
           contentWithIcons
         )
-        dom.contentPreview.appendChild(el)
+        nodes.push(el)
         break
       }
       case 'image': {
@@ -203,7 +201,7 @@ export function renderPreview () {
           fontStyle,
           contentWithIcons
         )
-        dom.contentPreview.appendChild(el)
+        nodes.push(el)
         break
       }
       case 'bubble': {
@@ -212,12 +210,12 @@ export function renderPreview () {
           fontStyle,
           contentWithIcons
         )
-        dom.contentPreview.appendChild(el)
+        nodes.push(el)
         break
       }
       case 'link': {
         const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
-        dom.contentPreview.appendChild(el)
+        nodes.push(el)
         break
       }
       default:
@@ -226,6 +224,121 @@ export function renderPreview () {
   })
 
   if (currentList) {
-    dom.contentPreview.appendChild(currentList)
+    flushCurrentList()
   }
+
+  return nodes
+}
+
+function getTextStats () {
+  const allText = [
+    recipeData.title || '',
+    recipeData.description || '',
+    ...recipeData.items.map((item) => item.content || '')
+  ]
+    .join(' ')
+    .trim()
+
+  const words = allText.length === 0 ? 0 : allText.split(/\s+/).length
+  const sentenceMatches =
+    allText.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || []
+  const sentences = sentenceMatches
+    .map((sentence) => sentence.trim())
+    .filter(Boolean).length
+
+  const paragraphs = [
+    recipeData.description || '',
+    ...recipeData.items
+      .filter((item) => typeof item.content === 'string')
+      .map((item) => item.content || '')
+  ]
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean).length
+
+  return { words, sentences, paragraphs }
+}
+
+function getPagedPageCount () {
+  if (!dom.recipeFlow) return 1
+  const styles = window.getComputedStyle(dom.recipeFlow)
+  const columnWidth = Number.parseFloat(styles.columnWidth)
+  const columnGap = Number.parseFloat(styles.columnGap) || 0
+
+  if (!Number.isFinite(columnWidth) || columnWidth <= 0) {
+    return 1
+  }
+
+  const estimatedPages = Math.ceil(
+    (dom.recipeFlow.scrollWidth + columnGap) / (columnWidth + columnGap)
+  )
+
+  return Math.max(1, estimatedPages)
+}
+
+function updatePreviewStats (pageCount = 1) {
+  const stats = getTextStats()
+
+  if (dom.wordCountValue) dom.wordCountValue.textContent = String(stats.words)
+  if (dom.sentenceCountValue) {
+    dom.sentenceCountValue.textContent = String(stats.sentences)
+  }
+  if (dom.paragraphCountValue) {
+    dom.paragraphCountValue.textContent = String(stats.paragraphs)
+  }
+  if (dom.pageCountValue) {
+    dom.pageCountValue.textContent = String(Math.max(1, pageCount))
+  }
+}
+
+function applyPreviewModeLayout (isPaged) {
+  if (dom.recipePanel) {
+    dom.recipePanel.classList.toggle('paged-preview-active', isPaged)
+  }
+  if (dom.previewStats) {
+    dom.previewStats.classList.toggle('hidden', !isPaged)
+  }
+}
+
+function schedulePreviewStatsUpdate (isPaged) {
+  if (!isPaged) {
+    updatePreviewStats(1)
+    return
+  }
+
+  const recalculate = () => {
+    updatePreviewStats(getPagedPageCount())
+  }
+
+  // Run multiple recalculations so page counts remain accurate
+  // after reflow from font loading and viewport scaling.
+  requestAnimationFrame(() => {
+    recalculate()
+    requestAnimationFrame(recalculate)
+  })
+  setTimeout(recalculate, 140)
+}
+
+export function refreshPagedPreviewMetrics () {
+  const isPaged = recipeData.settings && recipeData.settings.previewMode === 'paged'
+  const isPreviewVisible =
+    dom.recipePanel && !dom.recipePanel.classList.contains('hidden')
+  if (!isPaged || !isPreviewVisible) return
+  updatePreviewStats(getPagedPageCount())
+}
+
+export function renderPreview () {
+  const fontStyle = recipeData.settings.fontStyle || 'display'
+  const isPaged = recipeData.settings && recipeData.settings.previewMode === 'paged'
+
+  applyPreviewModeLayout(isPaged)
+
+  dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
+  dom.titlePreview.className = `font-style-${fontStyle}`
+
+  dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
+  dom.contentPreview.innerHTML = ''
+
+  const nodes = collectPreviewNodes(fontStyle)
+  nodes.forEach((node) => dom.contentPreview.appendChild(node))
+  schedulePreviewStatsUpdate(isPaged)
 }
