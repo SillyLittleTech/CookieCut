@@ -1,17 +1,17 @@
-import { escapeHTML } from '../helpers.js';
+import { escapeHTML } from '../helpers.js'
 
 /**
  * Returns the builder input configuration for a bullet item.
  * @param {object} item
  * @returns {{ label: string, inputHtml: string }}
  */
-export function getBuilderInput(item) {
-    return {
-        label: 'Bullet',
-        inputHtml: `
+export function getBuilderInput (item) {
+  return {
+    label: 'Bullet',
+    inputHtml: `
             <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Enter bullet text">${escapeHTML(item.content)}</textarea>
         `
-    };
+  }
 }
 
 /**
@@ -22,10 +22,10 @@ export function getBuilderInput(item) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
-    const el = document.createElement('li');
-    el.innerHTML = contentWithIcons;
-    return el;
+export function renderPreviewElement (item, fontStyle, contentWithIcons) {
+  const el = document.createElement('li')
+  el.innerHTML = contentWithIcons
+  return el
 }
 
 /**
@@ -36,17 +36,17 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {{ badge: HTMLElement, contentSpan: HTMLElement }}
  */
-export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    const badge = document.createElement('span');
-    badge.className = 'bullet-badge';
-    badge.textContent = '•';
+export function renderInlineElement (item, fontStyle, contentWithIcons) {
+  const badge = document.createElement('span')
+  badge.className = 'bullet-badge'
+  badge.textContent = '•'
 
-    const contentSpan = document.createElement('span');
-    contentSpan.className = 'bullet-content';
-    contentSpan.contentEditable = true;
-    contentSpan.dataset.id = item.id;
-    contentSpan.dataset.key = 'content';
-    contentSpan.innerHTML = contentWithIcons;
+  const contentSpan = document.createElement('span')
+  contentSpan.className = 'bullet-content'
+  contentSpan.contentEditable = true
+  contentSpan.dataset.id = item.id
+  contentSpan.dataset.key = 'content'
+  contentSpan.innerHTML = contentWithIcons
 
-    return { badge, contentSpan };
+  return { badge, contentSpan }
 }
