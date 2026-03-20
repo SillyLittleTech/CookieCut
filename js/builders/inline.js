@@ -3,7 +3,8 @@ import { dom } from '../dom.js'
 import {
   renderIconCodes,
   getTextAndCaret,
-  setCaretPosition
+  setCaretPosition,
+  getDocumentTextStats
 } from '../helpers.js'
 import * as headingHandler from '../handlers/heading.js'
 import * as stepHandler from '../handlers/step.js'
@@ -22,6 +23,54 @@ let linkEditorInputIdCounter = 0
 let currentDeleteConfirm = null
 let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
+let inlinePagedFlow = null
+let inlineStatNodes = null
+
+function getInlinePagedPageCount () {
+  if (!inlinePagedFlow) return 1
+
+  const styles = globalThis.getComputedStyle(inlinePagedFlow)
+  const columnWidth = Number.parseFloat(styles.columnWidth)
+  const columnGap = Number.parseFloat(styles.columnGap) || 0
+
+  if (!Number.isFinite(columnWidth) || columnWidth <= 0) {
+    return 1
+  }
+
+  const estimatedPages = Math.ceil(
+    (inlinePagedFlow.scrollWidth + columnGap) / (columnWidth + columnGap)
+  )
+  return Math.max(1, estimatedPages)
+}
+
+function updateInlinePreviewStats (pageCount = 1) {
+  if (!inlineStatNodes) return
+
+  const stats = getDocumentTextStats(recipeData)
+  inlineStatNodes.word.textContent = String(stats.words)
+  inlineStatNodes.sentence.textContent = String(stats.sentences)
+  inlineStatNodes.paragraph.textContent = String(stats.paragraphs)
+  inlineStatNodes.page.textContent = String(Math.max(1, pageCount))
+}
+
+function scheduleInlinePreviewStatsUpdate () {
+  if (!inlinePagedFlow || !inlineStatNodes) return
+
+  const recalculate = () => {
+    updateInlinePreviewStats(getInlinePagedPageCount())
+  }
+
+  requestAnimationFrame(() => {
+    recalculate()
+    requestAnimationFrame(recalculate)
+  })
+  setTimeout(recalculate, 140)
+}
+
+export function refreshInlinePreviewMetrics () {
+  if (!inlinePagedFlow || !inlineStatNodes) return
+  updateInlinePreviewStats(getInlinePagedPageCount())
+}
 
 function closeInlineDeleteConfirm (confirmed = false) {
   if (currentDeleteConfirm) {
@@ -175,6 +224,7 @@ export function openImageResizer (imgEl, item) {
       if (display) display.textContent = `${sizeValue}px`
       if (slider) slider.value = sizeValue
     }
+    refreshInlinePreviewMetrics()
   })
 
   // URL and alt inputs
@@ -210,6 +260,12 @@ export function openImageResizer (imgEl, item) {
     if (newUrl) {
       item.src = newUrl
       imgEl.src = newUrl
+      imgEl.addEventListener('load', refreshInlinePreviewMetrics, {
+        once: true
+      })
+      imgEl.addEventListener('error', refreshInlinePreviewMetrics, {
+        once: true
+      })
     }
     item.alt = newAlt
     imgEl.alt = newAlt
@@ -221,6 +277,7 @@ export function openImageResizer (imgEl, item) {
       if (srcInput) srcInput.value = item.src
       if (altInputEl) altInputEl.value = item.alt
     }
+    refreshInlinePreviewMetrics()
   })
 
   const closeBtn = document.createElement('button')
@@ -388,6 +445,7 @@ export function handleInlineInput (e) {
     const newHtml = renderIconCodes(text)
     el.innerHTML = newHtml
     setCaretPosition(el, caret)
+    refreshInlinePreviewMetrics()
     return
   }
 
@@ -406,6 +464,7 @@ export function handleInlineInput (e) {
     const input = itemEl.querySelector('[data-key="content"]')
     if (input) input.value = item.content
   }
+  refreshInlinePreviewMetrics()
 }
 
 export function handleInlineBlur (e) {
@@ -436,6 +495,7 @@ export function handleInlineBlur (e) {
 
   const newHtml = renderIconCodes(text || '')
   el.innerHTML = newHtml
+  refreshInlinePreviewMetrics()
 }
 
 // --- Inline Preview Renderer ---
@@ -447,8 +507,76 @@ export function renderInlinePreview () {
   }
   closeLinkEditor()
   dom.inlinePreview.innerHTML = ''
+  inlinePagedFlow = null
+  inlineStatNodes = null
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
+  const isPaged = recipeData.settings.previewMode === 'paged'
+  dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
+
+  let contentRoot = dom.inlinePreview
+  let dropSurface = dom.inlinePreview
+
+  if (isPaged) {
+    const layout = document.createElement('div')
+    layout.className = 'inline-preview-layout'
+
+    const stats = document.createElement('aside')
+    stats.className = 'preview-stats inline-preview-stats'
+
+    const statsTitle = document.createElement('h2')
+    statsTitle.className = 'preview-stats-title'
+    statsTitle.textContent = 'Document Stats'
+
+    const statsList = document.createElement('dl')
+    statsList.className = 'preview-stats-list'
+
+    const createStatsRow = (labelText, valueText) => {
+      const row = document.createElement('div')
+      row.className = 'preview-stats-row'
+
+      const label = document.createElement('dt')
+      label.textContent = labelText
+
+      const value = document.createElement('dd')
+      value.textContent = valueText
+
+      row.appendChild(label)
+      row.appendChild(value)
+      statsList.appendChild(row)
+      return value
+    }
+
+    const wordValue = createStatsRow('Words', '0')
+    const sentenceValue = createStatsRow('Sentences', '0')
+    const paragraphValue = createStatsRow('Paragraphs', '0')
+    const pageValue = createStatsRow('Pages', '1')
+
+    inlineStatNodes = {
+      word: wordValue,
+      sentence: sentenceValue,
+      paragraph: paragraphValue,
+      page: pageValue
+    }
+
+    stats.appendChild(statsTitle)
+    stats.appendChild(statsList)
+
+    const canvas = document.createElement('div')
+    canvas.className = 'inline-preview-canvas'
+
+    const flow = document.createElement('div')
+    flow.className = 'inline-preview-flow'
+    canvas.appendChild(flow)
+
+    layout.appendChild(stats)
+    layout.appendChild(canvas)
+    dom.inlinePreview.appendChild(layout)
+
+    contentRoot = flow
+    dropSurface = flow
+    inlinePagedFlow = flow
+  }
 
   // Title (editable)
   const h1 = document.createElement('h1')
@@ -466,7 +594,7 @@ export function renderInlinePreview () {
     h1.addEventListener('input', removeOutline)
     setTimeout(() => h1.focus(), 20)
   }
-  dom.inlinePreview.appendChild(h1)
+  contentRoot.appendChild(h1)
 
   // Description (editable)
   const descriptionParagraph = document.createElement('p')
@@ -483,7 +611,7 @@ export function renderInlinePreview () {
     }
     descriptionParagraph.addEventListener('input', removeOutlineDesc)
   }
-  dom.inlinePreview.appendChild(descriptionParagraph)
+  contentRoot.appendChild(descriptionParagraph)
 
   // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
   let currentList = null
@@ -514,7 +642,7 @@ export function renderInlinePreview () {
     })
     node.addEventListener('dragend', () => {
       node.classList.remove('dragging')
-      dom.inlinePreview
+      contentRoot
         .querySelectorAll('.inline-item.drop-target')
         .forEach((n) => n.classList.remove('drop-target'))
     })
@@ -543,7 +671,7 @@ export function renderInlinePreview () {
     currentList.className =
       type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
     currentListType = type
-    dom.inlinePreview.appendChild(currentList)
+    contentRoot.appendChild(currentList)
     return currentList
   }
 
@@ -680,25 +808,26 @@ export function renderInlinePreview () {
         renderedElement.addEventListener('input', onFirstInput)
         setTimeout(() => renderedElement.focus(), 20)
       }
-      dom.inlinePreview.appendChild(wrapper)
+      contentRoot.appendChild(wrapper)
 
       attachInlineItemInteractions(wrapper, item.id)
     }
   })
 
   // Attach input listeners for editable regions
-  dom.inlinePreview
-    .querySelectorAll('[contenteditable=true]')
-    .forEach((node) => {
-      node.addEventListener('input', handleInlineInput)
-      node.addEventListener('blur', handleInlineBlur)
-    })
+  contentRoot.querySelectorAll('[contenteditable=true]').forEach((node) => {
+    node.addEventListener('input', handleInlineInput)
+    node.addEventListener('blur', handleInlineBlur)
+  })
+
+  dom.inlinePreview.ondragover = null
+  dom.inlinePreview.ondrop = null
 
   // Container-level drag/drop: drop to append at end
-  dom.inlinePreview.ondragover = function (e) {
+  dropSurface.ondragover = function (e) {
     e.preventDefault()
   }
-  dom.inlinePreview.ondrop = function (e) {
+  dropSurface.ondrop = function (e) {
     e.preventDefault()
     const dragId = e.dataTransfer.getData('text/plain')
     if (!dragId) return
@@ -712,5 +841,9 @@ export function renderInlinePreview () {
       renderBuilderInputs()
       renderInlinePreview()
     })
+  }
+
+  if (isPaged) {
+    scheduleInlinePreviewStatsUpdate()
   }
 }

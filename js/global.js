@@ -2,11 +2,16 @@ import { recipeData } from './state.js'
 import { dom } from './dom.js'
 import { renderIconCodes, copyToClipboard } from './helpers.js'
 import { COMMON_ICONS } from './constants.js'
-import { renderBuilderInputs, renderPreview } from './builders/classic.js'
+import {
+  renderBuilderInputs,
+  renderPreview,
+  refreshPagedPreviewMetrics
+} from './builders/classic.js'
 import {
   renderInlinePreview,
   closeImageResizer,
-  closeLinkEditor
+  closeLinkEditor,
+  refreshInlinePreviewMetrics
 } from './builders/inline.js'
 
 // --- ACTIONS ---
@@ -164,16 +169,31 @@ function setEditorMode (mode) {
 
 // --- VIEW TOGGLE ---
 
+function updateAppLayoutForPreviewMode () {
+  if (!dom.appContainer) return
+
+  const isPagedPreviewVisible =
+    !dom.recipePanel.classList.contains('hidden') &&
+    recipeData.settings.previewMode === 'paged'
+
+  dom.appContainer.classList.toggle(
+    'paged-preview-shell',
+    isPagedPreviewVisible
+  )
+}
+
 function showPreview () {
   renderPreview()
   dom.builderPanel.classList.add('hidden')
   dom.recipePanel.classList.remove('hidden')
+  updateAppLayoutForPreviewMode()
   window.scrollTo(0, 0)
 }
 
 function showEditor () {
   dom.builderPanel.classList.remove('hidden')
   dom.recipePanel.classList.add('hidden')
+  updateAppLayoutForPreviewMode()
   window.scrollTo(0, 0)
 }
 
@@ -332,6 +352,10 @@ function openSettingsModal () {
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.value =
+      recipeData.settings.previewMode || 'continuous'
+  }
   dom.settingsModal.classList.remove('hidden')
 }
 function closeSettingsModal () {
@@ -342,12 +366,31 @@ function handleGlobalFontChange (e) {
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   if (isInlineMode()) {
     renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+}
+
+function handlePreviewModeChange (e) {
+  const nextMode = e.target.value === 'paged' ? 'paged' : 'continuous'
+  recipeData.settings.previewMode = nextMode
+  if (isInlineMode()) {
+    renderInlinePreview()
+    return
+  }
+  if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+    updateAppLayoutForPreviewMode()
   }
 }
 
 // --- INIT ---
 
 export function init () {
+  if (!recipeData.settings.previewMode) {
+    recipeData.settings.previewMode = 'continuous'
+  }
+
   // Main info
   dom.titleInput.addEventListener('input', handleUpdateMain)
   dom.descInput.addEventListener('input', handleUpdateMain)
@@ -411,6 +454,13 @@ export function init () {
     })
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.addEventListener('change', handlePreviewModeChange)
+    dom.previewModeSelect.value =
+      recipeData.settings.previewMode || 'continuous'
+  }
+
+  updateAppLayoutForPreviewMode()
 
   // Floating add button behavior
   if (dom.floatingAddBtn) {
@@ -470,6 +520,21 @@ export function init () {
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
   dom.printBtn.addEventListener('click', () => handlePrint())
+
+  let previewResizeTimer = null
+  window.addEventListener('resize', () => {
+    const inPagedClassicPreview =
+      !dom.recipePanel.classList.contains('hidden') &&
+      recipeData.settings.previewMode === 'paged'
+    const inPagedInlinePreview =
+      isInlineMode() && recipeData.settings.previewMode === 'paged'
+    if (!inPagedClassicPreview && !inPagedInlinePreview) return
+    clearTimeout(previewResizeTimer)
+    previewResizeTimer = setTimeout(() => {
+      if (inPagedClassicPreview) refreshPagedPreviewMetrics()
+      if (inPagedInlinePreview) refreshInlinePreviewMetrics()
+    }, 120)
+  })
 
   // Initial render
   renderBuilderInputs()
