@@ -260,8 +260,12 @@ export function openImageResizer (imgEl, item) {
     if (newUrl) {
       item.src = newUrl
       imgEl.src = newUrl
-      imgEl.addEventListener('load', refreshInlinePreviewMetrics, { once: true })
-      imgEl.addEventListener('error', refreshInlinePreviewMetrics, { once: true })
+      imgEl.addEventListener('load', refreshInlinePreviewMetrics, {
+        once: true
+      })
+      imgEl.addEventListener('error', refreshInlinePreviewMetrics, {
+        once: true
+      })
     }
     item.alt = newAlt
     imgEl.alt = newAlt
@@ -811,12 +815,10 @@ export function renderInlinePreview () {
   })
 
   // Attach input listeners for editable regions
-  contentRoot
-    .querySelectorAll('[contenteditable=true]')
-    .forEach((node) => {
-      node.addEventListener('input', handleInlineInput)
-      node.addEventListener('blur', handleInlineBlur)
-    })
+  contentRoot.querySelectorAll('[contenteditable=true]').forEach((node) => {
+    node.addEventListener('input', handleInlineInput)
+    node.addEventListener('blur', handleInlineBlur)
+  })
 
   dom.inlinePreview.ondragover = null
   dom.inlinePreview.ondrop = null
