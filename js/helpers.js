@@ -68,12 +68,20 @@ export function copyToClipboard (text) {
 }
 
 export function copyFallback (text) {
-  if (typeof globalThis.prompt === 'function') {
-    globalThis.prompt('Copy to clipboard:', text)
-    return
-  }
+  const hiddenTextarea = document.createElement('textarea')
+  hiddenTextarea.value = text
+  hiddenTextarea.setAttribute('readonly', '')
+  hiddenTextarea.style.position = 'fixed'
+  hiddenTextarea.style.opacity = '0'
+  hiddenTextarea.style.pointerEvents = 'none'
+  hiddenTextarea.style.left = '0'
+  hiddenTextarea.style.top = '0'
+  document.body.appendChild(hiddenTextarea)
+  hiddenTextarea.focus()
+  hiddenTextarea.select()
 
-  console.warn('Clipboard API unavailable and prompt fallback unsupported.')
+  // Preserve selected text briefly so users can press Ctrl/Cmd+C manually.
+  setTimeout(() => hiddenTextarea.remove(), 3000)
 }
 
 /**
@@ -130,8 +138,8 @@ export function getTextAndCaret (rootEl) {
       }
 
       // Normal element: walk children
-      for (let i = 0; i < elementNode.childNodes.length; i++) {
-        walk(elementNode.childNodes[i])
+      for (const childNode of elementNode.childNodes) {
+        walk(childNode)
       }
     }
   }
