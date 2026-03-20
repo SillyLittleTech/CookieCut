@@ -59,7 +59,9 @@ export function getDocumentTextStats (recipeData) {
 
 export function copyToClipboard (text) {
   if (globalThis.navigator?.clipboard && globalThis.isSecureContext) {
-    globalThis.navigator.clipboard.writeText(text).catch(() => copyFallback(text))
+    globalThis.navigator.clipboard
+      .writeText(text)
+      .catch(() => copyFallback(text))
   } else {
     copyFallback(text)
   }
@@ -195,7 +197,10 @@ export function setCaretPosition (element, chars) {
       ancestor = ancestor.parentElement
     }
 
-    if (ancestor?.classList?.contains('material-icons') && ancestor !== element) {
+    if (
+      ancestor?.classList?.contains('material-icons') &&
+      ancestor !== element
+    ) {
       range.setStartAfter(ancestor)
       range.collapse(true)
     }
