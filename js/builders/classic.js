@@ -319,7 +319,8 @@ function schedulePreviewStatsUpdate (isPaged) {
 }
 
 export function refreshPagedPreviewMetrics () {
-  const isPaged = recipeData.settings && recipeData.settings.previewMode === 'paged'
+  const isPaged =
+    recipeData.settings && recipeData.settings.previewMode === 'paged'
   const isPreviewVisible =
     dom.recipePanel && !dom.recipePanel.classList.contains('hidden')
   if (!isPaged || !isPreviewVisible) return
@@ -328,7 +329,8 @@ export function refreshPagedPreviewMetrics () {
 
 export function renderPreview () {
   const fontStyle = recipeData.settings.fontStyle || 'display'
-  const isPaged = recipeData.settings && recipeData.settings.previewMode === 'paged'
+  const isPaged =
+    recipeData.settings && recipeData.settings.previewMode === 'paged'
 
   applyPreviewModeLayout(isPaged)
 

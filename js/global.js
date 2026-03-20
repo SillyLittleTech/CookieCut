@@ -337,7 +337,8 @@ function openSettingsModal () {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
   if (dom.previewModeSelect) {
-    dom.previewModeSelect.value = recipeData.settings.previewMode || 'continuous'
+    dom.previewModeSelect.value =
+      recipeData.settings.previewMode || 'continuous'
   }
   dom.settingsModal.classList.remove('hidden')
 }
@@ -434,7 +435,8 @@ export function init () {
   }
   if (dom.previewModeSelect) {
     dom.previewModeSelect.addEventListener('change', handlePreviewModeChange)
-    dom.previewModeSelect.value = recipeData.settings.previewMode || 'continuous'
+    dom.previewModeSelect.value =
+      recipeData.settings.previewMode || 'continuous'
   }
 
   // Floating add button behavior

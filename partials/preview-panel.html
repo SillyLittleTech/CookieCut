@@ -1,48 +1,57 @@
 <!-- === RECIPE PREVIEW PANEL (hidden by default) === -->
 <div id="recipe-panel" class="recipe-panel w-full hidden animate-fade-in">
-    <div class="preview-layout" id="preview-layout">
-        <aside id="preview-stats" class="preview-stats hidden">
-            <h2 class="preview-stats-title">Document Stats</h2>
-            <dl class="preview-stats-list">
-                <div class="preview-stats-row">
-                    <dt>Words</dt>
-                    <dd id="word-count-value">0</dd>
-                </div>
-                <div class="preview-stats-row">
-                    <dt>Sentences</dt>
-                    <dd id="sentence-count-value">0</dd>
-                </div>
-                <div class="preview-stats-row">
-                    <dt>Paragraphs</dt>
-                    <dd id="paragraph-count-value">0</dd>
-                </div>
-                <div class="preview-stats-row">
-                    <dt>Pages</dt>
-                    <dd id="page-count-value">1</dd>
-                </div>
-            </dl>
-        </aside>
-        <div class="recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg" id="recipe-preview">
-            <div id="recipe-flow">
-                <!-- Main Title & Description -->
-                <h1 id="recipe-title-preview" class="font-style-display"></h1>
-                <p id="recipe-desc-preview"></p>
-
-                <!-- Dynamic Content Area -->
-                <div id="recipe-content-preview">
-                    <!-- JS will populate this area with recipe content -->
-                </div>
-            </div>
+  <div class="preview-layout" id="preview-layout">
+    <aside id="preview-stats" class="preview-stats hidden">
+      <h2 class="preview-stats-title">Document Stats</h2>
+      <dl class="preview-stats-list">
+        <div class="preview-stats-row">
+          <dt>Words</dt>
+          <dd id="word-count-value">0</dd>
         </div>
-    </div>
+        <div class="preview-stats-row">
+          <dt>Sentences</dt>
+          <dd id="sentence-count-value">0</dd>
+        </div>
+        <div class="preview-stats-row">
+          <dt>Paragraphs</dt>
+          <dd id="paragraph-count-value">0</dd>
+        </div>
+        <div class="preview-stats-row">
+          <dt>Pages</dt>
+          <dd id="page-count-value">1</dd>
+        </div>
+      </dl>
+    </aside>
+    <div
+      class="recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg"
+      id="recipe-preview"
+    >
+      <div id="recipe-flow">
+        <!-- Main Title & Description -->
+        <h1 id="recipe-title-preview" class="font-style-display"></h1>
+        <p id="recipe-desc-preview"></p>
 
-    <!-- Preview Control Buttons -->
-    <div class="preview-controls mt-6 flex gap-4">
-        <button id="edit-btn" class="no-print w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
-            Back to Editor
-        </button>
-        <button id="print-btn" class="no-print w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
-            Print Recipe
-        </button>
+        <!-- Dynamic Content Area -->
+        <div id="recipe-content-preview">
+          <!-- JS will populate this area with recipe content -->
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Preview Control Buttons -->
+  <div class="preview-controls mt-6 flex gap-4">
+    <button
+      id="edit-btn"
+      class="no-print w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
+    >
+      Back to Editor
+    </button>
+    <button
+      id="print-btn"
+      class="no-print w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
+    >
+      Print Recipe
+    </button>
+  </div>
 </div>
