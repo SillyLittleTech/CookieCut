@@ -29,7 +29,7 @@ let inlineStatNodes = null
 function getInlinePagedPageCount () {
   if (!inlinePagedFlow) return 1
 
-  const styles = window.getComputedStyle(inlinePagedFlow)
+  const styles = globalThis.getComputedStyle(inlinePagedFlow)
   const columnWidth = Number.parseFloat(styles.columnWidth)
   const columnGap = Number.parseFloat(styles.columnGap) || 0
 

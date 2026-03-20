@@ -4,9 +4,9 @@ import { COMMON_ICONS } from './constants.js'
 
 export function escapeHTML (str) {
   if (typeof str !== 'string') return ''
-  const p = document.createElement('p')
-  p.textContent = str
-  return p.innerHTML
+  const paragraphElement = document.createElement('p')
+  paragraphElement.textContent = str
+  return paragraphElement.innerHTML
 }
 
 export function renderIconCodes (text) {
@@ -15,18 +15,16 @@ export function renderIconCodes (text) {
   let result = ''
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 0) {
-      const p = document.createElement('p')
-      p.textContent = parts[i]
-      result += p.innerHTML.replace(/\n/g, '<br>')
+      const textNodeWrapper = document.createElement('p')
+      textNodeWrapper.textContent = parts[i]
+      result += textNodeWrapper.innerHTML.replace(/\n/g, '<br>')
+    } else if (COMMON_ICONS.includes(parts[i])) {
+      // Render icons as non-editable spans so the caret cannot be placed inside them
+      result += `<span class="material-icons" contenteditable="false" data-icon="${parts[i]}">${parts[i]}</span>`
     } else {
-      if (COMMON_ICONS.includes(parts[i])) {
-        // Render icons as non-editable spans so the caret cannot be placed inside them
-        result += `<span class="material-icons" contenteditable="false" data-icon="${parts[i]}">${parts[i]}</span>`
-      } else {
-        const p = document.createElement('p')
-        p.textContent = `:${parts[i]}:`
-        result += p.innerHTML
-      }
+      const fallbackTextWrapper = document.createElement('p')
+      fallbackTextWrapper.textContent = `:${parts[i]}:`
+      result += fallbackTextWrapper.innerHTML
     }
   }
   return result
@@ -42,9 +40,8 @@ export function getDocumentTextStats (recipeData) {
     .trim()
 
   const words = allText.length === 0 ? 0 : allText.split(/\s+/).length
-  const sentenceMatches =
-    allText.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || []
-  const sentences = sentenceMatches
+  const sentences = allText
+    .split(/[.!?]+/u)
     .map((sentence) => sentence.trim())
     .filter(Boolean).length
 
@@ -61,26 +58,20 @@ export function getDocumentTextStats (recipeData) {
 }
 
 export function copyToClipboard (text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).catch(() => copyFallback(text))
+  if (globalThis.navigator?.clipboard && globalThis.isSecureContext) {
+    globalThis.navigator.clipboard.writeText(text).catch(() => copyFallback(text))
   } else {
     copyFallback(text)
   }
 }
 
 export function copyFallback (text) {
-  const ta = document.createElement('textarea')
-  ta.value = text
-  ta.style.position = 'absolute'
-  ta.style.left = '-9999px'
-  document.body.appendChild(ta)
-  ta.select()
-  try {
-    document.execCommand('copy')
-  } catch (err) {
-    console.error('Fallback copy failed: ', err)
+  if (typeof globalThis.prompt === 'function') {
+    globalThis.prompt('Copy to clipboard:', text)
+    return
   }
-  document.body.removeChild(ta)
+
+  console.warn('Clipboard API unavailable and prompt fallback unsupported.')
 }
 
 /**
@@ -90,12 +81,12 @@ export function copyFallback (text) {
  * selection end.
  */
 export function getTextAndCaret (rootEl) {
-  const sel = window.getSelection()
+  const selection = globalThis.getSelection?.()
   let focusNode = null
   let focusOffset = 0
-  if (sel && sel.rangeCount > 0) {
-    focusNode = sel.getRangeAt(0).endContainer
-    focusOffset = sel.getRangeAt(0).endOffset
+  if (selection?.rangeCount > 0) {
+    focusNode = selection.getRangeAt(0).endContainer
+    focusOffset = selection.getRangeAt(0).endOffset
   }
 
   let text = ''
@@ -114,18 +105,20 @@ export function getTextAndCaret (rootEl) {
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node
+      const elementNode = node
       // If this element is an icon span, represent it as :name:
-      if (el.classList && el.classList.contains('material-icons')) {
-        const token = `:${(el.textContent || '').trim()}:`
+      if (elementNode.classList?.contains('material-icons')) {
+        const token = `:${(elementNode.textContent || '').trim()}:`
         // If focus is inside this element (or the element itself), approximate caret
-        if (!foundCaret && (el === focusNode || el.contains(focusNode))) {
+        if (
+          !foundCaret &&
+          (elementNode === focusNode || elementNode.contains(focusNode))
+        ) {
           // If focusNode is the element itself, use focusOffset to choose before/after
-          if (focusNode === el) {
+          if (focusNode === elementNode) {
             caret = text.length + (focusOffset === 0 ? 0 : token.length)
           } else {
-            // if focus is inside a descendant text node, walk that descendant to set caret
-            // but here we simply set caret to end of token to be safe
+            // If focus is inside a descendant text node, put caret at token end.
             caret = text.length + token.length
           }
           foundCaret = true
@@ -135,8 +128,8 @@ export function getTextAndCaret (rootEl) {
       }
 
       // Normal element: walk children
-      for (let i = 0; i < el.childNodes.length; i++) {
-        walk(el.childNodes[i])
+      for (let i = 0; i < elementNode.childNodes.length; i++) {
+        walk(elementNode.childNodes[i])
       }
     }
   }
@@ -154,17 +147,17 @@ export function getTextAndCaret (rootEl) {
  */
 export function setCaretPosition (element, chars) {
   if (typeof chars !== 'number' || chars < 0) return
-  const selection = window.getSelection()
+  const selection = globalThis.getSelection?.()
+  if (!selection) return
   const range = document.createRange()
   const nodeStack = [element]
-  let node
+  let node = null
   let found = false
   let charCount = 0
 
   while (nodeStack.length && !found) {
     node = nodeStack.shift()
-    if (node.nodeType === 3) {
-      // text node
+    if (node.nodeType === Node.TEXT_NODE) {
       const nextCharCount = charCount + node.length
       if (chars <= nextCharCount) {
         range.setStart(node, Math.max(0, chars - charCount))
@@ -174,7 +167,7 @@ export function setCaretPosition (element, chars) {
       }
       charCount = nextCharCount
     } else {
-      // push child nodes in order
+      // Push child nodes in order
       for (let i = 0; i < node.childNodes.length; i++) {
         nodeStack.push(node.childNodes[i])
       }
@@ -188,31 +181,25 @@ export function setCaretPosition (element, chars) {
 
   // If the computed start is inside a material-icons span, move it to after that span
   try {
-    const sc = range.startContainer
-    // If the start is a text node, get its parent element
-    let ancestor = sc.nodeType === Node.TEXT_NODE ? sc.parentElement : sc
+    const startContainerNode = range.startContainer
+    let ancestor =
+      startContainerNode.nodeType === Node.TEXT_NODE
+        ? startContainerNode.parentElement
+        : startContainerNode
+
     while (
-      ancestor &&
+      ancestor?.parentElement &&
       ancestor !== element &&
-      !(
-        ancestor.classList &&
-        ancestor.classList.contains &&
-        ancestor.classList.contains('material-icons')
-      )
+      !ancestor.classList?.contains('material-icons')
     ) {
       ancestor = ancestor.parentElement
     }
-    if (
-      ancestor &&
-      ancestor !== element &&
-      ancestor.classList &&
-      ancestor.classList.contains('material-icons')
-    ) {
-      // place caret after the icon element
+
+    if (ancestor?.classList?.contains('material-icons') && ancestor !== element) {
       range.setStartAfter(ancestor)
       range.collapse(true)
     }
-  } catch (err) {
+  } catch {
     // ignore and use original range
   }
 

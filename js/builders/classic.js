@@ -232,7 +232,7 @@ function collectPreviewNodes (fontStyle) {
 
 function getPagedPageCount () {
   if (!dom.recipeFlow) return 1
-  const styles = window.getComputedStyle(dom.recipeFlow)
+  const styles = globalThis.getComputedStyle(dom.recipeFlow)
   const columnWidth = Number.parseFloat(styles.columnWidth)
   const columnGap = Number.parseFloat(styles.columnGap) || 0
 
@@ -263,12 +263,8 @@ function updatePreviewStats (pageCount = 1) {
 }
 
 function applyPreviewModeLayout (isPaged) {
-  if (dom.recipePanel) {
-    dom.recipePanel.classList.toggle('paged-preview-active', isPaged)
-  }
-  if (dom.previewStats) {
-    dom.previewStats.classList.toggle('hidden', !isPaged)
-  }
+  dom.recipePanel?.classList.toggle('paged-preview-active', isPaged)
+  dom.previewStats?.classList.toggle('hidden', !isPaged)
 }
 
 function schedulePreviewStatsUpdate (isPaged) {
