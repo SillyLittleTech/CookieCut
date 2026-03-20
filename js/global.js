@@ -175,7 +175,10 @@ function updateAppLayoutForPreviewMode () {
     !dom.recipePanel.classList.contains('hidden') &&
     recipeData.settings.previewMode === 'paged'
 
-  dom.appContainer.classList.toggle('paged-preview-shell', isPagedPreviewVisible)
+  dom.appContainer.classList.toggle(
+    'paged-preview-shell',
+    isPagedPreviewVisible
+  )
 }
 
 function showPreview () {
