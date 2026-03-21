@@ -33,3 +33,5 @@ Then open `http://localhost:8000` in Chrome.
 - Review both types of feedback: review comments and normal PR comments.
 - Check the full PR checks/status list and confirm all checks are passing.
 - If any check fails, investigate and fix the issue, then commit/push again and re-check until everything passes.
+- After creating a PR, attempt to mark it as ready for review.
+- If the PR is based on an issue, include `resolves #<issue_number>` in the PR description.
