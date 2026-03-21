@@ -124,6 +124,9 @@ function parseRichTextSegment (sourceText, startIndex = 0, stopToken = null) {
       let nextIndex = index + 1
       while (nextIndex < sourceText.length) {
         const nextChar = sourceText[nextIndex]
+        if (stopToken && nextChar === stopToken[0]) {
+          break
+        }
         if (
           nextChar === '*' ||
           nextChar === '_' ||
