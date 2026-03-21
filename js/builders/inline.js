@@ -11,12 +11,12 @@ import {
   normalizeScale,
   syncScalePreviewSize
 } from '../handlers/scale.js'
-import * as headingHandler from '../handlers/heading.js'
-import * as stepHandler from '../handlers/step.js'
+import { renderInlineElement as renderInlineHeadingElement } from '../handlers/heading.js'
+import { renderInlineElement as renderInlineStepElement } from '../handlers/step.js'
 import { renderInlineElement as renderInlineBulletElement } from '../handlers/bullet.js'
-import * as textHandler from '../handlers/text.js'
-import * as imageHandler from '../handlers/image.js'
-import * as bubbleHandler from '../handlers/bubble.js'
+import { renderInlineElement as renderInlineTextElement } from '../handlers/text.js'
+import { renderInlineElement as renderInlineImageElement } from '../handlers/image.js'
+import { renderInlineElement as renderInlineBubbleElement } from '../handlers/bubble.js'
 import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js'
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
@@ -792,7 +792,7 @@ export function renderInlinePreview () {
       li.dataset.id = item.id
       li.draggable = true
 
-      const { badge, contentSpan } = stepHandler.renderInlineElement(
+      const { badge, contentSpan } = renderInlineStepElement(
         item,
         fontStyle,
         contentWithIcons,
@@ -847,14 +847,14 @@ export function renderInlinePreview () {
 
       switch (item.type) {
         case 'heading':
-          renderedElement = headingHandler.renderInlineElement(
+          renderedElement = renderInlineHeadingElement(
             item,
             fontStyle,
             contentWithIcons
           )
           break
         case 'text':
-          renderedElement = textHandler.renderInlineElement(
+          renderedElement = renderInlineTextElement(
             item,
             fontStyle,
             contentWithIcons
@@ -864,7 +864,7 @@ export function renderInlinePreview () {
           }
           break
         case 'image':
-          renderedElement = imageHandler.renderInlineElement(
+          renderedElement = renderInlineImageElement(
             item,
             fontStyle,
             contentWithIcons
@@ -875,7 +875,7 @@ export function renderInlinePreview () {
           })
           break
         case 'bubble':
-          renderedElement = bubbleHandler.renderInlineElement(
+          renderedElement = renderInlineBubbleElement(
             item,
             fontStyle,
             contentWithIcons
