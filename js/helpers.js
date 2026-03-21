@@ -412,7 +412,10 @@ function resolveCaretPoint (rootElement, targetOffset) {
       if (closeToken.length > 0) {
         const next = consumed + closeToken.length
         if (targetOffset <= next) {
-          point = { container: elementNode, offset: elementNode.childNodes.length }
+          point = {
+            container: elementNode,
+            offset: elementNode.childNodes.length
+          }
           return
         }
         consumed = next

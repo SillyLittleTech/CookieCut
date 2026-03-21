@@ -36,7 +36,10 @@ function getEditableNodeFromEventTarget (targetNode) {
 
 function isClassicFormattingField (element) {
   if (!element) return false
-  if (element.id === 'recipe-title-input' || element.id === 'recipe-desc-input') {
+  if (
+    element.id === 'recipe-title-input' ||
+    element.id === 'recipe-desc-input'
+  ) {
     return true
   }
   const key = element.dataset?.key
@@ -71,7 +74,9 @@ function getInlineSelectionTarget () {
   }
 
   const range = selection.getRangeAt(0)
-  const commonNode = getEditableNodeFromEventTarget(range.commonAncestorContainer)
+  const commonNode = getEditableNodeFromEventTarget(
+    range.commonAncestorContainer
+  )
   const editableRoot = commonNode?.closest(
     '#inline-preview [contenteditable="true"]'
   )
@@ -101,12 +106,17 @@ function showToolbarAtRect (rect) {
   const desiredTop = rect.top + globalThis.scrollY - toolbarHeight - 10
   const fallbackTop = rect.bottom + globalThis.scrollY + 10
   const top =
-    desiredTop < globalThis.scrollY + viewportPadding ? fallbackTop : desiredTop
+    desiredTop < globalThis.scrollY + viewportPadding
+      ? fallbackTop
+      : desiredTop
 
   const centeredLeft = rect.left + globalThis.scrollX + rect.width / 2
   const minLeft = globalThis.scrollX + viewportPadding
   const maxLeft =
-    globalThis.scrollX + document.documentElement.clientWidth - toolbarWidth - viewportPadding
+    globalThis.scrollX +
+    document.documentElement.clientWidth -
+    toolbarWidth -
+    viewportPadding
   const left = Math.min(
     Math.max(minLeft, centeredLeft - toolbarWidth / 2),
     Math.max(minLeft, maxLeft)
@@ -214,7 +224,13 @@ function applyCommandToText (command, value, text, start, end) {
     case 'strike':
       return toggleSymmetricTokens(text, start, end, '~~')
     case 'highlight':
-      return wrapSelectionWithTokens(text, start, end, `[${value || 'y'}[`, ']]')
+      return wrapSelectionWithTokens(
+        text,
+        start,
+        end,
+        `[${value || 'y'}[`,
+        ']]'
+      )
     case 'scale-up':
       return applyScaleDelta(text, start, end, 5)
     case 'scale-down':
@@ -237,7 +253,9 @@ function syncClassicModelValue (element, nextValue) {
   const itemElement = element.closest('[data-id]')
   if (!itemElement) return
   const itemId = itemElement.dataset.id
-  const item = recipeData.items.find((entry) => String(entry.id) === String(itemId))
+  const item = recipeData.items.find(
+    (entry) => String(entry.id) === String(itemId)
+  )
   if (!item) return
 
   const key = element.dataset?.key
@@ -261,7 +279,9 @@ function syncInlineModelValue (editableRoot, nextValue) {
 
   const itemId = editableRoot.dataset?.id
   if (!itemId) return
-  const item = recipeData.items.find((entry) => String(entry.id) === String(itemId))
+  const item = recipeData.items.find(
+    (entry) => String(entry.id) === String(itemId)
+  )
   if (!item) return
   item.content = nextValue
 }
@@ -350,8 +370,12 @@ function ensureToolbar () {
   const controls = document.createElement('div')
   controls.className = 'selection-toolbar-controls'
 
-  controls.appendChild(buildToolbarButton('A-', 'scale-down', 'Decrease text size by 5px'))
-  controls.appendChild(buildToolbarButton('A+', 'scale-up', 'Increase text size by 5px'))
+  controls.appendChild(
+    buildToolbarButton('A-', 'scale-down', 'Decrease text size by 5px')
+  )
+  controls.appendChild(
+    buildToolbarButton('A+', 'scale-up', 'Increase text size by 5px')
+  )
   controls.appendChild(buildToolbarButton('B', 'bold', 'Bold'))
   controls.appendChild(buildToolbarButton('I', 'italic', 'Italic'))
   controls.appendChild(buildToolbarButton('U', 'underline', 'Underline'))
