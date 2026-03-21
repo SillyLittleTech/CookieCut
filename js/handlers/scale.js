@@ -150,4 +150,3 @@ export function syncScalePreviewText (itemEl, content) {
   const nextText = content && content.trim() ? content : fallback
   preview.textContent = nextText
 }
-
