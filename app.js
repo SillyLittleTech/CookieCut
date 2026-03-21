@@ -1,6 +1,15 @@
 import { initDom } from './js/dom.js';
 import { init } from './js/global.js';
 
+if (typeof window !== 'undefined' && typeof window.__agentLog !== 'function') {
+    window.__agentLog = (payload) => {
+        try {
+            const beacon = new Image();
+            beacon.src = `http://localhost:8124/agent-log?payload=${encodeURIComponent(JSON.stringify(payload))}&t=${Date.now()}`;
+        } catch {}
+    };
+}
+
 /**
  * Fetches an HTML partial and injects it into the given container element.
  * @param {HTMLElement} container - target element to inject into
