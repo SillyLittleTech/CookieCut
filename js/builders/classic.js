@@ -1,6 +1,6 @@
 import { recipeData } from '../state.js'
 import { dom } from '../dom.js'
-import { renderIconCodes, getDocumentTextStats } from '../helpers.js'
+import { renderRichText, getDocumentTextStats } from '../helpers.js'
 import {
   getBuilderInput as getHeadingBuilderInput,
   renderPreviewElement as renderHeadingPreviewElement
@@ -178,7 +178,7 @@ function collectPreviewNodes (fontStyle) {
       flushCurrentList()
     }
 
-    const contentWithIcons = renderIconCodes(item.content || '')
+    const contentWithIcons = renderRichText(item.content || '')
 
     switch (item.type) {
       case 'heading': {
@@ -325,10 +325,10 @@ export function renderPreview () {
 
   applyPreviewModeLayout(isPaged)
 
-  dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
+  dom.titlePreview.innerHTML = renderRichText(recipeData.title)
   dom.titlePreview.className = `font-style-${fontStyle}`
 
-  dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
+  dom.descPreview.innerHTML = renderRichText(recipeData.description)
   dom.descPreview.className = descFontClass
   dom.contentPreview.innerHTML = ''
 

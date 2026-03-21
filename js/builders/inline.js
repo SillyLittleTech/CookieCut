@@ -1,7 +1,7 @@
 import { recipeData } from '../state.js'
 import { dom } from '../dom.js'
 import {
-  renderIconCodes,
+  renderRichText,
   getTextAndCaret,
   setCaretPosition,
   getDocumentTextStats
@@ -539,10 +539,10 @@ export function handleInlineInput (e) {
     dom.titleInput.value = recipeData.title
     dom.descInput.value = recipeData.description
     // also update preview title/desc if needed
-    dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
-    dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
+    dom.titlePreview.innerHTML = renderRichText(recipeData.title)
+    dom.descPreview.innerHTML = renderRichText(recipeData.description)
     // update the editable node's HTML to show icons and restore caret
-    const newHtml = renderIconCodes(text)
+    const newHtml = renderRichText(text)
     el.innerHTML = newHtml
     setCaretPosition(el, caret)
     refreshInlinePreviewMetrics()
@@ -554,7 +554,7 @@ export function handleInlineInput (e) {
   if (!item) return
   const { text: codeText, caret: newCaret } = getTextAndCaret(el)
   item.content = codeText || ''
-  const newHtml = renderIconCodes(item.content)
+  const newHtml = renderRichText(item.content)
   el.innerHTML = newHtml
   setCaretPosition(el, newCaret)
 
@@ -576,11 +576,11 @@ export function handleInlineBlur (e) {
   if (key === 'title') {
     recipeData.title = text
     dom.titleInput.value = recipeData.title
-    dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
+    dom.titlePreview.innerHTML = renderRichText(recipeData.title)
   } else if (key === 'description') {
     recipeData.description = text
     dom.descInput.value = recipeData.description
-    dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
+    dom.descPreview.innerHTML = renderRichText(recipeData.description)
   } else if (id) {
     const item = recipeData.items.find((i) => String(i.id) === String(id))
     if (item) {
@@ -593,7 +593,7 @@ export function handleInlineBlur (e) {
     }
   }
 
-  const newHtml = renderIconCodes(text || '')
+  const newHtml = renderRichText(text || '')
   el.innerHTML = newHtml
   refreshInlinePreviewMetrics()
 }
@@ -685,7 +685,7 @@ export function renderInlinePreview () {
   h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
   h1.contentEditable = true
   h1.dataset.key = 'title'
-  h1.innerHTML = renderIconCodes(recipeData.title)
+  h1.innerHTML = renderRichText(recipeData.title)
   // Outline for empty title so users notice it's editable
   if (!recipeData.title || recipeData.title.trim() === '') {
     h1.classList.add('new-text-outline')
@@ -705,7 +705,7 @@ export function renderInlinePreview () {
   }`.trim()
   descriptionParagraph.contentEditable = true
   descriptionParagraph.dataset.key = 'description'
-  descriptionParagraph.innerHTML = renderIconCodes(recipeData.description)
+  descriptionParagraph.innerHTML = renderRichText(recipeData.description)
   // Outline for empty description
   if (!recipeData.description || recipeData.description.trim() === '') {
     descriptionParagraph.classList.add('new-text-outline')
@@ -780,7 +780,7 @@ export function renderInlinePreview () {
   }
 
   recipeData.items.forEach((item) => {
-    const contentWithIcons = renderIconCodes(item.content || '')
+    const contentWithIcons = renderRichText(item.content || '')
 
     if (item.type === 'step') {
       if (currentListType !== 'step') stepCounter = 0
