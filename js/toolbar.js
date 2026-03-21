@@ -458,7 +458,10 @@ function scheduleToolbarVisibilityRefresh () {
 
 export function initSelectionToolbar () {
   ensureToolbar()
-  document.addEventListener('selectionchange', scheduleToolbarVisibilityRefresh)
+  document.addEventListener(
+    'selectionchange',
+    scheduleToolbarVisibilityRefresh
+  )
   window.addEventListener('scroll', () => {
     if (toolbarState.visible) scheduleToolbarVisibilityRefresh()
   })
