@@ -30,6 +30,155 @@ let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
+const INLINE_BOX_MIN_WIDTH = 180
+const INLINE_BOX_MAX_WIDTH = 1200
+const INLINE_BOX_MIN_HEIGHT = 48
+const INLINE_BOX_MAX_HEIGHT = 860
+
+function normalizeInlineBoxMeasurement (value, min, max) {
+  const numeric = Number.parseFloat(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return null
+  return Math.min(max, Math.max(min, Math.round(numeric)))
+}
+
+function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
+  const width = normalizeInlineBoxMeasurement(
+    item.inlineWidth,
+    INLINE_BOX_MIN_WIDTH,
+    INLINE_BOX_MAX_WIDTH
+  )
+  const minHeight = normalizeInlineBoxMeasurement(
+    item.inlineMinHeight,
+    INLINE_BOX_MIN_HEIGHT,
+    INLINE_BOX_MAX_HEIGHT
+  )
+
+  if (width) {
+    item.inlineWidth = width
+    sizeTargetEl.style.width = `${width}px`
+    sizeTargetEl.style.flex = '0 0 auto'
+  } else {
+    delete item.inlineWidth
+    sizeTargetEl.style.width = '100%'
+    sizeTargetEl.style.flex = '1 1 100%'
+  }
+
+  if (minHeight) {
+    item.inlineMinHeight = minHeight
+    frameEl.style.minHeight = `${minHeight}px`
+  } else {
+    delete item.inlineMinHeight
+    frameEl.style.removeProperty('min-height')
+  }
+}
+
+function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
+  const handle = document.createElement('div')
+  handle.className = `inline-frame-handle inline-frame-handle--${direction}`
+  handle.draggable = false
+  handle.title = 'Resize block'
+
+  let pointerStartX = 0
+  let pointerStartY = 0
+  let widthAtStart = 0
+  let heightAtStart = 0
+  let isResizing = false
+  let dragHost = null
+  let dragHostWasDraggable = false
+
+  const restoreDragHost = () => {
+    if (!dragHost) return
+    dragHost.draggable = dragHostWasDraggable
+    dragHost = null
+  }
+
+  const updateSizing = (width, minHeight) => {
+    item.inlineWidth = width
+    item.inlineMinHeight = minHeight
+    syncInlineBoxSizing(item, sizeTargetEl, frameEl)
+    refreshInlinePreviewMetrics()
+  }
+
+  handle.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('dblclick', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing = true
+    pointerStartX = e.clientX
+    pointerStartY = e.clientY
+    widthAtStart = sizeTargetEl.getBoundingClientRect().width
+    heightAtStart = frameEl.getBoundingClientRect().height
+    frameEl.classList.add('inline-item-frame--resizing')
+    dragHost = handle.closest('.inline-item')
+    if (dragHost) {
+      dragHostWasDraggable = Boolean(dragHost.draggable)
+      dragHost.draggable = false
+    }
+    try {
+      handle.setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture may be unavailable; drag still works.
+    }
+  })
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!isResizing || !e.buttons) return
+    const deltaX = e.clientX - pointerStartX
+    const deltaY = e.clientY - pointerStartY
+    let nextWidth = widthAtStart
+    let nextMinHeight = heightAtStart
+
+    if (direction.includes('east')) nextWidth = widthAtStart + deltaX
+    if (direction.includes('west')) nextWidth = widthAtStart - deltaX
+    if (direction.includes('south')) nextMinHeight = heightAtStart + deltaY
+
+    updateSizing(
+      Math.min(INLINE_BOX_MAX_WIDTH, Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)),
+      Math.min(
+        INLINE_BOX_MAX_HEIGHT,
+        Math.max(INLINE_BOX_MIN_HEIGHT, nextMinHeight)
+      )
+    )
+  })
+
+  const stopResizing = (e) => {
+    isResizing = false
+    frameEl.classList.remove('inline-item-frame--resizing')
+    if (e?.pointerId != null) {
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch {
+        // Pointer capture may already be released.
+      }
+    }
+    restoreDragHost()
+  }
+
+  handle.addEventListener('pointerup', stopResizing)
+  handle.addEventListener('pointercancel', stopResizing)
+  handle.addEventListener('lostpointercapture', () => {
+    isResizing = false
+    frameEl.classList.remove('inline-item-frame--resizing')
+    restoreDragHost()
+  })
+
+  return handle
+}
+
+function attachInlineBorderHandles (item, frameEl, sizeTargetEl) {
+  ;['east', 'west', 'south-east', 'south-west'].forEach((direction) => {
+    frameEl.appendChild(
+      createInlineBorderHandle(item, frameEl, sizeTargetEl, direction)
+    )
+  })
+}
 
 // --- Inline Scale Handle ---
 
@@ -618,6 +767,7 @@ export function renderInlinePreview () {
 
   let contentRoot = dom.inlinePreview
   let dropSurface = dom.inlinePreview
+  const useFormationLayout = !isPaged
 
   if (isPaged) {
     const layout = document.createElement('div')
@@ -680,9 +830,14 @@ export function renderInlinePreview () {
     inlinePagedFlow = flow
   }
 
+  if (useFormationLayout) {
+    contentRoot.classList.add('inline-content-surface')
+  }
+
   // Title (editable)
   const h1 = document.createElement('h1')
   h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
+  h1.classList.add('inline-full-span')
   h1.contentEditable = true
   h1.dataset.key = 'title'
   h1.innerHTML = renderRichText(recipeData.title)
@@ -703,6 +858,7 @@ export function renderInlinePreview () {
   descriptionParagraph.className = `text-gray-600 italic mb-4 ${
     applyToText ? `font-style-${fontStyle}` : ''
   }`.trim()
+  descriptionParagraph.classList.add('inline-full-span')
   descriptionParagraph.contentEditable = true
   descriptionParagraph.dataset.key = 'description'
   descriptionParagraph.innerHTML = renderRichText(recipeData.description)
@@ -774,6 +930,7 @@ export function renderInlinePreview () {
     currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
     currentList.className =
       type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
+    currentList.classList.add('inline-full-span')
     currentListType = type
     contentRoot.appendChild(currentList)
     return currentList
@@ -804,8 +961,13 @@ export function renderInlinePreview () {
       }
       const contentWrap = document.createElement('div')
       contentWrap.className = 'inline-list-content-wrap'
-      contentWrap.appendChild(contentSpan)
+      const contentFrame = document.createElement('div')
+      contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
+      contentFrame.appendChild(contentSpan)
+      contentWrap.appendChild(contentFrame)
       contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      syncInlineBoxSizing(item, contentWrap, contentFrame)
+      attachInlineBorderHandles(item, contentFrame, contentWrap)
       li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
@@ -830,8 +992,13 @@ export function renderInlinePreview () {
       }
       const contentWrap = document.createElement('div')
       contentWrap.className = 'inline-list-content-wrap'
-      contentWrap.appendChild(contentSpan)
+      const contentFrame = document.createElement('div')
+      contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
+      contentFrame.appendChild(contentSpan)
+      contentWrap.appendChild(contentFrame)
       contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      syncInlineBoxSizing(item, contentWrap, contentFrame)
+      attachInlineBorderHandles(item, contentFrame, contentWrap)
       li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
@@ -917,13 +1084,19 @@ export function renderInlinePreview () {
       if (!renderedElement) return
 
       const wrapper = document.createElement('div')
-      wrapper.className = 'inline-item'
+      wrapper.className = 'inline-item inline-layout-item'
       wrapper.dataset.id = item.id
       wrapper.draggable = true
-      wrapper.appendChild(renderedElement)
+      const frame = document.createElement('div')
+      frame.className = 'inline-item-frame'
+      frame.appendChild(renderedElement)
+      wrapper.appendChild(frame)
 
       // Add scale handle for all text-containing elements
       if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
+        frame.classList.add('inline-item-frame-resizable')
+        syncInlineBoxSizing(item, wrapper, frame)
+        attachInlineBorderHandles(item, frame, wrapper)
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
 

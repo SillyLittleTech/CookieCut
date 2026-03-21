@@ -647,6 +647,9 @@
   .inline-scale-handle {
     display: none !important;
   }
+  .inline-frame-handle {
+    display: none !important;
+  }
 }
 
 /* --- Inline Editor & Floating Add Button Styles --- */
@@ -676,12 +679,25 @@
 }
 
 .inline-preview-shell {
-  max-width: 48rem;
+  width: min(1600px, calc(100vw - 2rem));
+  max-width: none;
   margin: 1.5rem auto 0;
   padding: 1.5rem 2rem;
   border-radius: 0.75rem;
   background: #ffffff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+#inline-preview .inline-content-surface {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+#inline-preview .inline-full-span {
+  flex: 1 1 100%;
+  width: 100%;
 }
 
 #inline-preview.inline-paged-preview-active {
@@ -758,6 +774,7 @@
 
 @media (max-width: 768px) {
   .inline-preview-shell {
+    width: calc(100vw - 0.8rem);
     padding: 1rem;
   }
 
@@ -803,6 +820,75 @@
 /* Inline item wrapper */
 .inline-item {
   cursor: grab;
+}
+.inline-layout-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inline-list-content-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+.inline-item-frame {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.98);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.inline-item:hover .inline-item-frame,
+.inline-item:focus-within .inline-item-frame,
+.inline-item-frame.inline-item-frame--resizing {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.12),
+    0 8px 20px rgba(79, 70, 229, 0.12);
+}
+.inline-frame-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #6366f1;
+  border: 2px solid #ffffff;
+  box-shadow:
+    0 0 0 2px rgba(129, 140, 248, 0.8),
+    0 0 12px rgba(99, 102, 241, 0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 3;
+}
+.inline-item:hover .inline-frame-handle,
+.inline-item:focus-within .inline-frame-handle,
+.inline-item-frame.inline-item-frame--resizing .inline-frame-handle {
+  opacity: 1;
+}
+.inline-frame-handle--east {
+  top: calc(50% - 6px);
+  right: -7px;
+  cursor: ew-resize;
+}
+.inline-frame-handle--west {
+  top: calc(50% - 6px);
+  left: -7px;
+  cursor: ew-resize;
+}
+.inline-frame-handle--south-east {
+  right: -7px;
+  bottom: -7px;
+  cursor: nwse-resize;
+}
+.inline-frame-handle--south-west {
+  left: -7px;
+  bottom: -7px;
+  cursor: nesw-resize;
 }
 .inline-item.dragging {
   opacity: 0.5;
