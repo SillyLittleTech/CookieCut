@@ -93,8 +93,8 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
   }
 
   const updateSizing = (width, minHeight) => {
-    item.inlineWidth = width
-    item.inlineMinHeight = minHeight
+    if (width != null) item.inlineWidth = width
+    if (minHeight != null) item.inlineMinHeight = minHeight
     syncInlineBoxSizing(item, sizeTargetEl, frameEl)
     refreshInlinePreviewMetrics()
   }
@@ -132,20 +132,32 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
     if (!isResizing || !e.buttons) return
     const deltaX = e.clientX - pointerStartX
     const deltaY = e.clientY - pointerStartY
-    let nextWidth = widthAtStart
-    let nextMinHeight = heightAtStart
+    let widthArg = null
+    let minHeightArg = null
 
-    if (direction.includes('east')) nextWidth = widthAtStart + deltaX
-    if (direction.includes('west')) nextWidth = widthAtStart - deltaX
-    if (direction.includes('south')) nextMinHeight = heightAtStart + deltaY
+    if (direction.includes('east')) {
+      const nextWidth = widthAtStart + deltaX
+      widthArg = Math.min(
+        INLINE_BOX_MAX_WIDTH,
+        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+      )
+    } else if (direction.includes('west')) {
+      const nextWidth = widthAtStart - deltaX
+      widthArg = Math.min(
+        INLINE_BOX_MAX_WIDTH,
+        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+      )
+    }
 
-    updateSizing(
-      Math.min(INLINE_BOX_MAX_WIDTH, Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)),
-      Math.min(
+    if (direction.includes('south')) {
+      const nextMinHeight = heightAtStart + deltaY
+      minHeightArg = Math.min(
         INLINE_BOX_MAX_HEIGHT,
         Math.max(INLINE_BOX_MIN_HEIGHT, nextMinHeight)
       )
-    )
+    }
+
+    updateSizing(widthArg, minHeightArg)
   })
 
   const stopResizing = (e) => {
@@ -764,10 +776,10 @@ export function renderInlinePreview () {
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
   dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
+  dom.inlinePreview.classList.toggle('inline-content-surface', !isPaged)
 
   let contentRoot = dom.inlinePreview
   let dropSurface = dom.inlinePreview
-  const useFormationLayout = !isPaged
 
   if (isPaged) {
     const layout = document.createElement('div')
@@ -828,10 +840,6 @@ export function renderInlinePreview () {
     contentRoot = flow
     dropSurface = flow
     inlinePagedFlow = flow
-  }
-
-  if (useFormationLayout) {
-    contentRoot.classList.add('inline-content-surface')
   }
 
   // Title (editable)
