@@ -45,6 +45,8 @@ export const dom = {
   settingsModalOverlay: null,
   closeSettingsModalBtn: null,
   globalFontStyleSelect: null,
+  fontApplyTextCheckbox: null,
+  fontApplyTipsCheckbox: null,
   editorModeSelect: null,
   previewModeSelect: null,
   // Print Modal
@@ -116,6 +118,12 @@ export function initDom () {
   )
   dom.globalFontStyleSelect = document.getElementById(
     'global-font-style-select'
+  )
+  dom.fontApplyTextCheckbox = document.getElementById(
+    'font-apply-text-checkbox'
+  )
+  dom.fontApplyTipsCheckbox = document.getElementById(
+    'font-apply-tips-checkbox'
   )
   dom.editorModeSelect = document.getElementById('editor-mode-select')
   dom.previewModeSelect = document.getElementById('preview-mode-select')

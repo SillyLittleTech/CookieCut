@@ -133,6 +133,8 @@ function collectPreviewNodes (fontStyle) {
   const nodes = []
   let currentList = null
   let currentListType = null
+  const applyToText = !!recipeData.settings.fontApplyToText
+  const applyToTips = !!recipeData.settings.fontApplyToTips
 
   const flushCurrentList = () => {
     if (!currentList) return
@@ -170,6 +172,7 @@ function collectPreviewNodes (fontStyle) {
           fontStyle,
           contentWithIcons
         )
+        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         currentList.appendChild(el)
         break
       }
@@ -183,6 +186,7 @@ function collectPreviewNodes (fontStyle) {
           fontStyle,
           contentWithIcons
         )
+        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         currentList.appendChild(el)
         break
       }
@@ -192,6 +196,7 @@ function collectPreviewNodes (fontStyle) {
           fontStyle,
           contentWithIcons
         )
+        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         nodes.push(el)
         break
       }
@@ -210,11 +215,13 @@ function collectPreviewNodes (fontStyle) {
           fontStyle,
           contentWithIcons
         )
+        if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
         nodes.push(el)
         break
       }
       case 'link': {
         const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
+        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         nodes.push(el)
         break
       }
