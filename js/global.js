@@ -479,7 +479,10 @@ export function init () {
   })
   if (dom.printFileNameInput) {
     dom.printFileNameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); dom.confirmPrintBtn.click() }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        dom.confirmPrintBtn.click()
+      }
       if (e.key === 'Escape') closePrintModal()
     })
   }
