@@ -247,7 +247,10 @@ export function serializeNodeToCode (node) {
     return getSerializedTokenForIcon(elementNode)
   }
 
-  const escapeCode = Number.parseInt(elementNode.dataset?.rtEscapeCode || '', 10)
+  const escapeCode = Number.parseInt(
+    elementNode.dataset?.rtEscapeCode || '',
+    10
+  )
   if (Number.isFinite(escapeCode)) {
     return `\\${String.fromCodePoint(escapeCode)}`
   }
