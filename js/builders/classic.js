@@ -351,7 +351,9 @@ export function renderPreview () {
     message: 'Classic description classes after render',
     data: {
       descClassName: dom.descPreview?.className || '',
-      expectedFontClassIfApplyToText: applyToText ? `font-style-${fontStyle}` : ''
+      expectedFontClassIfApplyToText: applyToText
+        ? `font-style-${fontStyle}`
+        : ''
     },
     timestamp: Date.now()
   })
