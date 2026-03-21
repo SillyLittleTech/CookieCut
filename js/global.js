@@ -3,6 +3,11 @@ import { dom } from './dom.js'
 import { renderIconCodes, copyToClipboard } from './helpers.js'
 import { COMMON_ICONS } from './constants.js'
 import {
+  normalizeScale,
+  syncScalePreviewSize,
+  syncScalePreviewText
+} from './handlers/scale.js'
+import {
   renderBuilderInputs,
   renderPreview,
   refreshPagedPreviewMetrics
@@ -270,13 +275,24 @@ function handleLiveInput (e) {
     }
   }
 
+  if (key === 'content') {
+    const previewText =
+      item.type === 'link' ? value.trim() || item.href || '' : value
+    syncScalePreviewText(itemEl, previewText)
+  }
+
   // If it's the scale slider, update the percentage display and live preview sample
   if (key === 'scale') {
-    item.scale = Number(value)
-    const display = itemEl.querySelector('[data-role="scale-display"]')
-    const preview = itemEl.querySelector('[data-role="scale-preview"]')
-    if (display) display.textContent = `${value}%`
-    if (preview) preview.style.fontSize = `${Number(value) / 100}em`
+    const normalizedScale = normalizeScale(value)
+    item.scale = normalizedScale
+    if (e.target.value !== String(normalizedScale)) {
+      e.target.value = String(normalizedScale)
+    }
+    syncScalePreviewSize(itemEl, normalizedScale)
+  }
+
+  if (key === 'href' && (!item.content || item.content.trim() === '')) {
+    syncScalePreviewText(itemEl, item.href || '')
   }
 }
 
