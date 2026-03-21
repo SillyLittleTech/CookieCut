@@ -1,23 +1,28 @@
-import { escapeHTML } from '../helpers.js';
+import { escapeHTML } from '../helpers.js'
+import { createScaleInputHtml, applyItemScale } from './scale.js'
 
 /**
  * Returns the builder input configuration for a bubble/toast item.
  * @param {object} item
  * @returns {{ label: string, inputHtml: string }}
  */
-export function getBuilderInput(item) {
-    let label;
-    switch (item.subtype) {
-        case 'tip':     label = 'Toast (Tip)';     break;
-        case 'warning': label = 'Toast (Warning)'; break;
-        default:        label = 'Toast (Note)';
-    }
-    return {
-        label,
-        inputHtml: `
+export function getBuilderInput (item) {
+  const labelBySubtype = {
+    tip: 'Toast (Tip)',
+    warning: 'Toast (Warning)'
+  }
+  const label = labelBySubtype[item.subtype] || 'Toast (Note)'
+  return {
+    label,
+    inputHtml: `
             <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="2" placeholder="Enter tip or note">${escapeHTML(item.content)}</textarea>
+            ${createScaleInputHtml({
+              item,
+              previewText: item.content,
+              previewFallback: 'Sample toast'
+            })}
         `
-    };
+  }
 }
 
 /**
@@ -27,16 +32,22 @@ export function getBuilderInput(item) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
-    const el = document.createElement('div');
-    el.className = 'toast-base';
-    switch (item.subtype) {
-        case 'tip':     el.classList.add('toast-tip');     break;
-        case 'warning': el.classList.add('toast-warning'); break;
-        default:        el.classList.add('toast-note');
-    }
-    el.innerHTML = contentWithIcons;
-    return el;
+export function renderPreviewElement (item, fontStyle, contentWithIcons) {
+  const el = document.createElement('div')
+  el.className = 'toast-base'
+  switch (item.subtype) {
+    case 'tip':
+      el.classList.add('toast-tip')
+      break
+    case 'warning':
+      el.classList.add('toast-warning')
+      break
+    default:
+      el.classList.add('toast-note')
+  }
+  el.innerHTML = contentWithIcons
+  applyItemScale(el, item, 'preview')
+  return el
 }
 
 /**
@@ -46,17 +57,23 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    const el = document.createElement('div');
-    el.className = 'toast-base';
-    switch (item.subtype) {
-        case 'tip':     el.classList.add('toast-tip');     break;
-        case 'warning': el.classList.add('toast-warning'); break;
-        default:        el.classList.add('toast-note');
-    }
-    el.contentEditable = true;
-    el.dataset.id = item.id;
-    el.dataset.key = 'content';
-    el.innerHTML = contentWithIcons;
-    return el;
+export function renderInlineElement (item, fontStyle, contentWithIcons) {
+  const el = document.createElement('div')
+  el.className = 'toast-base'
+  switch (item.subtype) {
+    case 'tip':
+      el.classList.add('toast-tip')
+      break
+    case 'warning':
+      el.classList.add('toast-warning')
+      break
+    default:
+      el.classList.add('toast-note')
+  }
+  el.contentEditable = true
+  el.dataset.id = item.id
+  el.dataset.key = 'content'
+  el.innerHTML = contentWithIcons
+  applyItemScale(el, item, 'inline')
+  return el
 }
