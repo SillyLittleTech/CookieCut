@@ -6,6 +6,11 @@ import {
   setCaretPosition,
   getDocumentTextStats
 } from '../helpers.js'
+import {
+  applyItemScale,
+  normalizeScale,
+  syncScalePreviewSize
+} from '../handlers/scale.js'
 import * as headingHandler from '../handlers/heading.js'
 import * as stepHandler from '../handlers/step.js'
 import { renderInlineElement as renderInlineBulletElement } from '../handlers/bullet.js'
@@ -38,7 +43,7 @@ let inlineStatNodes = null
 function createScaleHandle (item, textEl) {
   const handle = document.createElement('div')
   handle.className = 'inline-scale-handle no-print'
-  const currentScale = item.scale != null ? Number(item.scale) : 100
+  const currentScale = normalizeScale(item.scale)
   handle.title = `Scale: ${currentScale}% — drag up/down to resize`
   handle.draggable = false
 
@@ -52,12 +57,27 @@ function createScaleHandle (item, textEl) {
 
   let pointerStartY = 0
   let scaleAtStart = 0
+  let isResizing = false
+  let dragHost = null
+  let dragHostWasDraggable = false
+
+  const restoreDragHost = () => {
+    if (!dragHost) return
+    dragHost.draggable = dragHostWasDraggable
+    dragHost = null
+  }
 
   handle.addEventListener('pointerdown', (e) => {
     e.preventDefault()
     e.stopPropagation()
+    isResizing = true
     pointerStartY = e.clientY
-    scaleAtStart = item.scale != null ? Number(item.scale) : 100
+    scaleAtStart = normalizeScale(item.scale)
+    dragHost = handle.closest('.inline-item')
+    if (dragHost) {
+      dragHostWasDraggable = Boolean(dragHost.draggable)
+      dragHost.draggable = false
+    }
     try {
       handle.setPointerCapture(e.pointerId)
     } catch {
@@ -66,25 +86,41 @@ function createScaleHandle (item, textEl) {
   })
 
   handle.addEventListener('pointermove', (e) => {
-    if (!e.buttons) return
+    if (!isResizing || !e.buttons) return
     const delta = pointerStartY - e.clientY // drag up = bigger scale
-    const rawScale = scaleAtStart + delta
-    const newScale = Math.max(50, Math.min(300, Math.round(rawScale / 5) * 5))
-    if (newScale !== item.scale) {
+    const newScale = normalizeScale(scaleAtStart + delta)
+    if (newScale !== normalizeScale(item.scale)) {
       item.scale = newScale
-      textEl.style.fontSize = `${newScale / 100}em`
+      applyItemScale(textEl, item, 'inline')
       handle.title = `Scale: ${newScale}% — drag up/down to resize`
       // Sync the builder panel inputs if visible
       const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
       if (itemEl) {
         const slider = itemEl.querySelector('[data-key="scale"]')
-        const display = itemEl.querySelector('[data-role="scale-display"]')
-        const preview = itemEl.querySelector('[data-role="scale-preview"]')
         if (slider) slider.value = newScale
-        if (display) display.textContent = `${newScale}%`
-        if (preview) preview.style.fontSize = `${newScale / 100}em`
+        syncScalePreviewSize(itemEl, newScale)
+      }
+      refreshInlinePreviewMetrics()
+    }
+  })
+
+  const stopResizing = (e) => {
+    isResizing = false
+    if (e?.pointerId != null) {
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch {
+        // Pointer capture may already be released.
       }
     }
+    restoreDragHost()
+  }
+
+  handle.addEventListener('pointerup', stopResizing)
+  handle.addEventListener('pointercancel', stopResizing)
+  handle.addEventListener('lostpointercapture', () => {
+    isResizing = false
+    restoreDragHost()
   })
 
   return handle
