@@ -199,12 +199,17 @@ function showEditor () {
 
 // --- PRINT ---
 
-function handlePrint () {
+function executePrint (fileName) {
   const isInline = isInlineMode()
   if (isInline) document.body.classList.add('print-inline-only')
   else document.body.classList.add('print-recipe-only')
 
+  const originalTitle = document.title
+  const printTitle = fileName?.trim() || recipeData.title || originalTitle
+  document.title = printTitle
+
   function cleanup () {
+    document.title = originalTitle
     document.body.classList.remove('print-inline-only', 'print-recipe-only')
     window.removeEventListener('afterprint', cleanup)
   }
@@ -212,6 +217,21 @@ function handlePrint () {
   window.addEventListener('afterprint', cleanup)
   window.print()
   setTimeout(cleanup, 1500)
+}
+
+function openPrintModal () {
+  if (dom.printFileNameInput) {
+    dom.printFileNameInput.value = recipeData.settings.fileName || ''
+  }
+  dom.printModal.classList.remove('hidden')
+}
+
+function closePrintModal () {
+  dom.printModal.classList.add('hidden')
+}
+
+function handlePrint () {
+  openPrintModal()
 }
 
 // --- MAIN INPUT HANDLERS ---
@@ -446,6 +466,23 @@ export function init () {
   dom.closeSettingsModalBtn.addEventListener('click', closeSettingsModal)
   dom.settingsModalOverlay.addEventListener('click', closeSettingsModal)
   dom.globalFontStyleSelect.addEventListener('change', handleGlobalFontChange)
+
+  // Print Modal Listeners
+  dom.closePrintModalBtn.addEventListener('click', closePrintModal)
+  dom.printModalOverlay.addEventListener('click', closePrintModal)
+  dom.cancelPrintBtn.addEventListener('click', closePrintModal)
+  dom.confirmPrintBtn.addEventListener('click', () => {
+    const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
+    recipeData.settings.fileName = fileName
+    closePrintModal()
+    executePrint(fileName)
+  })
+  if (dom.printFileNameInput) {
+    dom.printFileNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); dom.confirmPrintBtn.click() }
+      if (e.key === 'Escape') closePrintModal()
+    })
+  }
 
   // Editor Mode select
   if (dom.editorModeSelect) {
