@@ -18,22 +18,6 @@ import {
 // circular-import issues at module evaluation time.
 let inlineRenderRequestId = 0
 
-function writeAgentDebugLog (payload) {
-  try {
-    if (typeof require === 'function') {
-      require('fs').appendFileSync(
-        '/opt/cursor/logs/debug.log',
-        `${JSON.stringify(payload)}\n`
-      )
-    }
-  } catch {}
-  try {
-    if (typeof globalThis.__agentLog === 'function') {
-      globalThis.__agentLog(payload)
-    }
-  } catch {}
-}
-
 /**
  * Re-draws the entire builder input form based on recipeData.
  */
@@ -321,22 +305,7 @@ export function renderPreview () {
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPaged = recipeData.settings?.previewMode === 'paged'
   const applyToText = Boolean(recipeData.settings?.fontApplyToText)
-  const applyToTips = Boolean(recipeData.settings?.fontApplyToTips)
-
-  // #region agent log
-  writeAgentDebugLog({
-    hypothesisId: 'A',
-    location: 'js/builders/classic.js:renderPreview:entry',
-    message: 'Classic renderPreview entry',
-    data: {
-      fontStyle,
-      isPaged,
-      applyToText,
-      applyToTips
-    },
-    timestamp: Date.now()
-  })
-  // #endregion
+  const descFontClass = applyToText ? `font-style-${fontStyle}` : ''
 
   applyPreviewModeLayout(isPaged)
 
@@ -344,20 +313,7 @@ export function renderPreview () {
   dom.titlePreview.className = `font-style-${fontStyle}`
 
   dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
-  // #region agent log
-  writeAgentDebugLog({
-    hypothesisId: 'A',
-    location: 'js/builders/classic.js:renderPreview:description',
-    message: 'Classic description classes after render',
-    data: {
-      descClassName: dom.descPreview?.className || '',
-      expectedFontClassIfApplyToText: applyToText
-        ? `font-style-${fontStyle}`
-        : ''
-    },
-    timestamp: Date.now()
-  })
-  // #endregion
+  dom.descPreview.className = descFontClass
   dom.contentPreview.innerHTML = ''
 
   const nodes = collectPreviewNodes(fontStyle)
