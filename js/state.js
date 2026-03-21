@@ -6,6 +6,7 @@ export const recipeData = {
   settings: {
     fontStyle: 'display',
     editorMode: 'classic', // 'classic' or 'inline'
-    previewMode: 'continuous' // 'continuous' or 'paged'
+    previewMode: 'continuous', // 'continuous' or 'paged'
+    fileName: '' // custom filename for print/download
   }
 }

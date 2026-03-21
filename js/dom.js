@@ -47,6 +47,13 @@ export const dom = {
   globalFontStyleSelect: null,
   editorModeSelect: null,
   previewModeSelect: null,
+  // Print Modal
+  printModal: null,
+  printModalOverlay: null,
+  closePrintModalBtn: null,
+  printFileNameInput: null,
+  cancelPrintBtn: null,
+  confirmPrintBtn: null,
   // Inline editor
   floatingAddBtn: null,
   inlinePreview: null,
@@ -112,6 +119,13 @@ export function initDom () {
   )
   dom.editorModeSelect = document.getElementById('editor-mode-select')
   dom.previewModeSelect = document.getElementById('preview-mode-select')
+  // Print Modal
+  dom.printModal = document.getElementById('print-modal')
+  dom.printModalOverlay = document.getElementById('print-modal-overlay')
+  dom.closePrintModalBtn = document.getElementById('close-print-modal-btn')
+  dom.printFileNameInput = document.getElementById('print-file-name-input')
+  dom.cancelPrintBtn = document.getElementById('cancel-print-btn')
+  dom.confirmPrintBtn = document.getElementById('confirm-print-btn')
   // Inline editor
   dom.floatingAddBtn = document.getElementById('floating-add-btn')
   dom.inlinePreview = document.getElementById('inline-preview')
