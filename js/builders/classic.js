@@ -195,11 +195,7 @@ function collectPreviewNodes (fontStyle) {
           currentList = document.createElement('ol')
           currentListType = 'step'
         }
-        const el = renderStepPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         currentList.appendChild(el)
         break
@@ -219,21 +215,13 @@ function collectPreviewNodes (fontStyle) {
         break
       }
       case 'text': {
-        const el = renderTextPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         nodes.push(el)
         break
       }
       case 'image': {
-        const el = renderImagePreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderImagePreviewElement(item, fontStyle, contentWithIcons)
         nodes.push(el)
         break
       }
