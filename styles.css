@@ -516,13 +516,15 @@
   touch-action: none;
 }
 .inline-scale-handle::after {
-  content: '';
+  content: "";
   display: block;
   width: 32px;
   height: 3px;
   border-radius: 2px;
   background: #cbd5e1; /* slate-300 */
-  transition: background 0.15s ease, width 0.15s ease;
+  transition:
+    background 0.15s ease,
+    width 0.15s ease;
 }
 .inline-item:hover .inline-scale-handle {
   opacity: 1;
