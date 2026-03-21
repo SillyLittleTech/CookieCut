@@ -6,6 +6,11 @@ import {
   setCaretPosition,
   getDocumentTextStats
 } from '../helpers.js'
+import {
+  applyItemScale,
+  normalizeScale,
+  syncScalePreviewSize
+} from '../handlers/scale.js'
 import * as headingHandler from '../handlers/heading.js'
 import * as stepHandler from '../handlers/step.js'
 import { renderInlineElement as renderInlineBulletElement } from '../handlers/bullet.js'
@@ -25,6 +30,101 @@ let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
+
+// --- Inline Scale Handle ---
+
+/**
+ * Creates a drag handle that allows resizing text scale by dragging vertically.
+ * Dragging up increases scale; dragging down decreases it.
+ * @param {object} item - the recipe item (mutated in place)
+ * @param {HTMLElement} textEl - the rendered text element whose fontSize to update
+ * @returns {HTMLElement}
+ */
+function createScaleHandle (item, textEl) {
+  const handle = document.createElement('div')
+  handle.className = 'inline-scale-handle no-print'
+  const currentScale = normalizeScale(item.scale)
+  handle.title = `Scale: ${currentScale}% — drag up/down to resize`
+  handle.draggable = false
+
+  handle.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('dblclick', (e) => {
+    e.stopPropagation()
+  })
+
+  let pointerStartY = 0
+  let scaleAtStart = 0
+  let isResizing = false
+  let dragHost = null
+  let dragHostWasDraggable = false
+
+  const restoreDragHost = () => {
+    if (!dragHost) return
+    dragHost.draggable = dragHostWasDraggable
+    dragHost = null
+  }
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing = true
+    pointerStartY = e.clientY
+    scaleAtStart = normalizeScale(item.scale)
+    dragHost = handle.closest('.inline-item')
+    if (dragHost) {
+      dragHostWasDraggable = Boolean(dragHost.draggable)
+      dragHost.draggable = false
+    }
+    try {
+      handle.setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture unavailable (e.g. synthetic events); drag still works
+    }
+  })
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!isResizing || !e.buttons) return
+    const delta = pointerStartY - e.clientY // drag up = bigger scale
+    const newScale = normalizeScale(scaleAtStart + delta)
+    if (newScale !== normalizeScale(item.scale)) {
+      item.scale = newScale
+      applyItemScale(textEl, item, 'inline')
+      handle.title = `Scale: ${newScale}% — drag up/down to resize`
+      // Sync the builder panel inputs if visible
+      const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
+      if (itemEl) {
+        const slider = itemEl.querySelector('[data-key="scale"]')
+        if (slider) slider.value = newScale
+        syncScalePreviewSize(itemEl, newScale)
+      }
+      refreshInlinePreviewMetrics()
+    }
+  })
+
+  const stopResizing = (e) => {
+    isResizing = false
+    if (e?.pointerId != null) {
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch {
+        // Pointer capture may already be released.
+      }
+    }
+    restoreDragHost()
+  }
+
+  handle.addEventListener('pointerup', stopResizing)
+  handle.addEventListener('pointercancel', stopResizing)
+  handle.addEventListener('lostpointercapture', () => {
+    isResizing = false
+    restoreDragHost()
+  })
+
+  return handle
+}
 
 function getInlinePagedPageCount () {
   if (!inlinePagedFlow) return 1
@@ -695,7 +795,11 @@ export function renderInlinePreview () {
         stepCounter
       )
       li.appendChild(badge)
-      li.appendChild(contentSpan)
+      const contentWrap = document.createElement('div')
+      contentWrap.className = 'inline-list-content-wrap'
+      contentWrap.appendChild(contentSpan)
+      contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
       return
@@ -714,7 +818,11 @@ export function renderInlinePreview () {
         contentWithIcons
       )
       li.appendChild(badge)
-      li.appendChild(contentSpan)
+      const contentWrap = document.createElement('div')
+      contentWrap.className = 'inline-list-content-wrap'
+      contentWrap.appendChild(contentSpan)
+      contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
       return
@@ -794,6 +902,11 @@ export function renderInlinePreview () {
       wrapper.dataset.id = item.id
       wrapper.draggable = true
       wrapper.appendChild(renderedElement)
+
+      // Add scale handle for all text-containing elements
+      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
+        wrapper.appendChild(createScaleHandle(item, renderedElement))
+      }
 
       // mark new text with outline to make it visible
       if (

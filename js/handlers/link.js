@@ -1,6 +1,7 @@
-import { escapeHTML } from '../helpers.js';
+import { escapeHTML } from '../helpers.js'
+import { createScaleInputHtml, applyItemScale } from './scale.js'
 
-const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
+const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:']
 
 /**
  * Normalize and validate a link href, allowing only safe URL schemes.
@@ -8,21 +9,21 @@ const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
  * @param {string} href
  * @returns {string}
  */
-function sanitizeHref(href) {
-    if (!href) {
-        return '#';
-    }
+function sanitizeHref (href) {
+  if (!href) {
+    return '#'
+  }
 
-    try {
-        const url = new URL(href, window.location.origin);
-        if (ALLOWED_LINK_SCHEMES.includes(url.protocol)) {
-            return url.href;
-        }
-    } catch {
-        // Invalid URL, fall through to return '#'
+  try {
+    const url = new URL(href, window.location.origin)
+    if (ALLOWED_LINK_SCHEMES.includes(url.protocol)) {
+      return url.href
     }
+  } catch {
+    // Invalid URL, fall through to return '#'
+  }
 
-    return '#';
+  return '#'
 }
 
 /**
@@ -30,16 +31,23 @@ function sanitizeHref(href) {
  * @param {object} item
  * @returns {{ label: string, inputHtml: string }}
  */
-export function getBuilderInput(item) {
-    return {
-        label: '<span class="material-icons align-middle text-base">link</span> Link',
-        inputHtml: `
+export function getBuilderInput (item) {
+  return {
+    label:
+      '<span class="material-icons align-middle text-base">link</span> Link',
+    inputHtml: `
             <div class="space-y-2">
                 <input type="text" data-key="content" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Link text" value="${escapeHTML(item.content || '')}">
                 <input type="url" data-key="href" class="w-full p-2 border border-gray-300 rounded-md" placeholder="https://example.com" value="${escapeHTML(item.href || '')}">
             </div>
+            ${createScaleInputHtml({
+              item,
+              previewText: item.content || item.href || 'Link text',
+              previewFallback: 'Link text',
+              previewClass: 'text-blue-600 underline'
+            })}
         `
-    };
+  }
 }
 
 /**
@@ -48,24 +56,28 @@ export function getBuilderInput(item) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-function createLinkBlock(item, contentWithIcons) {
-    const wrapper = document.createElement('p');
-    wrapper.className = 'recipe-text-block flex items-center gap-1';
+function createLinkBlock (item, contentWithIcons) {
+  const wrapper = document.createElement('p')
+  wrapper.className = 'recipe-text-block flex items-center gap-1'
 
-    const icon = document.createElement('span');
-    icon.className = 'material-icons text-base align-middle';
-    icon.textContent = 'link';
+  const icon = document.createElement('span')
+  icon.className = 'material-icons text-base align-middle'
+  icon.textContent = 'link'
 
-    const anchorElement = document.createElement('a');
-    anchorElement.href = sanitizeHref(item.href);
-    anchorElement.target = '_blank';
-    anchorElement.rel = 'noopener noreferrer';
-    anchorElement.className = 'underline text-blue-600 hover:text-blue-800';
-    anchorElement.innerHTML = contentWithIcons || escapeHTML(item.content || item.href || 'Link');
+  const anchorElement = document.createElement('a')
+  anchorElement.href = sanitizeHref(item.href)
+  anchorElement.target = '_blank'
+  anchorElement.rel = 'noopener noreferrer'
+  anchorElement.className = 'underline text-blue-600 hover:text-blue-800'
+  anchorElement.innerHTML =
+    contentWithIcons || escapeHTML(item.content || item.href || 'Link')
 
-    wrapper.appendChild(icon);
-    wrapper.appendChild(anchorElement);
-    return wrapper;
+  wrapper.appendChild(icon)
+  wrapper.appendChild(anchorElement)
+
+  applyItemScale(wrapper, item, 'preview')
+
+  return wrapper
 }
 
 /**
@@ -75,8 +87,8 @@ function createLinkBlock(item, contentWithIcons) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
-    return createLinkBlock(item, contentWithIcons);
+export function renderPreviewElement (item, fontStyle, contentWithIcons) {
+  return createLinkBlock(item, contentWithIcons)
 }
 
 /**
@@ -86,6 +98,6 @@ export function renderPreviewElement(item, fontStyle, contentWithIcons) {
  * @param {string} contentWithIcons - pre-rendered HTML with icon spans
  * @returns {HTMLElement}
  */
-export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    return createLinkBlock(item, contentWithIcons);
+export function renderInlineElement (item, fontStyle, contentWithIcons) {
+  return createLinkBlock(item, contentWithIcons)
 }

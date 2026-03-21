@@ -1,4 +1,5 @@
 import { escapeHTML } from '../helpers.js'
+import { createScaleInputHtml, applyItemScale } from './scale.js'
 
 /**
  * Returns the builder input configuration for a bullet item.
@@ -10,6 +11,11 @@ export function getBuilderInput (item) {
     label: 'Bullet',
     inputHtml: `
             <textarea data-key="content" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Enter bullet text">${escapeHTML(item.content)}</textarea>
+            ${createScaleInputHtml({
+              item,
+              previewText: item.content,
+              previewFallback: 'Sample bullet'
+            })}
         `
   }
 }
@@ -25,6 +31,7 @@ export function getBuilderInput (item) {
 export function renderPreviewElement (item, fontStyle, contentWithIcons) {
   const el = document.createElement('li')
   el.innerHTML = contentWithIcons
+  applyItemScale(el, item, 'preview')
   return el
 }
 
@@ -47,6 +54,7 @@ export function renderInlineElement (item, fontStyle, contentWithIcons) {
   contentSpan.dataset.id = item.id
   contentSpan.dataset.key = 'content'
   contentSpan.innerHTML = contentWithIcons
+  applyItemScale(contentSpan, item, 'inline')
 
   return { badge, contentSpan }
 }
