@@ -31,12 +31,21 @@ function sanitizeHref(href) {
  * @returns {{ label: string, inputHtml: string }}
  */
 export function getBuilderInput(item) {
+    const scale = item.scale != null ? Number(item.scale) : 100;
     return {
         label: '<span class="material-icons align-middle text-base">link</span> Link',
         inputHtml: `
             <div class="space-y-2">
                 <input type="text" data-key="content" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Link text" value="${escapeHTML(item.content || '')}">
                 <input type="url" data-key="href" class="w-full p-2 border border-gray-300 rounded-md" placeholder="https://example.com" value="${escapeHTML(item.href || '')}">
+            </div>
+            <div class="scale-input-container mt-2">
+                <label class="block text-xs font-medium text-gray-600">Text Scale</label>
+                <div class="flex items-center gap-3 mt-1">
+                    <input type="range" data-key="scale" min="50" max="300" step="5" value="${scale}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <span class="text-sm text-gray-600 font-mono w-12 text-right" data-role="scale-display">${scale}%</span>
+                </div>
+                <p class="scale-preview text-blue-600 underline mt-1 truncate" data-role="scale-preview" style="font-size: ${scale / 100}em">${escapeHTML(item.content || item.href || 'Link text')}</p>
             </div>
         `
     };
@@ -65,6 +74,12 @@ function createLinkBlock(item, contentWithIcons) {
 
     wrapper.appendChild(icon);
     wrapper.appendChild(anchorElement);
+
+    const scale = item.scale != null ? Number(item.scale) : 100;
+    if (scale !== 100) {
+        wrapper.style.fontSize = `${scale / 100}em`;
+    }
+
     return wrapper;
 }
 

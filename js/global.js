@@ -35,6 +35,7 @@ export function addItem (type, subtype = null) {
     case 'bullet':
       newItem.type = type
       newItem.content = ''
+      newItem.scale = 100
       break
     case 'text':
       newItem.type = 'text'
@@ -51,11 +52,13 @@ export function addItem (type, subtype = null) {
       newItem.type = 'bubble'
       newItem.subtype = subtype || 'note'
       newItem.content = ''
+      newItem.scale = 100
       break
     case 'link':
       newItem.type = 'link'
       newItem.content = ''
       newItem.href = ''
+      newItem.scale = 100
       break
     default:
       break
