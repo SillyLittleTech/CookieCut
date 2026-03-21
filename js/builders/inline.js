@@ -173,7 +173,7 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
 }
 
 function attachInlineBorderHandles (item, frameEl, sizeTargetEl) {
-  ;['east', 'west', 'south-east', 'south-west'].forEach((direction) => {
+  ['east', 'west', 'south-east', 'south-west'].forEach((direction) => {
     frameEl.appendChild(
       createInlineBorderHandle(item, frameEl, sizeTargetEl, direction)
     )
