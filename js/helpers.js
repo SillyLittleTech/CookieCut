@@ -267,11 +267,79 @@ export function serializeNodeToCode (node) {
 }
 
 function getCodeIndexFromBoundary (rootElement, containerNode, containerOffset) {
-  const range = document.createRange()
-  range.selectNodeContents(rootElement)
-  range.setEnd(containerNode, containerOffset)
-  const clonedContents = range.cloneContents()
-  return serializeNodeToCode(clonedContents).length
+  // Special case: boundary is expressed as a child index directly on rootElement.
+  if (containerNode === rootElement) {
+    let idx = 0
+    const children = rootElement.childNodes
+    for (let i = 0; i < containerOffset && i < children.length; i++) {
+      idx += serializeNodeToCode(children[i]).length
+    }
+    return idx
+  }
+
+  let index = 0
+
+  function walk (node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (node === containerNode) {
+        index += containerOffset
+        return true
+      }
+      index += (node.nodeValue || '').length
+      return false
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) return false
+
+    if (node.tagName === 'BR') {
+      if (node === containerNode) return true
+      index += 1
+      return false
+    }
+
+    if (node.classList.contains('material-icons')) {
+      if (node === containerNode) return true
+      const iconName = (node.textContent || '').trim()
+      index += `:${iconName}:`.length
+      return false
+    }
+
+    const escapeCode = Number.parseInt(node.dataset?.rtEscapeCode || '', 10)
+    if (Number.isFinite(escapeCode)) {
+      if (node === containerNode) return true
+      index += 2
+      return false
+    }
+
+    const openToken = node.dataset?.rtOpen || ''
+    const closeToken = node.dataset?.rtClose || ''
+
+    index += openToken.length
+
+    const children = node.childNodes
+    for (let i = 0; i < children.length; i++) {
+      // Check boundary before child i — handles cases where the selection
+      // lands between two sibling nodes (e.g. containerOffset === i on the
+      // parent means "just before child i").
+      if (node === containerNode && containerOffset === i) return true
+      if (walk(children[i])) return true
+    }
+
+    // Check boundary after the last child — handles containerOffset equal to
+    // the child count, which means "just after the last child of this node".
+    if (node === containerNode && containerOffset === children.length) {
+      return true
+    }
+
+    index += closeToken.length
+    return false
+  }
+
+  for (const child of rootElement.childNodes) {
+    if (walk(child)) break
+  }
+
+  return index
 }
 
 export function getCodeSelection (rootElement) {
