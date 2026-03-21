@@ -939,53 +939,22 @@ export function renderInlinePreview () {
   recipeData.items.forEach((item) => {
     const contentWithIcons = renderRichText(item.content || '')
 
-    if (item.type === 'step') {
-      if (currentListType !== 'step') stepCounter = 0
-      stepCounter += 1
-
-      const list = ensureListContainer('step')
-      const li = document.createElement('li')
-      li.className = 'inline-item inline-list-item'
-      li.dataset.id = item.id
-      li.draggable = true
-
-      const { badge, contentSpan } = renderInlineStepElement(
-        item,
-        fontStyle,
-        contentWithIcons,
-        stepCounter
-      )
-      li.appendChild(badge)
-      if (applyToText) {
-        contentSpan.classList.add(`font-style-${fontStyle}`)
+    if (item.type === 'step' || item.type === 'bullet') {
+      const isStep = item.type === 'step'
+      if (isStep) {
+        if (currentListType !== 'step') stepCounter = 0
+        stepCounter += 1
       }
-      const contentWrap = document.createElement('div')
-      contentWrap.className = 'inline-list-content-wrap'
-      const contentFrame = document.createElement('div')
-      contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
-      contentFrame.appendChild(contentSpan)
-      contentWrap.appendChild(contentFrame)
-      contentWrap.appendChild(createScaleHandle(item, contentSpan))
-      syncInlineBoxSizing(item, contentWrap, contentFrame)
-      attachInlineBorderHandles(item, contentFrame, contentWrap)
-      li.appendChild(contentWrap)
-      list.appendChild(li)
-      attachInlineItemInteractions(li, item.id)
-      return
-    }
 
-    if (item.type === 'bullet') {
-      const list = ensureListContainer('bullet')
+      const list = ensureListContainer(isStep ? 'step' : 'bullet')
       const li = document.createElement('li')
       li.className = 'inline-item inline-list-item'
       li.dataset.id = item.id
       li.draggable = true
 
-      const { badge, contentSpan } = renderInlineBulletElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
+      const { badge, contentSpan } = isStep
+        ? renderInlineStepElement(item, fontStyle, contentWithIcons, stepCounter)
+        : renderInlineBulletElement(item, fontStyle, contentWithIcons)
       li.appendChild(badge)
       if (applyToText) {
         contentSpan.classList.add(`font-style-${fontStyle}`)
