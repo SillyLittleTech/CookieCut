@@ -147,7 +147,7 @@ export function syncScalePreviewText (itemEl, content) {
   if (!preview) return
 
   const fallback = preview.dataset.emptyPreview || ''
-  const nextText = content && content.trim() ? content : fallback
+  const nextText = content?.trim() ? content : fallback
   preview.textContent = nextText
 }
 
