@@ -21,3 +21,9 @@ Then open `http://localhost:8000` in Chrome.
 - There are no automated tests, no lint config, and no build command. Verification is manual-only via the browser.
 - State is in-memory only (`recipeData` in `js/state.js`); nothing persists across page reloads.
 - CI: `.github/workflows/preview.yml` deploys PR preview channels to Firebase Hosting (project `slf-cookiecutter`). No build step runs in CI — raw files are deployed directly.
+
+### Post-commit PR checks
+- After each commit/push, check for new feedback from DeepSource and SonarCloud.
+- Review both types of feedback: review comments and normal PR comments.
+- Check the full PR checks/status list and confirm all checks are passing.
+- If any check fails, investigate and fix the issue, then commit/push again and re-check until everything passes.
