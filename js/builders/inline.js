@@ -759,7 +759,11 @@ export function renderInlinePreview () {
         stepCounter
       )
       li.appendChild(badge)
-      li.appendChild(contentSpan)
+      const contentWrap = document.createElement('div')
+      contentWrap.className = 'inline-list-content-wrap'
+      contentWrap.appendChild(contentSpan)
+      contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
       return
@@ -778,7 +782,11 @@ export function renderInlinePreview () {
         contentWithIcons
       )
       li.appendChild(badge)
-      li.appendChild(contentSpan)
+      const contentWrap = document.createElement('div')
+      contentWrap.className = 'inline-list-content-wrap'
+      contentWrap.appendChild(contentSpan)
+      contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
       return
@@ -859,8 +867,8 @@ export function renderInlinePreview () {
       wrapper.draggable = true
       wrapper.appendChild(renderedElement)
 
-      // Add scale handle for text and heading elements
-      if (item.type === 'text' || item.type === 'heading') {
+      // Add scale handle for all text-containing elements
+      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
 
