@@ -150,26 +150,56 @@ function wrapSelectionWithTokens (text, start, end, openToken, closeToken) {
   return { text: nextText, start: wrappedStart, end: wrappedEnd }
 }
 
+function normalizeSelectionIgnoringMarkers (text, start, end, openToken, closeToken) {
+  const selectedText = text.slice(start, end)
+  const containsExplicitWrappers =
+    selectedText.length > openToken.length + closeToken.length &&
+    selectedText.startsWith(openToken) &&
+    selectedText.endsWith(closeToken)
+
+  if (!containsExplicitWrappers) {
+    return { start, end }
+  }
+
+  return {
+    start: start + openToken.length,
+    end: end - closeToken.length
+  }
+}
+
 function toggleSymmetricTokens (text, start, end, token) {
+  const normalized = normalizeSelectionIgnoringMarkers(text, start, end, token, token)
+  const normalizedStart = normalized.start
+  const normalizedEnd = normalized.end
+  if (normalizedEnd <= normalizedStart) {
+    return { text, start, end }
+  }
+
   const isWrapped =
-    start >= token.length &&
-    end + token.length <= text.length &&
-    text.slice(start - token.length, start) === token &&
-    text.slice(end, end + token.length) === token
+    normalizedStart >= token.length &&
+    normalizedEnd + token.length <= text.length &&
+    text.slice(normalizedStart - token.length, normalizedStart) === token &&
+    text.slice(normalizedEnd, normalizedEnd + token.length) === token
 
   if (isWrapped) {
     const nextText =
-      text.slice(0, start - token.length) +
-      text.slice(start, end) +
-      text.slice(end + token.length)
+      text.slice(0, normalizedStart - token.length) +
+      text.slice(normalizedStart, normalizedEnd) +
+      text.slice(normalizedEnd + token.length)
     return {
       text: nextText,
-      start: start - token.length,
-      end: end - token.length
+      start: normalizedStart - token.length,
+      end: normalizedEnd - token.length
     }
   }
 
-  return wrapSelectionWithTokens(text, start, end, token, token)
+  return wrapSelectionWithTokens(
+    text,
+    normalizedStart,
+    normalizedEnd,
+    token,
+    token
+  )
 }
 
 function applyScaleDelta (text, start, end, deltaPx) {
