@@ -34,6 +34,7 @@ const INLINE_BOX_MIN_WIDTH = 180
 const INLINE_BOX_MAX_WIDTH = 1200
 const INLINE_BOX_MIN_HEIGHT = 48
 const INLINE_BOX_MAX_HEIGHT = 860
+const INLINE_BOX_DEFAULT_FLEX_BASIS = 340
 
 function normalizeInlineBoxMeasurement (value, min, max) {
   const numeric = Number.parseFloat(value)
@@ -59,8 +60,8 @@ function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
     sizeTargetEl.style.flex = '0 0 auto'
   } else {
     delete item.inlineWidth
-    sizeTargetEl.style.width = '100%'
-    sizeTargetEl.style.flex = '1 1 100%'
+    sizeTargetEl.style.removeProperty('width')
+    sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
   }
 
   if (minHeight) {
