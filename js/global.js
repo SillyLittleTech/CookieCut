@@ -437,8 +437,10 @@ function handleGlobalFontChange (e) {
 }
 
 function handleFontScopeChange () {
-  recipeData.settings.fontApplyToText = dom.fontApplyTextCheckbox?.checked ?? false
-  recipeData.settings.fontApplyToTips = dom.fontApplyTipsCheckbox?.checked ?? false
+  recipeData.settings.fontApplyToText =
+    dom.fontApplyTextCheckbox?.checked ?? false
+  recipeData.settings.fontApplyToTips =
+    dom.fontApplyTipsCheckbox?.checked ?? false
   if (isInlineMode()) {
     renderInlinePreview()
   } else if (!dom.recipePanel.classList.contains('hidden')) {
