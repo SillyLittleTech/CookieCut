@@ -1,15 +1,30 @@
 import { recipeData } from '../state.js'
 import { dom } from '../dom.js'
 import { renderIconCodes, getDocumentTextStats } from '../helpers.js'
-import * as headingHandler from '../handlers/heading.js'
-import * as stepHandler from '../handlers/step.js'
+import {
+  getBuilderInput as getHeadingBuilderInput,
+  renderPreviewElement as renderHeadingPreviewElement
+} from '../handlers/heading.js'
+import {
+  getBuilderInput as getStepBuilderInput,
+  renderPreviewElement as renderStepPreviewElement
+} from '../handlers/step.js'
 import {
   getBuilderInput as getBulletBuilderInput,
   renderPreviewElement as renderBulletPreviewElement
 } from '../handlers/bullet.js'
-import * as textHandler from '../handlers/text.js'
-import * as imageHandler from '../handlers/image.js'
-import * as bubbleHandler from '../handlers/bubble.js'
+import {
+  getBuilderInput as getTextBuilderInput,
+  renderPreviewElement as renderTextPreviewElement
+} from '../handlers/text.js'
+import {
+  getBuilderInput as getImageBuilderInput,
+  renderPreviewElement as renderImagePreviewElement
+} from '../handlers/image.js'
+import {
+  getBuilderInput as getBubbleBuilderInput,
+  renderPreviewElement as renderBubblePreviewElement
+} from '../handlers/bubble.js'
 import {
   getBuilderInput as getLinkBuilderInput,
   renderPreviewElement as renderLinkPreviewElement
@@ -35,13 +50,13 @@ export function renderBuilderInputs () {
 
     switch (item.type) {
       case 'heading': {
-        const result = headingHandler.getBuilderInput(item)
+        const result = getHeadingBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
       }
       case 'step': {
-        const result = stepHandler.getBuilderInput(item)
+        const result = getStepBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
@@ -53,19 +68,19 @@ export function renderBuilderInputs () {
         break
       }
       case 'text': {
-        const result = textHandler.getBuilderInput(item)
+        const result = getTextBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
       }
       case 'image': {
-        const result = imageHandler.getBuilderInput(item)
+        const result = getImageBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
       }
       case 'bubble': {
-        const result = bubbleHandler.getBuilderInput(item)
+        const result = getBubbleBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
@@ -137,7 +152,7 @@ function collectPreviewNodes (fontStyle) {
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
 
   // Ensure the description preview reflects the current font style setting.
-  if (dom && dom.descPreview) {
+  if (dom?.descPreview) {
     // Remove any existing font-style-* classes from the description.
     Array.from(dom.descPreview.classList).forEach((cls) => {
       if (cls.startsWith('font-style-')) {
@@ -167,7 +182,7 @@ function collectPreviewNodes (fontStyle) {
 
     switch (item.type) {
       case 'heading': {
-        const el = headingHandler.renderPreviewElement(
+        const el = renderHeadingPreviewElement(
           item,
           fontStyle,
           contentWithIcons
@@ -180,11 +195,7 @@ function collectPreviewNodes (fontStyle) {
           currentList = document.createElement('ol')
           currentListType = 'step'
         }
-        const el = stepHandler.renderPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         currentList.appendChild(el)
         break
@@ -204,26 +215,18 @@ function collectPreviewNodes (fontStyle) {
         break
       }
       case 'text': {
-        const el = textHandler.renderPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
         nodes.push(el)
         break
       }
       case 'image': {
-        const el = imageHandler.renderPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
+        const el = renderImagePreviewElement(item, fontStyle, contentWithIcons)
         nodes.push(el)
         break
       }
       case 'bubble': {
-        const el = bubbleHandler.renderPreviewElement(
+        const el = renderBubblePreviewElement(
           item,
           fontStyle,
           contentWithIcons
