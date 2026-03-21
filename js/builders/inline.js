@@ -54,7 +54,9 @@ function clampValue (value, min, max) {
 
 function getInlineSurface () {
   if (!dom.inlinePreview) return null
-  return dom.inlinePreview.querySelector('.inline-preview-flow') || dom.inlinePreview
+  return (
+    dom.inlinePreview.querySelector('.inline-preview-flow') || dom.inlinePreview
+  )
 }
 
 function rectsOverlap (a, b) {
@@ -77,7 +79,9 @@ function moveItemNearVerticalAnchor (itemId, anchorY) {
   const candidates = Array.from(surface.querySelectorAll('.inline-item'))
     .map((node) => {
       const id = node.dataset.id
-      const candidate = recipeData.items.find((entry) => String(entry.id) === id)
+      const candidate = recipeData.items.find(
+        (entry) => String(entry.id) === id
+      )
       return { node, id, candidate }
     })
     .filter(
@@ -85,7 +89,8 @@ function moveItemNearVerticalAnchor (itemId, anchorY) {
         id &&
         String(id) !== String(itemId) &&
         candidate &&
-        (candidate.type !== 'image' || getInlineImageFlowMode(candidate) === 'around')
+        (candidate.type !== 'image' ||
+          getInlineImageFlowMode(candidate) === 'around')
     )
     .map(({ node, id }) => ({ id, rect: node.getBoundingClientRect() }))
     .sort((a, b) => {
@@ -157,8 +162,14 @@ function applyFloatingImagePlacement (wrapper, item, surface) {
   const wrapperRect = wrapper.getBoundingClientRect()
   const width = wrapperRect.width || item.inlineWidth || item.size || 320
   const height = wrapperRect.height || 120
-  const maxX = Math.max(0, surfaceRect.width - Math.min(width, surfaceRect.width))
-  const maxY = Math.max(0, surfaceRect.height - Math.min(height, surfaceRect.height))
+  const maxX = Math.max(
+    0,
+    surfaceRect.width - Math.min(width, surfaceRect.width)
+  )
+  const maxY = Math.max(
+    0,
+    surfaceRect.height - Math.min(height, surfaceRect.height)
+  )
 
   const currentX = Number.parseFloat(item.inlineX)
   const currentY = Number.parseFloat(item.inlineY)
@@ -752,8 +763,8 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   flowSelect.style.marginTop = '4px'
   flowSelect.style.border = '1px solid #d1d5db'
   flowSelect.style.borderRadius = '6px'
-  flowSelect.style.padding = '6px 8px'
-  ;[
+  flowSelect.style.padding = '6px 8px';
+  [
     { value: 'around', label: 'Around text' },
     { value: 'over', label: 'Over text' },
     { value: 'under', label: 'Under text' }
@@ -791,8 +802,16 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
       if (surface) {
         const surfaceRect = surface.getBoundingClientRect()
         const wrapperRect = wrapperEl.getBoundingClientRect()
-        item.inlineX = clampValue(wrapperRect.left - surfaceRect.left, 0, surfaceRect.width)
-        item.inlineY = clampValue(wrapperRect.top - surfaceRect.top, 0, surfaceRect.height)
+        item.inlineX = clampValue(
+          wrapperRect.left - surfaceRect.left,
+          0,
+          surfaceRect.width
+        )
+        item.inlineY = clampValue(
+          wrapperRect.top - surfaceRect.top,
+          0,
+          surfaceRect.height
+        )
       }
     }
 
