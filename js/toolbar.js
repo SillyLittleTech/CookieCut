@@ -150,7 +150,13 @@ function wrapSelectionWithTokens (text, start, end, openToken, closeToken) {
   return { text: nextText, start: wrappedStart, end: wrappedEnd }
 }
 
-function normalizeSelectionIgnoringMarkers (text, start, end, openToken, closeToken) {
+function normalizeSelectionIgnoringMarkers (
+  text,
+  start,
+  end,
+  openToken,
+  closeToken
+) {
   const selectedText = text.slice(start, end)
   const containsExplicitWrappers =
     selectedText.length > openToken.length + closeToken.length &&
@@ -168,7 +174,13 @@ function normalizeSelectionIgnoringMarkers (text, start, end, openToken, closeTo
 }
 
 function toggleSymmetricTokens (text, start, end, token) {
-  const normalized = normalizeSelectionIgnoringMarkers(text, start, end, token, token)
+  const normalized = normalizeSelectionIgnoringMarkers(
+    text,
+    start,
+    end,
+    token,
+    token
+  )
   const normalizedStart = normalized.start
   const normalizedEnd = normalized.end
   if (normalizedEnd <= normalizedStart) {
