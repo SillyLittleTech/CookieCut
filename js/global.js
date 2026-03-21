@@ -404,6 +404,16 @@ function handleIconListClick (e) {
 
 function openSettingsModal () {
   dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
+  if (dom.fontApplyTextCheckbox) {
+    dom.fontApplyTextCheckbox.checked = Boolean(
+      recipeData.settings.fontApplyToText
+    )
+  }
+  if (dom.fontApplyTipsCheckbox) {
+    dom.fontApplyTipsCheckbox.checked = Boolean(
+      recipeData.settings.fontApplyToTips
+    )
+  }
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
@@ -419,6 +429,20 @@ function closeSettingsModal () {
 function handleGlobalFontChange (e) {
   recipeData.settings.fontStyle = e.target.value
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
+  if (isInlineMode()) {
+    renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+}
+
+function handleFontScopeChange () {
+  recipeData.settings.fontApplyToText = dom.fontApplyTextCheckbox
+    ? dom.fontApplyTextCheckbox.checked
+    : false
+  recipeData.settings.fontApplyToTips = dom.fontApplyTipsCheckbox
+    ? dom.fontApplyTipsCheckbox.checked
+    : false
   if (isInlineMode()) {
     renderInlinePreview()
   } else if (!dom.recipePanel.classList.contains('hidden')) {
@@ -501,6 +525,12 @@ export function init () {
   dom.closeSettingsModalBtn.addEventListener('click', closeSettingsModal)
   dom.settingsModalOverlay.addEventListener('click', closeSettingsModal)
   dom.globalFontStyleSelect.addEventListener('change', handleGlobalFontChange)
+  if (dom.fontApplyTextCheckbox) {
+    dom.fontApplyTextCheckbox.addEventListener('change', handleFontScopeChange)
+  }
+  if (dom.fontApplyTipsCheckbox) {
+    dom.fontApplyTipsCheckbox.addEventListener('change', handleFontScopeChange)
+  }
 
   // Print Modal Listeners
   dom.closePrintModalBtn.addEventListener('click', closePrintModal)

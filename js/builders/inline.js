@@ -612,6 +612,8 @@ export function renderInlinePreview () {
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPaged = recipeData.settings.previewMode === 'paged'
+  const applyToText = Boolean(recipeData.settings.fontApplyToText)
+  const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
   dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
 
   let contentRoot = dom.inlinePreview
@@ -698,7 +700,9 @@ export function renderInlinePreview () {
 
   // Description (editable)
   const descriptionParagraph = document.createElement('p')
-  descriptionParagraph.className = 'text-gray-600 italic mb-4'
+  descriptionParagraph.className = `text-gray-600 italic mb-4 ${
+    applyToText ? `font-style-${fontStyle}` : ''
+  }`.trim()
   descriptionParagraph.contentEditable = true
   descriptionParagraph.dataset.key = 'description'
   descriptionParagraph.innerHTML = renderIconCodes(recipeData.description)
@@ -795,6 +799,9 @@ export function renderInlinePreview () {
         stepCounter
       )
       li.appendChild(badge)
+      if (applyToText) {
+        contentSpan.classList.add(`font-style-${fontStyle}`)
+      }
       const contentWrap = document.createElement('div')
       contentWrap.className = 'inline-list-content-wrap'
       contentWrap.appendChild(contentSpan)
@@ -818,6 +825,9 @@ export function renderInlinePreview () {
         contentWithIcons
       )
       li.appendChild(badge)
+      if (applyToText) {
+        contentSpan.classList.add(`font-style-${fontStyle}`)
+      }
       const contentWrap = document.createElement('div')
       contentWrap.className = 'inline-list-content-wrap'
       contentWrap.appendChild(contentSpan)
@@ -849,6 +859,9 @@ export function renderInlinePreview () {
             fontStyle,
             contentWithIcons
           )
+          if (applyToText) {
+            renderedElement.classList.add(`font-style-${fontStyle}`)
+          }
           break
         case 'image':
           renderedElement = imageHandler.renderInlineElement(
@@ -867,6 +880,9 @@ export function renderInlinePreview () {
             fontStyle,
             contentWithIcons
           )
+          if (applyToTips) {
+            renderedElement.classList.add(`font-style-${fontStyle}`)
+          }
           break
         case 'link': {
           renderedElement = renderInlineLinkElement(
@@ -874,6 +890,9 @@ export function renderInlinePreview () {
             fontStyle,
             contentWithIcons
           )
+          if (applyToText) {
+            renderedElement.classList.add(`font-style-${fontStyle}`)
+          }
           const anchorEl = renderedElement.querySelector('a')
           if (anchorEl) {
             anchorEl.classList.add('inline-edit-link')

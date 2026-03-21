@@ -5,6 +5,8 @@ export const recipeData = {
   items: [],
   settings: {
     fontStyle: 'display',
+    fontApplyToText: false, // also apply font to description and text items
+    fontApplyToTips: false, // also apply font to tips/toasts
     editorMode: 'classic', // 'classic' or 'inline'
     previewMode: 'continuous', // 'continuous' or 'paged'
     fileName: '' // custom filename for print/download
