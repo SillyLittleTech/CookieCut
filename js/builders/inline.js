@@ -26,6 +26,70 @@ let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
 
+// --- Inline Scale Handle ---
+
+/**
+ * Creates a drag handle that allows resizing text scale by dragging vertically.
+ * Dragging up increases scale; dragging down decreases it.
+ * @param {object} item - the recipe item (mutated in place)
+ * @param {HTMLElement} textEl - the rendered text element whose fontSize to update
+ * @returns {HTMLElement}
+ */
+function createScaleHandle (item, textEl) {
+  const handle = document.createElement('div')
+  handle.className = 'inline-scale-handle no-print'
+  const currentScale = item.scale != null ? Number(item.scale) : 100
+  handle.title = `Scale: ${currentScale}% — drag up/down to resize`
+  handle.draggable = false
+
+  handle.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('dblclick', (e) => {
+    e.stopPropagation()
+  })
+
+  let pointerStartY = 0
+  let scaleAtStart = 0
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    pointerStartY = e.clientY
+    scaleAtStart = item.scale != null ? Number(item.scale) : 100
+    try {
+      handle.setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture unavailable (e.g. synthetic events); drag still works
+    }
+  })
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!e.buttons) return
+    const delta = pointerStartY - e.clientY // drag up = bigger scale
+    const rawScale = scaleAtStart + delta
+    const newScale = Math.max(50, Math.min(300, Math.round(rawScale / 5) * 5))
+    if (newScale !== item.scale) {
+      item.scale = newScale
+      textEl.style.fontSize = `${newScale / 100}em`
+      handle.title = `Scale: ${newScale}% — drag up/down to resize`
+      // Sync the builder panel inputs if visible
+      const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
+      if (itemEl) {
+        const slider = itemEl.querySelector('[data-key="scale"]')
+        const display = itemEl.querySelector('[data-role="scale-display"]')
+        const preview = itemEl.querySelector('[data-role="scale-preview"]')
+        if (slider) slider.value = newScale
+        if (display) display.textContent = `${newScale}%`
+        if (preview) preview.style.fontSize = `${newScale / 100}em`
+      }
+    }
+  })
+
+  return handle
+}
+
 function getInlinePagedPageCount () {
   if (!inlinePagedFlow) return 1
 
@@ -794,6 +858,11 @@ export function renderInlinePreview () {
       wrapper.dataset.id = item.id
       wrapper.draggable = true
       wrapper.appendChild(renderedElement)
+
+      // Add scale handle for text and heading elements
+      if (item.type === 'text' || item.type === 'heading') {
+        wrapper.appendChild(createScaleHandle(item, renderedElement))
+      }
 
       // mark new text with outline to make it visible
       if (
