@@ -136,6 +136,19 @@ function collectPreviewNodes (fontStyle) {
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
 
+  // Ensure the description preview reflects the current font style setting.
+  if (dom && dom.descPreview) {
+    // Remove any existing font-style-* classes from the description.
+    Array.from(dom.descPreview.classList).forEach((cls) => {
+      if (cls.startsWith('font-style-')) {
+        dom.descPreview.classList.remove(cls)
+      }
+    })
+    // Apply the current font style if the setting is enabled.
+    if (applyToText && fontStyle) {
+      dom.descPreview.classList.add(`font-style-${fontStyle}`)
+    }
+  }
   const flushCurrentList = () => {
     if (!currentList) return
     nodes.push(currentList)
