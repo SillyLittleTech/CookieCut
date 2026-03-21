@@ -29,12 +29,17 @@ export function addItem (type, subtype = null) {
     case 'heading':
       newItem.type = 'heading'
       newItem.content = 'New Heading'
+      newItem.scale = 100
       break
     case 'step':
     case 'bullet':
-    case 'text':
       newItem.type = type
       newItem.content = ''
+      break
+    case 'text':
+      newItem.type = 'text'
+      newItem.content = ''
+      newItem.scale = 100
       break
     case 'image':
       newItem.type = 'image'
@@ -260,6 +265,15 @@ function handleLiveInput (e) {
     if (display) {
       display.textContent = `${value}px`
     }
+  }
+
+  // If it's the scale slider, update the percentage display and live preview sample
+  if (key === 'scale') {
+    item.scale = Number(value)
+    const display = itemEl.querySelector('[data-role="scale-display"]')
+    const preview = itemEl.querySelector('[data-role="scale-preview"]')
+    if (display) display.textContent = `${value}%`
+    if (preview) preview.style.fontSize = `${Number(value) / 100}em`
   }
 }
 
