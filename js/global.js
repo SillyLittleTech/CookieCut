@@ -1,6 +1,6 @@
 import { recipeData } from './state.js'
 import { dom } from './dom.js'
-import { renderIconCodes, copyToClipboard } from './helpers.js'
+import { renderRichText, copyToClipboard } from './helpers.js'
 import { COMMON_ICONS } from './constants.js'
 import {
   normalizeScale,
@@ -18,6 +18,7 @@ import {
   closeLinkEditor,
   refreshInlinePreviewMetrics
 } from './builders/inline.js'
+import { initSelectionToolbar } from './toolbar.js'
 
 // --- ACTIONS ---
 let nextItemId = Date.now()
@@ -624,6 +625,7 @@ export function init () {
   // Dynamic item handlers
   dom.contentInputs.addEventListener('input', handleLiveInput)
   dom.contentInputs.addEventListener('click', handleContentInputClick)
+  initSelectionToolbar()
 
   // View Toggle Listeners
   dom.previewBtn.addEventListener('click', showPreview)
@@ -649,8 +651,8 @@ export function init () {
   renderBuilderInputs()
   dom.titleInput.value = recipeData.title
   dom.descInput.value = recipeData.description
-  dom.titlePreview.innerHTML = renderIconCodes(recipeData.title)
-  dom.descPreview.innerHTML = renderIconCodes(recipeData.description)
+  dom.titlePreview.innerHTML = renderRichText(recipeData.title)
+  dom.descPreview.innerHTML = renderRichText(recipeData.description)
   dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   // Initialize editor mode (inline is experimental and OFF by default)

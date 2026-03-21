@@ -30,6 +30,285 @@ export function renderIconCodes (text) {
   return result
 }
 
+export const RICH_TEXT_SCALE_MIN_PX = 8
+export const RICH_TEXT_SCALE_MAX_PX = 160
+export const RICH_TEXT_DEFAULT_SCALE_PX = 16
+
+const HIGHLIGHT_COLOR_MAP = {
+  y: 'rt-highlight-y',
+  b: 'rt-highlight-b',
+  g: 'rt-highlight-g',
+  p: 'rt-highlight-p'
+}
+
+const FORMATTING_TOKEN_TYPES = [
+  {
+    type: 'bold',
+    open: '**',
+    close: '**',
+    render: (innerHtml) =>
+      `<strong data-rt-open="**" data-rt-close="**">${innerHtml}</strong>`
+  },
+  {
+    type: 'underline',
+    open: '__',
+    close: '__',
+    render: (innerHtml) =>
+      `<span class="rt-underline" data-rt-open="__" data-rt-close="__">${innerHtml}</span>`
+  },
+  {
+    type: 'strike',
+    open: '~~',
+    close: '~~',
+    render: (innerHtml) =>
+      `<span class="rt-strike" data-rt-open="~~" data-rt-close="~~">${innerHtml}</span>`
+  },
+  {
+    type: 'italic',
+    open: '*',
+    close: '*',
+    render: (innerHtml) =>
+      `<em data-rt-open="*" data-rt-close="*">${innerHtml}</em>`
+  }
+]
+
+function clampRichTextScale (pxValue) {
+  return Math.max(
+    RICH_TEXT_SCALE_MIN_PX,
+    Math.min(RICH_TEXT_SCALE_MAX_PX, pxValue)
+  )
+}
+
+function renderEscapedLiteral (escapedChar) {
+  const escapedCodePoint = escapedChar.codePointAt(0)
+  if (!Number.isFinite(escapedCodePoint)) {
+    return ''
+  }
+  const visibleChar = renderIconCodes(escapedChar)
+  return `<span class="rt-escaped-literal" data-rt-escape-code="${escapedCodePoint}" contenteditable="false">${visibleChar}</span>`
+}
+
+function parseFormattingTokenAt (sourceText, startIndex) {
+  const currentSlice = sourceText.slice(startIndex)
+
+  const scaleMatch = currentSlice.match(/^\{(\d{1,3})\{/u)
+  if (scaleMatch) {
+    const pxValue = Number.parseInt(scaleMatch[1], 10)
+    if (Number.isFinite(pxValue)) {
+      return {
+        type: 'scale',
+        open: scaleMatch[0],
+        close: '}}',
+        render: (innerHtml) => {
+          const clampedSize = clampRichTextScale(pxValue)
+          return `<span class="rt-scale" style="font-size:${clampedSize}px;" data-rt-open="${escapeHTML(scaleMatch[0])}" data-rt-close="}}">${innerHtml}</span>`
+        }
+      }
+    }
+  }
+
+  const highlightMatch = currentSlice.match(/^\[([a-z])\[/u)
+  if (highlightMatch) {
+    const colorCode = highlightMatch[1]
+    if (!Object.prototype.hasOwnProperty.call(HIGHLIGHT_COLOR_MAP, colorCode)) {
+      return null
+    }
+    const colorClass = HIGHLIGHT_COLOR_MAP[colorCode]
+    const safeOpenToken = escapeHTML(highlightMatch[0])
+    return {
+      type: 'highlight',
+      open: highlightMatch[0],
+      close: ']]',
+      render: (innerHtml) =>
+        `<mark class="rt-highlight ${colorClass}" data-rt-open="${safeOpenToken}" data-rt-close="]]">${innerHtml}</mark>`
+    }
+  }
+
+  for (const tokenType of FORMATTING_TOKEN_TYPES) {
+    if (currentSlice.startsWith(tokenType.open)) {
+      return tokenType
+    }
+  }
+
+  return null
+}
+
+function parseRichTextSegment (sourceText, startIndex = 0, stopToken = null) {
+  let html = ''
+  let index = startIndex
+
+  while (index < sourceText.length) {
+    if (stopToken && sourceText.startsWith(stopToken, index)) {
+      return { html, nextIndex: index + stopToken.length, closed: true }
+    }
+
+    if (sourceText[index] === '\\') {
+      const escapedChar = sourceText[index + 1]
+      if (escapedChar != null) {
+        html += renderEscapedLiteral(escapedChar)
+        index += 2
+      } else {
+        html += renderIconCodes('\\')
+        index += 1
+      }
+      continue
+    }
+
+    const token = parseFormattingTokenAt(sourceText, index)
+    if (!token) {
+      let nextIndex = index + 1
+      while (nextIndex < sourceText.length) {
+        const nextChar = sourceText[nextIndex]
+        if (stopToken && nextChar === stopToken[0]) {
+          break
+        }
+        if (
+          nextChar === '*' ||
+          nextChar === '_' ||
+          nextChar === '~' ||
+          nextChar === '[' ||
+          nextChar === '{'
+        ) {
+          break
+        }
+        nextIndex += 1
+      }
+      html += renderIconCodes(sourceText.slice(index, nextIndex))
+      index = nextIndex
+      continue
+    }
+
+    const tokenStart = index
+    const openLength = token.open.length
+    const inner = parseRichTextSegment(
+      sourceText,
+      index + openLength,
+      token.close
+    )
+
+    if (!inner.closed) {
+      // Unbalanced marker: treat the first marker character literally.
+      html += renderIconCodes(sourceText[tokenStart])
+      index = tokenStart + 1
+      continue
+    }
+
+    html += token.render(inner.html)
+    index = inner.nextIndex
+  }
+
+  return { html, nextIndex: index, closed: false }
+}
+
+export function renderRichText (text) {
+  if (typeof text !== 'string' || text.length === 0) return ''
+  return parseRichTextSegment(text).html
+}
+
+export function getHighlightOptions () {
+  return [
+    { code: 'y', label: 'Yellow' },
+    { code: 'b', label: 'Blue' },
+    { code: 'g', label: 'Green' },
+    { code: 'p', label: 'Pink' }
+  ]
+}
+
+function getSerializedTokenForIcon (elementNode) {
+  const iconName = (elementNode.textContent || '').trim()
+  return `:${iconName}:`
+}
+
+export function serializeNodeToCode (node) {
+  if (!node) return ''
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.nodeValue || ''
+  }
+
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    let fragmentText = ''
+    for (const childNode of node.childNodes) {
+      fragmentText += serializeNodeToCode(childNode)
+    }
+    return fragmentText
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return ''
+  }
+
+  const elementNode = node
+  if (elementNode.tagName === 'BR') {
+    return '\n'
+  }
+
+  if (elementNode.classList.contains('material-icons')) {
+    return getSerializedTokenForIcon(elementNode)
+  }
+
+  const escapeCode = Number.parseInt(
+    elementNode.dataset?.rtEscapeCode || '',
+    10
+  )
+  if (Number.isFinite(escapeCode)) {
+    return `\\${String.fromCodePoint(escapeCode)}`
+  }
+
+  const openToken = elementNode.dataset?.rtOpen || ''
+  const closeToken = elementNode.dataset?.rtClose || ''
+  let innerText = ''
+
+  for (const childNode of elementNode.childNodes) {
+    innerText += serializeNodeToCode(childNode)
+  }
+
+  return `${openToken}${innerText}${closeToken}`
+}
+
+function getCodeIndexFromBoundary (rootElement, containerNode, containerOffset) {
+  const range = document.createRange()
+  range.selectNodeContents(rootElement)
+  range.setEnd(containerNode, containerOffset)
+  const clonedContents = range.cloneContents()
+  return serializeNodeToCode(clonedContents).length
+}
+
+export function getCodeSelection (rootElement) {
+  const text = serializeNodeToCode(rootElement)
+  const selection = globalThis.getSelection?.()
+  if (!selection || selection.rangeCount === 0) {
+    const fallbackIndex = text.length
+    return { text, start: fallbackIndex, end: fallbackIndex }
+  }
+
+  const range = selection.getRangeAt(0)
+  if (
+    !rootElement.contains(range.startContainer) ||
+    !rootElement.contains(range.endContainer)
+  ) {
+    const fallbackIndex = text.length
+    return { text, start: fallbackIndex, end: fallbackIndex }
+  }
+
+  const selectionStart = getCodeIndexFromBoundary(
+    rootElement,
+    range.startContainer,
+    range.startOffset
+  )
+  const selectionEnd = getCodeIndexFromBoundary(
+    rootElement,
+    range.endContainer,
+    range.endOffset
+  )
+
+  return {
+    text,
+    start: Math.min(selectionStart, selectionEnd),
+    end: Math.max(selectionStart, selectionEnd)
+  }
+}
+
 export function getDocumentTextStats (recipeData) {
   const allText = [
     recipeData.title || '',
@@ -85,136 +364,151 @@ export function copyFallback (text) {
 }
 
 /**
- * Walk the editable element and return a plain "code text" where
- * icon spans are represented as :icon: tokens, plus the caret offset
- * (character index) inside that code text corresponding to the current
- * selection end.
+ * Return serialized code text and current caret/selection offsets.
  */
 export function getTextAndCaret (rootEl) {
-  const selection = globalThis.getSelection?.()
-  let focusNode = null
-  let focusOffset = 0
-  if (selection?.rangeCount > 0) {
-    focusNode = selection.getRangeAt(0).endContainer
-    focusOffset = selection.getRangeAt(0).endOffset
+  const { text, start, end } = getCodeSelection(rootEl)
+  return {
+    text,
+    caret: end,
+    selectionStart: start,
+    selectionEnd: end
+  }
+}
+
+function getNodeIndexInParent (node) {
+  if (!node?.parentNode) return 0
+  return Array.prototype.indexOf.call(node.parentNode.childNodes, node)
+}
+
+function resolveCaretPoint (rootElement, targetOffset) {
+  let consumed = 0
+  let point = null
+
+  const setBeforeNode = (node) => {
+    const index = getNodeIndexInParent(node)
+    point = { container: node.parentNode, offset: Math.max(0, index) }
   }
 
-  let text = ''
-  let caret = 0
-  let foundCaret = false
+  const setAfterNode = (node) => {
+    const index = getNodeIndexInParent(node)
+    point = { container: node.parentNode, offset: Math.max(0, index + 1) }
+  }
 
   function walk (node) {
+    if (point) return
+
     if (node.nodeType === Node.TEXT_NODE) {
-      const nodeText = node.nodeValue || ''
-      if (!foundCaret && node === focusNode) {
-        caret = text.length + Math.min(focusOffset, nodeText.length)
-        foundCaret = true
+      const value = node.nodeValue || ''
+      const next = consumed + value.length
+      if (targetOffset <= next) {
+        point = {
+          container: node,
+          offset: Math.max(0, targetOffset - consumed)
+        }
+        return
       }
-      text += nodeText
+      consumed = next
       return
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
       const elementNode = node
-      // If this element is an icon span, represent it as :name:
-      if (elementNode.classList?.contains('material-icons')) {
-        const token = `:${(elementNode.textContent || '').trim()}:`
-        // If focus is inside this element (or the element itself), approximate caret
-        if (
-          !foundCaret &&
-          (elementNode === focusNode || elementNode.contains(focusNode))
-        ) {
-          // If focusNode is the element itself, use focusOffset to choose before/after
-          if (focusNode === elementNode) {
-            caret = text.length + (focusOffset === 0 ? 0 : token.length)
-          } else {
-            // If focus is inside a descendant text node, put caret at token end.
-            caret = text.length + token.length
-          }
-          foundCaret = true
+
+      if (elementNode.tagName === 'BR') {
+        const next = consumed + 1
+        if (targetOffset <= next) {
+          if (targetOffset === consumed) setBeforeNode(elementNode)
+          else setAfterNode(elementNode)
+          return
         }
-        text += token
+        consumed = next
         return
       }
 
-      // Normal element: walk children
+      if (elementNode.classList.contains('material-icons')) {
+        const tokenLength = getSerializedTokenForIcon(elementNode).length
+        const next = consumed + tokenLength
+        if (targetOffset <= next) {
+          if (targetOffset === consumed) setBeforeNode(elementNode)
+          else setAfterNode(elementNode)
+          return
+        }
+        consumed = next
+        return
+      }
+
+      const escapeCode = Number.parseInt(
+        elementNode.dataset?.rtEscapeCode || '',
+        10
+      )
+      if (Number.isFinite(escapeCode)) {
+        const tokenLength = 2 // backslash + escaped character
+        const next = consumed + tokenLength
+        if (targetOffset <= next) {
+          if (targetOffset === consumed) setBeforeNode(elementNode)
+          else setAfterNode(elementNode)
+          return
+        }
+        consumed = next
+        return
+      }
+
+      const openToken = elementNode.dataset?.rtOpen || ''
+      const closeToken = elementNode.dataset?.rtClose || ''
+
+      if (openToken.length > 0) {
+        const next = consumed + openToken.length
+        if (targetOffset <= next) {
+          point = { container: elementNode, offset: 0 }
+          return
+        }
+        consumed = next
+      }
+
       for (const childNode of elementNode.childNodes) {
         walk(childNode)
+        if (point) return
+      }
+
+      if (closeToken.length > 0) {
+        const next = consumed + closeToken.length
+        if (targetOffset <= next) {
+          point = {
+            container: elementNode,
+            offset: elementNode.childNodes.length
+          }
+          return
+        }
+        consumed = next
       }
     }
   }
 
-  walk(rootEl)
+  walk(rootElement)
 
-  if (!foundCaret) caret = text.length
-  return { text, caret }
+  if (!point) {
+    return {
+      container: rootElement,
+      offset: rootElement.childNodes.length
+    }
+  }
+
+  return point
 }
 
 /**
- * Set caret (character) position within an element. Walk text nodes until
- * we locate the correct offset and set the range there.
- * Returns early without throwing if chars is not a non-negative number.
+ * Set caret position using serialized-code offsets.
  */
 export function setCaretPosition (element, chars) {
   if (typeof chars !== 'number' || chars < 0) return
   const selection = globalThis.getSelection?.()
   if (!selection) return
   const range = document.createRange()
-  const nodeStack = [element]
-  let node = null
-  let found = false
-  let charCount = 0
 
-  while (nodeStack.length && !found) {
-    node = nodeStack.shift()
-    if (node.nodeType === Node.TEXT_NODE) {
-      const nextCharCount = charCount + node.length
-      if (chars <= nextCharCount) {
-        range.setStart(node, Math.max(0, chars - charCount))
-        range.collapse(true)
-        found = true
-        break
-      }
-      charCount = nextCharCount
-    } else {
-      // Push child nodes in order
-      for (let i = 0; i < node.childNodes.length; i++) {
-        nodeStack.push(node.childNodes[i])
-      }
-    }
-  }
-
-  if (!found) {
-    range.selectNodeContents(element)
-    range.collapse(false)
-  }
-
-  // If the computed start is inside a material-icons span, move it to after that span
-  try {
-    const startContainerNode = range.startContainer
-    let ancestor =
-      startContainerNode.nodeType === Node.TEXT_NODE
-        ? startContainerNode.parentElement
-        : startContainerNode
-
-    while (
-      ancestor?.parentElement &&
-      ancestor !== element &&
-      !ancestor.classList?.contains('material-icons')
-    ) {
-      ancestor = ancestor.parentElement
-    }
-
-    if (
-      ancestor?.classList?.contains('material-icons') &&
-      ancestor !== element
-    ) {
-      range.setStartAfter(ancestor)
-      range.collapse(true)
-    }
-  } catch {
-    // ignore and use original range
-  }
+  const point = resolveCaretPoint(element, chars)
+  range.setStart(point.container, point.offset)
+  range.collapse(true)
 
   selection.removeAllRanges()
   selection.addRange(range)
