@@ -318,10 +318,15 @@ function getCodeIndexFromBoundary (rootElement, containerNode, containerOffset) 
 
     const children = node.childNodes
     for (let i = 0; i < children.length; i++) {
+      // Check boundary before child i — handles cases where the selection
+      // lands between two sibling nodes (e.g. containerOffset === i on the
+      // parent means "just before child i").
       if (node === containerNode && containerOffset === i) return true
       if (walk(children[i])) return true
     }
 
+    // Check boundary after the last child — handles containerOffset equal to
+    // the child count, which means "just after the last child of this node".
     if (node === containerNode && containerOffset === children.length) {
       return true
     }

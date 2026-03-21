@@ -182,21 +182,8 @@ function normalizeSelectionIgnoringMarkers (
   // form a doubled token (e.g. '**' for bold) with no standalone single-char
   // wrapper — pressing italic on '**bold**' should add italic, not strip bold.
   if (openToken.length === 1 && openToken === closeToken) {
-    const tokenChar = openToken[0]
-    let leadCount = 0
-    while (
-      leadCount < selectedText.length &&
-      selectedText[leadCount] === tokenChar
-    ) {
-      leadCount++
-    }
-    let trailCount = 0
-    while (
-      trailCount < selectedText.length &&
-      selectedText[selectedText.length - 1 - trailCount] === tokenChar
-    ) {
-      trailCount++
-    }
+    const leadCount = countTokenRunLength(selectedText, 0)
+    const trailCount = countTokenRunLength(selectedText, selectedText.length - 1)
     if (leadCount % 2 === 0 || trailCount % 2 === 0) {
       return { start, end }
     }
