@@ -30,6 +30,10 @@ export function renderIconCodes (text) {
   return result
 }
 
+export const RICH_TEXT_SCALE_MIN_PX = 8
+export const RICH_TEXT_SCALE_MAX_PX = 160
+export const RICH_TEXT_DEFAULT_SCALE_PX = 16
+
 const HIGHLIGHT_COLOR_MAP = {
   y: 'rt-highlight-y',
   b: 'rt-highlight-b',
@@ -68,6 +72,13 @@ const FORMATTING_TOKEN_TYPES = [
   }
 ]
 
+function clampRichTextScale (pxValue) {
+  return Math.max(
+    RICH_TEXT_SCALE_MIN_PX,
+    Math.min(RICH_TEXT_SCALE_MAX_PX, pxValue)
+  )
+}
+
 function parseFormattingTokenAt (sourceText, startIndex) {
   const currentSlice = sourceText.slice(startIndex)
 
@@ -80,7 +91,7 @@ function parseFormattingTokenAt (sourceText, startIndex) {
         open: scaleMatch[0],
         close: '}}',
         render: (innerHtml) => {
-          const clampedSize = Math.max(8, Math.min(160, pxValue))
+          const clampedSize = clampRichTextScale(pxValue)
           return `<span class="rt-scale" style="font-size:${clampedSize}px;" data-rt-open="${escapeHTML(scaleMatch[0])}" data-rt-close="}}">${innerHtml}</span>`
         }
       }
@@ -90,7 +101,10 @@ function parseFormattingTokenAt (sourceText, startIndex) {
   const highlightMatch = currentSlice.match(/^\[([a-z])\[/u)
   if (highlightMatch) {
     const colorCode = highlightMatch[1]
-    const colorClass = HIGHLIGHT_COLOR_MAP[colorCode] || HIGHLIGHT_COLOR_MAP.y
+    if (!Object.prototype.hasOwnProperty.call(HIGHLIGHT_COLOR_MAP, colorCode)) {
+      return null
+    }
+    const colorClass = HIGHLIGHT_COLOR_MAP[colorCode]
     const safeOpenToken = escapeHTML(highlightMatch[0])
     return {
       type: 'highlight',

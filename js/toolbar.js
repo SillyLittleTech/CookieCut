@@ -1,12 +1,14 @@
 import { recipeData } from './state.js'
 import { dom } from './dom.js'
-import { getCodeSelection, getHighlightOptions } from './helpers.js'
+import {
+  getCodeSelection,
+  getHighlightOptions,
+  RICH_TEXT_SCALE_MIN_PX,
+  RICH_TEXT_SCALE_MAX_PX,
+  RICH_TEXT_DEFAULT_SCALE_PX
+} from './helpers.js'
 import { renderBuilderInputs, renderPreview } from './builders/classic.js'
-import { renderInlinePreview } from './builders/inline.js'
-
-const MIN_SCALE_PX = 8
-const MAX_SCALE_PX = 160
-const DEFAULT_SCALE_PX = 16
+let visibilityRefreshRafId = 0
 
 const toolbarState = {
   element: null,
@@ -17,7 +19,10 @@ const toolbarState = {
 }
 
 function clampScale (value) {
-  return Math.max(MIN_SCALE_PX, Math.min(MAX_SCALE_PX, value))
+  return Math.max(
+    RICH_TEXT_SCALE_MIN_PX,
+    Math.min(RICH_TEXT_SCALE_MAX_PX, value)
+  )
 }
 
 function normalizeRange (start, end) {
@@ -208,7 +213,7 @@ function applyScaleDelta (text, start, end, deltaPx) {
     }
   }
 
-  const nextScale = clampScale(DEFAULT_SCALE_PX + deltaPx)
+  const nextScale = clampScale(RICH_TEXT_DEFAULT_SCALE_PX + deltaPx)
   const openToken = `{${nextScale}{`
   return wrapSelectionWithTokens(text, start, end, openToken, '}}')
 }
@@ -330,7 +335,6 @@ function applyCommandToInlineSelection (command, value) {
 
   syncInlineModelValue(inlineTarget.root, next.text)
   renderBuilderInputs()
-  renderInlinePreview()
   hideToolbar()
 }
 
@@ -350,13 +354,20 @@ function handleToolbarCommand (event) {
   }
 }
 
-function buildToolbarButton (label, command, title, extraClass = '') {
+function buildToolbarButton (
+  label,
+  command,
+  title,
+  extraClass = '',
+  ariaLabel = title
+) {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = label
   button.className = `selection-toolbar-btn ${extraClass}`.trim()
   button.dataset.command = command
   button.title = title
+  button.setAttribute('aria-label', ariaLabel)
   return button
 }
 
@@ -366,9 +377,13 @@ function ensureToolbar () {
   const toolbar = document.createElement('div')
   toolbar.id = 'selection-format-toolbar'
   toolbar.className = 'selection-format-toolbar hidden no-print'
+  toolbar.setAttribute('role', 'toolbar')
+  toolbar.setAttribute('aria-label', 'Text formatting toolbar')
 
   const controls = document.createElement('div')
   controls.className = 'selection-toolbar-controls'
+  controls.setAttribute('role', 'group')
+  controls.setAttribute('aria-label', 'Text style controls')
 
   controls.appendChild(
     buildToolbarButton('A-', 'scale-down', 'Decrease text size by 5px')
@@ -383,6 +398,8 @@ function ensureToolbar () {
 
   const palette = document.createElement('div')
   palette.className = 'selection-toolbar-palette'
+  palette.setAttribute('role', 'group')
+  palette.setAttribute('aria-label', 'Highlight color controls')
   for (const option of getHighlightOptions()) {
     const swatch = document.createElement('button')
     swatch.type = 'button'
@@ -390,6 +407,7 @@ function ensureToolbar () {
     swatch.dataset.command = 'highlight'
     swatch.dataset.value = option.code
     swatch.title = `Highlight: ${option.label}`
+    swatch.setAttribute('aria-label', `Highlight ${option.label}`)
     palette.appendChild(swatch)
   }
 
@@ -430,17 +448,25 @@ function refreshToolbarVisibility () {
   hideToolbar()
 }
 
+function scheduleToolbarVisibilityRefresh () {
+  if (visibilityRefreshRafId) return
+  visibilityRefreshRafId = requestAnimationFrame(() => {
+    visibilityRefreshRafId = 0
+    refreshToolbarVisibility()
+  })
+}
+
 export function initSelectionToolbar () {
   ensureToolbar()
-  document.addEventListener('selectionchange', refreshToolbarVisibility)
+  document.addEventListener('selectionchange', scheduleToolbarVisibilityRefresh)
   window.addEventListener('scroll', () => {
-    if (toolbarState.visible) refreshToolbarVisibility()
+    if (toolbarState.visible) scheduleToolbarVisibilityRefresh()
   })
   window.addEventListener('resize', () => {
-    if (toolbarState.visible) refreshToolbarVisibility()
+    if (toolbarState.visible) scheduleToolbarVisibilityRefresh()
   })
   document.addEventListener('mousedown', (event) => {
     if (!toolbarState.element?.contains(event.target)) return
-    refreshToolbarVisibility()
+    scheduleToolbarVisibilityRefresh()
   })
 }
