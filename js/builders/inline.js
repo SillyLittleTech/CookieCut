@@ -35,6 +35,212 @@ const INLINE_BOX_MAX_WIDTH = 1200
 const INLINE_BOX_MIN_HEIGHT = 48
 const INLINE_BOX_MAX_HEIGHT = 860
 const INLINE_BOX_DEFAULT_FLEX_BASIS = 340
+const INLINE_IMAGE_FLOW_MODES = new Set(['around', 'over', 'under'])
+
+function normalizeInlineImageFlowMode (mode) {
+  if (INLINE_IMAGE_FLOW_MODES.has(mode)) return mode
+  return 'around'
+}
+
+function getInlineImageFlowMode (item) {
+  const mode = normalizeInlineImageFlowMode(item.inlineImageFlow)
+  item.inlineImageFlow = mode
+  return mode
+}
+
+function clampValue (value, min, max) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function getInlineSurface () {
+  if (!dom.inlinePreview) return null
+  return dom.inlinePreview.querySelector('.inline-preview-flow') || dom.inlinePreview
+}
+
+function rectsOverlap (a, b) {
+  return !(
+    a.right <= b.left ||
+    a.left >= b.right ||
+    a.bottom <= b.top ||
+    a.top >= b.bottom
+  )
+}
+
+function moveItemNearVerticalAnchor (itemId, anchorY) {
+  const movingIndex = recipeData.items.findIndex(
+    (entry) => String(entry.id) === String(itemId)
+  )
+  if (movingIndex === -1) return
+  const surface = getInlineSurface()
+  if (!surface) return
+
+  const candidates = Array.from(surface.querySelectorAll('.inline-item'))
+    .map((node) => {
+      const id = node.dataset.id
+      const candidate = recipeData.items.find((entry) => String(entry.id) === id)
+      return { node, id, candidate }
+    })
+    .filter(
+      ({ id, candidate }) =>
+        id &&
+        String(id) !== String(itemId) &&
+        candidate &&
+        (candidate.type !== 'image' || getInlineImageFlowMode(candidate) === 'around')
+    )
+    .map(({ node, id }) => ({ id, rect: node.getBoundingClientRect() }))
+    .sort((a, b) => {
+      const topDelta = a.rect.top - b.rect.top
+      if (Math.abs(topDelta) > 2) return topDelta
+      return a.rect.left - b.rect.left
+    })
+
+  if (!candidates.length) return
+  const [movingItem] = recipeData.items.splice(movingIndex, 1)
+
+  let insertBeforeId = null
+  for (const candidate of candidates) {
+    const midpointY = candidate.rect.top + candidate.rect.height / 2
+    if (anchorY < midpointY) {
+      insertBeforeId = candidate.id
+      break
+    }
+  }
+
+  if (!insertBeforeId) {
+    recipeData.items.push(movingItem)
+    return
+  }
+
+  const insertIndex = recipeData.items.findIndex(
+    (entry) => String(entry.id) === String(insertBeforeId)
+  )
+  if (insertIndex === -1) recipeData.items.push(movingItem)
+  else recipeData.items.splice(insertIndex, 0, movingItem)
+}
+
+function doesImageOverlapTextItems (imageWrapper, imageItemId) {
+  const surface = getInlineSurface()
+  if (!surface || !imageWrapper) return false
+  const imageRect = imageWrapper.getBoundingClientRect()
+
+  return Array.from(surface.querySelectorAll('.inline-item')).some((node) => {
+    if (String(node.dataset.id) === String(imageItemId)) return false
+    const nodeItem = recipeData.items.find(
+      (entry) => String(entry.id) === String(node.dataset.id)
+    )
+    if (!nodeItem || nodeItem.type === 'image') return false
+    return rectsOverlap(imageRect, node.getBoundingClientRect())
+  })
+}
+
+function applyFloatingImagePlacement (wrapper, item, surface) {
+  const flowMode = getInlineImageFlowMode(item)
+  const isFloating = flowMode !== 'around'
+  wrapper.classList.toggle('inline-item--floating-image', isFloating)
+  wrapper.classList.toggle('inline-item--image-over', flowMode === 'over')
+  wrapper.classList.toggle('inline-item--image-under', flowMode === 'under')
+  wrapper.dataset.freeMove = isFloating ? 'true' : 'false'
+
+  if (!isFloating) {
+    wrapper.style.removeProperty('position')
+    wrapper.style.removeProperty('left')
+    wrapper.style.removeProperty('top')
+    wrapper.style.removeProperty('z-index')
+    wrapper.draggable = true
+    return
+  }
+
+  wrapper.draggable = false
+  wrapper.style.position = 'absolute'
+
+  const surfaceRect = surface.getBoundingClientRect()
+  const wrapperRect = wrapper.getBoundingClientRect()
+  const width = wrapperRect.width || item.inlineWidth || item.size || 320
+  const height = wrapperRect.height || 120
+  const maxX = Math.max(0, surfaceRect.width - Math.min(width, surfaceRect.width))
+  const maxY = Math.max(0, surfaceRect.height - Math.min(height, surfaceRect.height))
+
+  const currentX = Number.parseFloat(item.inlineX)
+  const currentY = Number.parseFloat(item.inlineY)
+  const nextX = Number.isFinite(currentX) ? clampValue(currentX, 0, maxX) : 24
+  const nextY = Number.isFinite(currentY) ? clampValue(currentY, 0, maxY) : 24
+  item.inlineX = nextX
+  item.inlineY = nextY
+  wrapper.style.left = `${nextX}px`
+  wrapper.style.top = `${nextY}px`
+  wrapper.style.zIndex = flowMode === 'over' ? '9' : '1'
+}
+
+function attachFloatingImageMoveInteraction (wrapper, frame, item, surface) {
+  let startX = 0
+  let startY = 0
+  let startLeft = 0
+  let startTop = 0
+  let active = false
+  let moved = false
+
+  frame.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('.inline-frame-handle')) return
+    if (event.target.closest('.inline-edit-image')) return
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+
+    startX = event.clientX
+    startY = event.clientY
+    startLeft = Number.parseFloat(item.inlineX) || 0
+    startTop = Number.parseFloat(item.inlineY) || 0
+    active = true
+    moved = false
+    try {
+      frame.setPointerCapture(event.pointerId)
+    } catch {
+      // Pointer capture may be unavailable.
+    }
+  })
+
+  frame.addEventListener('pointermove', (event) => {
+    if (!active || !event.buttons) return
+    const deltaX = event.clientX - startX
+    const deltaY = event.clientY - startY
+    moved = moved || Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2
+
+    const surfaceRect = surface.getBoundingClientRect()
+    const wrapperRect = wrapper.getBoundingClientRect()
+    const maxX = Math.max(0, surfaceRect.width - wrapperRect.width)
+    const maxY = Math.max(0, surfaceRect.height - wrapperRect.height)
+    const nextX = clampValue(startLeft + deltaX, 0, maxX)
+    const nextY = clampValue(startTop + deltaY, 0, maxY)
+
+    item.inlineX = nextX
+    item.inlineY = nextY
+    wrapper.style.left = `${nextX}px`
+    wrapper.style.top = `${nextY}px`
+  })
+
+  const stopMove = (event) => {
+    if (!active) return
+    active = false
+    if (event?.pointerId != null) {
+      try {
+        frame.releasePointerCapture(event.pointerId)
+      } catch {
+        // Pointer capture may already be released.
+      }
+    }
+    if (moved) {
+      wrapper.dataset.suppressImageClick = 'true'
+      setTimeout(() => {
+        if (wrapper.dataset.suppressImageClick === 'true') {
+          delete wrapper.dataset.suppressImageClick
+        }
+      }, 0)
+    }
+  }
+
+  frame.addEventListener('pointerup', stopMove)
+  frame.addEventListener('pointercancel', stopMove)
+}
 
 function normalizeInlineBoxMeasurement (value, min, max) {
   const numeric = Number.parseFloat(value)
@@ -434,6 +640,22 @@ function syncLinkInputs (item) {
   if (hrefInput) hrefInput.value = item.href || ''
 }
 
+function syncImageInputs (item) {
+  const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
+  if (!itemEl) return
+  const srcInput = itemEl.querySelector('[data-key="src"]')
+  const altInput = itemEl.querySelector('[data-key="alt"]')
+  const sizeSlider = itemEl.querySelector('[data-key="size"]')
+  const sizeDisplay = itemEl.querySelector('[data-role="size-display"]')
+  const flowSelect = itemEl.querySelector('[data-key="inlineImageFlow"]')
+
+  if (srcInput) srcInput.value = item.src || ''
+  if (altInput) altInput.value = item.alt || ''
+  if (sizeSlider) sizeSlider.value = String(item.size || 350)
+  if (sizeDisplay) sizeDisplay.textContent = `${item.size || 350}px`
+  if (flowSelect) flowSelect.value = getInlineImageFlowMode(item)
+}
+
 function persistLinkChanges (item, text, href) {
   item.content = text.trim()
   item.href = href.trim()
@@ -448,7 +670,7 @@ function saveLinkAndRerender (item, text, href) {
   })
 }
 
-export function openImageResizer (imgEl, item) {
+export function openImageResizer (imgEl, item, wrapperEl = null) {
   closeActiveInlineEditors()
   const resizer = document.createElement('div')
   resizer.className = 'image-resizer-overlay'
@@ -467,25 +689,31 @@ export function openImageResizer (imgEl, item) {
   input.min = 100
   input.max = 1200
   input.step = 1
-  input.value = item.size || 350
+  const initialSize = Math.round(
+    normalizeInlineBoxMeasurement(item.inlineWidth, 100, 1200) ||
+      normalizeInlineBoxMeasurement(item.size, 100, 1200) ||
+      350
+  )
+  input.value = initialSize
   input.style.width = '300px'
   const label = document.createElement('span')
-  label.textContent = `${input.value}px`
+  label.textContent = `${initialSize}px`
   label.style.marginLeft = '10px'
+  item.size = initialSize
+  item.inlineWidth = initialSize
 
   input.addEventListener('input', () => {
-    const sizeValue = input.value
-    item.size = Number(sizeValue)
-    imgEl.style.maxWidth = `${sizeValue}px`
+    const sizeValue = Math.round(Number.parseFloat(input.value) || 350)
+    item.size = sizeValue
+    item.inlineWidth = sizeValue
     label.textContent = `${sizeValue}px`
-    // update builder input display if visible
-    const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
-    if (itemEl) {
-      const display = itemEl.querySelector('[data-role="size-display"]')
-      const slider = itemEl.querySelector('[data-key="size"]')
-      if (display) display.textContent = `${sizeValue}px`
-      if (slider) slider.value = sizeValue
+    if (wrapperEl) {
+      const frameEl = wrapperEl.querySelector('.inline-item-frame')
+      if (frameEl) {
+        syncInlineBoxSizing(item, wrapperEl, frameEl)
+      }
     }
+    syncImageInputs(item)
     refreshInlinePreviewMetrics()
   })
 
@@ -513,10 +741,36 @@ export function openImageResizer (imgEl, item) {
   altInput.style.display = 'block'
   altInput.style.marginTop = '4px'
 
+  const flowLabel = document.createElement('label')
+  flowLabel.textContent = 'Inline text flow'
+  flowLabel.style.display = 'block'
+  flowLabel.style.marginTop = '8px'
+
+  const flowSelect = document.createElement('select')
+  flowSelect.style.width = '420px'
+  flowSelect.style.display = 'block'
+  flowSelect.style.marginTop = '4px'
+  flowSelect.style.border = '1px solid #d1d5db'
+  flowSelect.style.borderRadius = '6px'
+  flowSelect.style.padding = '6px 8px'
+  ;[
+    { value: 'around', label: 'Around text' },
+    { value: 'over', label: 'Over text' },
+    { value: 'under', label: 'Under text' }
+  ].forEach((entry) => {
+    const option = document.createElement('option')
+    option.value = entry.value
+    option.textContent = entry.label
+    flowSelect.appendChild(option)
+  })
+  flowSelect.value = getInlineImageFlowMode(item)
+
   const applyBtn = document.createElement('button')
   applyBtn.textContent = 'Apply'
   applyBtn.className = 'ml-3 px-3 py-1 bg-blue-600 text-white rounded'
   applyBtn.addEventListener('click', () => {
+    const previousFlow = getInlineImageFlowMode(item)
+    const nextFlow = normalizeInlineImageFlowMode(flowSelect.value)
     const newUrl = urlInput.value.trim()
     const newAlt = altInput.value.trim()
     if (newUrl) {
@@ -531,14 +785,36 @@ export function openImageResizer (imgEl, item) {
     }
     item.alt = newAlt
     imgEl.alt = newAlt
-    // update builder inputs if visible
-    const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
-    if (itemEl) {
-      const srcInput = itemEl.querySelector('[data-key="src"]')
-      const altInputEl = itemEl.querySelector('[data-key="alt"]')
-      if (srcInput) srcInput.value = item.src
-      if (altInputEl) altInputEl.value = item.alt
+
+    if (previousFlow === 'around' && nextFlow !== 'around' && wrapperEl) {
+      const surface = getInlineSurface()
+      if (surface) {
+        const surfaceRect = surface.getBoundingClientRect()
+        const wrapperRect = wrapperEl.getBoundingClientRect()
+        item.inlineX = clampValue(wrapperRect.left - surfaceRect.left, 0, surfaceRect.width)
+        item.inlineY = clampValue(wrapperRect.top - surfaceRect.top, 0, surfaceRect.height)
+      }
     }
+
+    if (previousFlow !== 'around' && nextFlow === 'around') {
+      const anchorY = wrapperEl
+        ? wrapperEl.getBoundingClientRect().top +
+          wrapperEl.getBoundingClientRect().height / 2
+        : 0
+      const overlapsText = wrapperEl
+        ? doesImageOverlapTextItems(wrapperEl, item.id)
+        : false
+      delete item.inlineX
+      delete item.inlineY
+      if (overlapsText) {
+        moveItemNearVerticalAnchor(item.id, anchorY)
+      }
+    }
+
+    item.inlineImageFlow = nextFlow
+    syncImageInputs(item)
+    closeImageResizer()
+    renderInlinePreview()
     refreshInlinePreviewMetrics()
   })
 
@@ -553,6 +829,8 @@ export function openImageResizer (imgEl, item) {
   resizer.appendChild(urlInput)
   resizer.appendChild(altLabel)
   resizer.appendChild(altInput)
+  resizer.appendChild(flowLabel)
+  resizer.appendChild(flowSelect)
   resizer.appendChild(applyBtn)
   resizer.appendChild(closeBtn)
   document.body.appendChild(resizer)
@@ -905,6 +1183,10 @@ export function renderInlinePreview () {
       }
     })
 
+    if (node.dataset.freeMove === 'true') {
+      return
+    }
+
     node.addEventListener('dragstart', (ev) => {
       ev.dataTransfer.setData('text/plain', String(itemId))
       node.classList.add('dragging')
@@ -1019,10 +1301,6 @@ export function renderInlinePreview () {
             fontStyle,
             contentWithIcons
           )
-          renderedElement.addEventListener('click', (e) => {
-            e.stopPropagation()
-            openImageResizer(renderedElement, item)
-          })
           break
         case 'bubble':
           renderedElement = renderInlineBubbleElement(
@@ -1075,11 +1353,26 @@ export function renderInlinePreview () {
       frame.appendChild(renderedElement)
       wrapper.appendChild(frame)
 
-      // Add scale handle for all text-containing elements
-      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
+      // Add border-handle resizing for modular items (including images).
+      if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
+        if (item.type === 'image') {
+          const normalizedImageWidth = normalizeInlineBoxMeasurement(
+            item.inlineWidth || item.size,
+            INLINE_BOX_MIN_WIDTH,
+            INLINE_BOX_MAX_WIDTH
+          )
+          if (normalizedImageWidth) {
+            item.inlineWidth = normalizedImageWidth
+            item.size = normalizedImageWidth
+          }
+        }
         frame.classList.add('inline-item-frame-resizable')
         syncInlineBoxSizing(item, wrapper, frame)
         attachInlineBorderHandles(item, frame, wrapper)
+      }
+
+      // Add text scale handle for text-containing elements.
+      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
 
@@ -1097,6 +1390,22 @@ export function renderInlinePreview () {
         setTimeout(() => renderedElement.focus(), 20)
       }
       contentRoot.appendChild(wrapper)
+
+      if (item.type === 'image') {
+        const surface = getInlineSurface() || contentRoot
+        applyFloatingImagePlacement(wrapper, item, surface)
+        if (wrapper.dataset.freeMove === 'true') {
+          attachFloatingImageMoveInteraction(wrapper, frame, item, surface)
+        }
+        renderedElement.addEventListener('click', (e) => {
+          e.stopPropagation()
+          if (wrapper.dataset.suppressImageClick === 'true') {
+            delete wrapper.dataset.suppressImageClick
+            return
+          }
+          openImageResizer(renderedElement, item, wrapper)
+        })
+      }
 
       attachInlineItemInteractions(wrapper, item.id)
     }

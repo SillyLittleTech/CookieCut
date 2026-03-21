@@ -6,6 +6,7 @@ import { escapeHTML } from '../helpers.js';
  * @returns {{ label: string, inputHtml: string }}
  */
 export function getBuilderInput(item) {
+    const imageFlowMode = item.inlineImageFlow || 'around';
     return {
         label: 'Image',
         inputHtml: `
@@ -27,6 +28,12 @@ export function getBuilderInput(item) {
                     <span>Medium</span>
                     <span>Large</span>
                 </div>
+                <label class="block text-xs font-medium text-gray-600 pt-2">Inline Text Flow</label>
+                <select data-key="inlineImageFlow" class="w-full p-2 border border-gray-300 rounded-md bg-white">
+                    <option value="around" ${imageFlowMode === 'around' ? 'selected' : ''}>Around text</option>
+                    <option value="over" ${imageFlowMode === 'over' ? 'selected' : ''}>Over text</option>
+                    <option value="under" ${imageFlowMode === 'under' ? 'selected' : ''}>Under text</option>
+                </select>
             </div>
         `
     };
@@ -60,7 +67,9 @@ export function renderInlineElement(item, fontStyle, contentWithIcons) {
     const el = document.createElement('img');
     el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview';
     el.alt = item.alt || '';
-    el.style.maxWidth = `${item.size}px`;
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
+    el.style.height = 'auto';
     el.dataset.id = item.id;
     el.className = 'inline-edit-image';
     return el;
