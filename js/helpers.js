@@ -79,6 +79,15 @@ function clampRichTextScale (pxValue) {
   )
 }
 
+function renderEscapedLiteral (escapedChar) {
+  const escapedCodePoint = escapedChar.codePointAt(0)
+  if (!Number.isFinite(escapedCodePoint)) {
+    return ''
+  }
+  const visibleChar = renderIconCodes(escapedChar)
+  return `<span class="rt-escaped-literal" data-rt-escape-code="${escapedCodePoint}" contenteditable="false">${visibleChar}</span>`
+}
+
 function parseFormattingTokenAt (sourceText, startIndex) {
   const currentSlice = sourceText.slice(startIndex)
 
@@ -131,6 +140,18 @@ function parseRichTextSegment (sourceText, startIndex = 0, stopToken = null) {
   while (index < sourceText.length) {
     if (stopToken && sourceText.startsWith(stopToken, index)) {
       return { html, nextIndex: index + stopToken.length, closed: true }
+    }
+
+    if (sourceText[index] === '\\') {
+      const escapedChar = sourceText[index + 1]
+      if (escapedChar != null) {
+        html += renderEscapedLiteral(escapedChar)
+        index += 2
+      } else {
+        html += renderIconCodes('\\')
+        index += 1
+      }
+      continue
     }
 
     const token = parseFormattingTokenAt(sourceText, index)
@@ -224,6 +245,11 @@ export function serializeNodeToCode (node) {
 
   if (elementNode.classList.contains('material-icons')) {
     return getSerializedTokenForIcon(elementNode)
+  }
+
+  const escapeCode = Number.parseInt(elementNode.dataset?.rtEscapeCode || '', 10)
+  if (Number.isFinite(escapeCode)) {
+    return `\\${String.fromCodePoint(escapeCode)}`
   }
 
   const openToken = elementNode.dataset?.rtOpen || ''
@@ -399,6 +425,22 @@ function resolveCaretPoint (rootElement, targetOffset) {
 
       if (elementNode.classList.contains('material-icons')) {
         const tokenLength = getSerializedTokenForIcon(elementNode).length
+        const next = consumed + tokenLength
+        if (targetOffset <= next) {
+          if (targetOffset === consumed) setBeforeNode(elementNode)
+          else setAfterNode(elementNode)
+          return
+        }
+        consumed = next
+        return
+      }
+
+      const escapeCode = Number.parseInt(
+        elementNode.dataset?.rtEscapeCode || '',
+        10
+      )
+      if (Number.isFinite(escapeCode)) {
+        const tokenLength = 2 // backslash + escaped character
         const next = consumed + tokenLength
         if (targetOffset <= next) {
           if (targetOffset === consumed) setBeforeNode(elementNode)
