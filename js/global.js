@@ -79,7 +79,7 @@ export function addItem (type, subtype = null) {
 }
 
 function moveItem (id, direction) {
-  const index = recipeData.items.findIndex((i) => i.id == id)
+  const index = recipeData.items.findIndex((i) => String(i.id) === String(id))
   if (direction === 'up' && index > 0) {
     [recipeData.items[index], recipeData.items[index - 1]] = [
       recipeData.items[index - 1],
@@ -261,7 +261,7 @@ function handleLiveInput (e) {
   const id = itemEl.dataset.id
   const key = e.target.dataset.key
   const value = e.target.value
-  const item = recipeData.items.find((i) => i.id == id)
+  const item = recipeData.items.find((i) => String(i.id) === String(id))
 
   if (!item || !key) return
 
@@ -309,7 +309,9 @@ function handleContentInputClick (e) {
   let actionTaken = false
 
   if (deleteBtn) {
-    recipeData.items = recipeData.items.filter((i) => i.id != id)
+    recipeData.items = recipeData.items.filter(
+      (i) => String(i.id) !== String(id)
+    )
     actionTaken = true
   } else if (moveUpBtn) {
     moveItem(id, 'up')
@@ -556,14 +558,14 @@ export function init () {
       menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
 
       const makeBtn = (label, cb) => {
-        const b = document.createElement('button')
-        b.textContent = label
-        b.className = 'px-3 py-2 block w-full text-left'
-        b.addEventListener('click', () => {
+        const buttonEl = document.createElement('button')
+        buttonEl.textContent = label
+        buttonEl.className = 'px-3 py-2 block w-full text-left'
+        buttonEl.addEventListener('click', () => {
           cb()
           menu.remove()
         })
-        return b
+        return buttonEl
       }
 
       menu.appendChild(makeBtn('Add Text', () => openTextModal()))
@@ -575,9 +577,13 @@ export function init () {
       // click outside to close
       setTimeout(() => {
         document.addEventListener('click', function _close (ev) {
-          const m = document.getElementById('floating-add-menu')
-          if (m && !m.contains(ev.target) && ev.target !== dom.floatingAddBtn) {
-            m.remove()
+          const menuEl = document.getElementById('floating-add-menu')
+          if (
+            menuEl &&
+            !menuEl.contains(ev.target) &&
+            ev.target !== dom.floatingAddBtn
+          ) {
+            menuEl.remove()
           }
           document.removeEventListener('click', _close)
         })
