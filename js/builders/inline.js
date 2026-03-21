@@ -953,7 +953,12 @@ export function renderInlinePreview () {
       li.draggable = true
 
       const { badge, contentSpan } = isStep
-        ? renderInlineStepElement(item, fontStyle, contentWithIcons, stepCounter)
+        ? renderInlineStepElement(
+          item,
+          fontStyle,
+          contentWithIcons,
+          stepCounter
+        )
         : renderInlineBulletElement(item, fontStyle, contentWithIcons)
       li.appendChild(badge)
       if (applyToText) {
