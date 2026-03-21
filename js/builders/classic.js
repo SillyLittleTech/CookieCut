@@ -133,8 +133,8 @@ function collectPreviewNodes (fontStyle) {
   const nodes = []
   let currentList = null
   let currentListType = null
-  const applyToText = !!recipeData.settings.fontApplyToText
-  const applyToTips = !!recipeData.settings.fontApplyToTips
+  const applyToText = Boolean(recipeData.settings.fontApplyToText)
+  const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
 
   const flushCurrentList = () => {
     if (!currentList) return

@@ -370,10 +370,10 @@ function handleIconListClick (e) {
 function openSettingsModal () {
   dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
   if (dom.fontApplyTextCheckbox) {
-    dom.fontApplyTextCheckbox.checked = !!recipeData.settings.fontApplyToText
+    dom.fontApplyTextCheckbox.checked = Boolean(recipeData.settings.fontApplyToText)
   }
   if (dom.fontApplyTipsCheckbox) {
-    dom.fontApplyTipsCheckbox.checked = !!recipeData.settings.fontApplyToTips
+    dom.fontApplyTipsCheckbox.checked = Boolean(recipeData.settings.fontApplyToTips)
   }
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
