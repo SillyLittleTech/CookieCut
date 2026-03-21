@@ -26,6 +26,34 @@ let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
 
+function writeAgentDebugLog (payload) {
+  try {
+    if (typeof require === 'function') {
+      require('fs').appendFileSync(
+        '/opt/cursor/logs/debug.log',
+        `${JSON.stringify(payload)}\n`
+      )
+    }
+  } catch {}
+  try {
+    if (typeof globalThis.__agentLog === 'function') {
+      globalThis.__agentLog(payload)
+    }
+  } catch {}
+}
+
+function logInlineItemRender (data) {
+  // #region agent log
+  writeAgentDebugLog({
+    hypothesisId: 'B',
+    location: 'js/builders/inline.js:renderInlinePreview:item',
+    message: 'Inline item rendered',
+    data,
+    timestamp: Date.now()
+  })
+  // #endregion
+}
+
 function getInlinePagedPageCount () {
   if (!inlinePagedFlow) return 1
 
@@ -512,6 +540,23 @@ export function renderInlinePreview () {
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPaged = recipeData.settings.previewMode === 'paged'
+  const applyToText = Boolean(recipeData.settings.fontApplyToText)
+  const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
+  // #region agent log
+  writeAgentDebugLog({
+    hypothesisId: 'B',
+    location: 'js/builders/inline.js:renderInlinePreview:entry',
+    message: 'Inline preview render entry',
+    data: {
+      fontStyle,
+      isPaged,
+      applyToText,
+      applyToTips,
+      itemCount: recipeData.items.length
+    },
+    timestamp: Date.now()
+  })
+  // #endregion
   dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
 
   let contentRoot = dom.inlinePreview
@@ -612,6 +657,19 @@ export function renderInlinePreview () {
     descriptionParagraph.addEventListener('input', removeOutlineDesc)
   }
   contentRoot.appendChild(descriptionParagraph)
+  // #region agent log
+  writeAgentDebugLog({
+    hypothesisId: 'C',
+    location: 'js/builders/inline.js:renderInlinePreview:description',
+    message: 'Inline description paragraph class assignment',
+    data: {
+      applyToText,
+      fontStyle,
+      className: descriptionParagraph.className
+    },
+    timestamp: Date.now()
+  })
+  // #endregion
 
   // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
   let currentList = null
@@ -698,6 +756,14 @@ export function renderInlinePreview () {
       li.appendChild(contentSpan)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
+      logInlineItemRender({
+        itemType: item.type,
+        itemId: item.id,
+        targetNode: 'step-content',
+        className: contentSpan.className,
+        applyToText,
+        fontStyle
+      })
       return
     }
 
@@ -717,6 +783,14 @@ export function renderInlinePreview () {
       li.appendChild(contentSpan)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
+      logInlineItemRender({
+        itemType: item.type,
+        itemId: item.id,
+        targetNode: 'bullet-content',
+        className: contentSpan.className,
+        applyToText,
+        fontStyle
+      })
       return
     }
 
@@ -811,6 +885,15 @@ export function renderInlinePreview () {
       contentRoot.appendChild(wrapper)
 
       attachInlineItemInteractions(wrapper, item.id)
+      logInlineItemRender({
+        itemType: item.type,
+        itemId: item.id,
+        targetNode: 'wrapper-first-child',
+        className: renderedElement.className || '',
+        applyToText,
+        applyToTips,
+        fontStyle
+      })
     }
   })
 

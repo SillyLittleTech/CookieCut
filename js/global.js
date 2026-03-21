@@ -18,6 +18,22 @@ import {
 let nextItemId = Date.now()
 let floatingAddMenuCloseHandler = null
 
+function writeAgentDebugLog (payload) {
+  try {
+    if (typeof require === 'function') {
+      require('fs').appendFileSync(
+        '/opt/cursor/logs/debug.log',
+        `${JSON.stringify(payload)}\n`
+      )
+    }
+  } catch {}
+  try {
+    if (typeof globalThis.__agentLog === 'function') {
+      globalThis.__agentLog(payload)
+    }
+  } catch {}
+}
+
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
   return nextItemId
@@ -392,6 +408,20 @@ function closeSettingsModal () {
   dom.settingsModal.classList.add('hidden')
 }
 function handleGlobalFontChange (e) {
+  // #region agent log
+  writeAgentDebugLog({
+    hypothesisId: 'A',
+    location: 'js/global.js:handleGlobalFontChange',
+    message: 'Global font change handler entry',
+    data: {
+      selectedFont: e?.target?.value,
+      mode: recipeData.settings?.editorMode,
+      applyToText: Boolean(recipeData.settings?.fontApplyToText),
+      applyToTips: Boolean(recipeData.settings?.fontApplyToTips)
+    },
+    timestamp: Date.now()
+  })
+  // #endregion
   recipeData.settings.fontStyle = e.target.value
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   if (isInlineMode()) {
@@ -408,6 +438,20 @@ function handleFontScopeChange () {
   recipeData.settings.fontApplyToTips = dom.fontApplyTipsCheckbox
     ? dom.fontApplyTipsCheckbox.checked
     : false
+  // #region agent log
+  writeAgentDebugLog({
+    hypothesisId: 'B',
+    location: 'js/global.js:handleFontScopeChange',
+    message: 'Font scope toggles changed',
+    data: {
+      mode: recipeData.settings?.editorMode,
+      applyToText: Boolean(recipeData.settings?.fontApplyToText),
+      applyToTips: Boolean(recipeData.settings?.fontApplyToTips),
+      fontStyle: recipeData.settings?.fontStyle
+    },
+    timestamp: Date.now()
+  })
+  // #endregion
   if (isInlineMode()) {
     renderInlinePreview()
   } else if (!dom.recipePanel.classList.contains('hidden')) {
