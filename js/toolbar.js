@@ -150,6 +150,16 @@ function wrapSelectionWithTokens (text, start, end, openToken, closeToken) {
   return { text: nextText, start: wrappedStart, end: wrappedEnd }
 }
 
+function countTokenRunLength (text, pos) {
+  const char = text[pos]
+  if (!char) return 0
+  let runStart = pos
+  while (runStart > 0 && text[runStart - 1] === char) runStart--
+  let runEnd = pos
+  while (runEnd + 1 < text.length && text[runEnd + 1] === char) runEnd++
+  return runEnd - runStart + 1
+}
+
 function normalizeSelectionIgnoringMarkers (
   text,
   start,
@@ -165,6 +175,31 @@ function normalizeSelectionIgnoringMarkers (
 
   if (!containsExplicitWrappers) {
     return { start, end }
+  }
+
+  // For single-char symmetric tokens (e.g. '*' for italic), verify the leading
+  // and trailing runs have odd length. An even count means the boundary chars
+  // form a doubled token (e.g. '**' for bold) with no standalone single-char
+  // wrapper — pressing italic on '**bold**' should add italic, not strip bold.
+  if (openToken.length === 1 && openToken === closeToken) {
+    const tokenChar = openToken[0]
+    let leadCount = 0
+    while (
+      leadCount < selectedText.length &&
+      selectedText[leadCount] === tokenChar
+    ) {
+      leadCount++
+    }
+    let trailCount = 0
+    while (
+      trailCount < selectedText.length &&
+      selectedText[selectedText.length - 1 - trailCount] === tokenChar
+    ) {
+      trailCount++
+    }
+    if (leadCount % 2 === 0 || trailCount % 2 === 0) {
+      return { start, end }
+    }
   }
 
   return {
@@ -187,11 +222,22 @@ function toggleSymmetricTokens (text, start, end, token) {
     return { text, start, end }
   }
 
-  const isWrapped =
+  let isWrapped =
     normalizedStart >= token.length &&
     normalizedEnd + token.length <= text.length &&
     text.slice(normalizedStart - token.length, normalizedStart) === token &&
     text.slice(normalizedEnd, normalizedEnd + token.length) === token
+
+  // For single-char tokens, ensure the boundary chars are not part of a
+  // doubled token (e.g. the '*' next to inner 'bold' in '**bold**' has a
+  // run-length of 2 — even — so it is a bold marker, not a standalone italic).
+  if (isWrapped && token.length === 1) {
+    const leftRun = countTokenRunLength(text, normalizedStart - 1)
+    const rightRun = countTokenRunLength(text, normalizedEnd)
+    if (leftRun % 2 === 0 || rightRun % 2 === 0) {
+      isWrapped = false
+    }
+  }
 
   if (isWrapped) {
     const nextText =
