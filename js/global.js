@@ -23,6 +23,7 @@ import { initSelectionToolbar } from './toolbar.js'
 // --- ACTIONS ---
 let nextItemId = Date.now()
 let floatingAddMenuCloseHandler = null
+let documentTransferMessageTimer = null
 const COOKIE_DOCUMENT_VERSION = 1
 const VALID_ITEM_TYPES = new Set([
   'heading',
@@ -62,6 +63,18 @@ function syncNextItemIdToRecipeItems () {
     return Math.max(maxId, normalizedId)
   }, 0)
   nextItemId = Math.max(nextItemId, maxImportedId)
+}
+
+function showDocumentTransferMessage (message, isError = false) {
+  if (!dom.documentTransferStatus) return
+  dom.documentTransferStatus.textContent = message
+  dom.documentTransferStatus.style.color = isError ? '#b91c1c' : '#374151'
+  clearTimeout(documentTransferMessageTimer)
+  documentTransferMessageTimer = setTimeout(() => {
+    if (dom.documentTransferStatus?.textContent === message) {
+      dom.documentTransferStatus.textContent = ''
+    }
+  }, 5000)
 }
 
 function normalizeImportedSettings (rawSettings) {
@@ -175,12 +188,14 @@ function exportDocumentFile () {
   const blob = new Blob([payloadText], { type: 'application/json' })
   const objectUrl = URL.createObjectURL(blob)
   const linkEl = document.createElement('a')
+  const exportFileName = `${getExportFileNameBase()}.cookie`
   linkEl.href = objectUrl
-  linkEl.download = `${getExportFileNameBase()}.cookie`
+  linkEl.download = exportFileName
   document.body.appendChild(linkEl)
   linkEl.click()
   linkEl.remove()
   URL.revokeObjectURL(objectUrl)
+  showDocumentTransferMessage(`Exported ${exportFileName}`)
 }
 
 function readTextFile (file) {
@@ -241,6 +256,7 @@ async function importDocumentFile (file) {
   recipeData.settings = normalizedRecipeData.settings
   syncNextItemIdToRecipeItems()
   syncUiFromRecipeData()
+  showDocumentTransferMessage(`Imported ${file.name}`)
 }
 
 export function addItem (type, subtype = null) {
@@ -723,15 +739,16 @@ export function init () {
       dom.importDocInput.click()
     })
     dom.importDocInput.addEventListener('change', async (event) => {
-      const selectedFile = event.target.files && event.target.files[0]
+      const selectedFile = event.target.files?.[0]
       event.target.value = ''
       if (!selectedFile) return
       try {
         await importDocumentFile(selectedFile)
       } catch (error) {
         console.error('Failed to import CookieCut document:', error)
-        window.alert(
-          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.'
+        showDocumentTransferMessage(
+          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
+          true
         )
       }
     })

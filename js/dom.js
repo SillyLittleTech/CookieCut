@@ -16,6 +16,7 @@ export const dom = {
   exportDocBtn: null,
   importDocBtn: null,
   importDocInput: null,
+  documentTransferStatus: null,
   previewBtn: null,
   editBtn: null,
   printBtn: null,
@@ -87,6 +88,7 @@ export function initDom () {
   dom.exportDocBtn = document.getElementById('export-doc-btn')
   dom.importDocBtn = document.getElementById('import-doc-btn')
   dom.importDocInput = document.getElementById('import-doc-input')
+  dom.documentTransferStatus = document.getElementById('doc-transfer-status')
   dom.previewBtn = document.getElementById('preview-btn')
   dom.editBtn = document.getElementById('edit-btn')
   dom.printBtn = document.getElementById('print-btn')
