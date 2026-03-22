@@ -507,6 +507,7 @@ function saveTemplateSlotToCache (slot, payloadText, sourceName = '') {
     getTemplateSlotCookieKey(slot),
     {
       slot,
+      sourceName,
       payloadText
     },
     TEMPLATE_SLOT_COOKIE_MAX_CHARS
@@ -524,6 +525,22 @@ async function readTemplatePayloadForSlot (slot) {
       name: cachedSlot.sourceName || `Custom Slot ${slot}`,
       payloadText: cachedSlot.payloadText,
       sourceType: 'cached'
+    }
+  }
+
+  const cookieBackupValue = getCookieValue(getTemplateSlotCookieKey(slot))
+  if (cookieBackupValue) {
+    try {
+      const parsedCookieBackup = JSON.parse(decodeURIComponent(cookieBackupValue))
+      if (typeof parsedCookieBackup.payloadText === 'string') {
+        return {
+          name: parsedCookieBackup.sourceName || `Custom Slot ${slot}`,
+          payloadText: parsedCookieBackup.payloadText,
+          sourceType: 'cookie'
+        }
+      }
+    } catch {
+      // Ignore invalid cookie backup payloads for this slot.
     }
   }
 
@@ -647,10 +664,7 @@ function renderTemplateGallerySlots () {
   }
 }
 
-async function importDocumentPayloadText (
-  rawText,
-  sourceLabel = 'CookieCut document'
-) {
+function importDocumentPayloadText (rawText, sourceLabel = 'CookieCut document') {
   const normalizedRecipeData = parseImportedRecipeDataText(rawText)
   if (!normalizedRecipeData) {
     throw new Error('Invalid CookieCut document format.')
@@ -1354,17 +1368,15 @@ function handlePreviewModeChange (e) {
 function handleGlobalKeydown (event) {
   const hasPrimaryModifier = event.ctrlKey || event.metaKey
   if (hasPrimaryModifier && !event.altKey && event.key.toLowerCase() === 'z') {
-    event.preventDefault()
     if (event.shiftKey) {
-      handleRedoAction()
+      if (handleRedoAction()) event.preventDefault()
       return
     }
-    handleUndoAction()
+    if (handleUndoAction()) event.preventDefault()
     return
   }
   if (hasPrimaryModifier && !event.altKey && event.key.toLowerCase() === 'y') {
-    event.preventDefault()
-    handleRedoAction()
+    if (handleRedoAction()) event.preventDefault()
     return
   }
 
@@ -1378,7 +1390,10 @@ function handleGlobalKeydown (event) {
 }
 
 async function handleTemplateGalleryGridClick (event) {
-  const card = event.target.closest('.template-slot-card')
+  const clickTarget =
+    event.target instanceof Element ? event.target : event.target?.parentElement
+  if (!clickTarget) return
+  const card = clickTarget.closest('.template-slot-card')
   if (!card) return
   const slot = Number.parseInt(card.dataset.slot || '', 10)
   if (!Number.isFinite(slot) || slot < 1 || slot > TEMPLATE_SLOT_COUNT) return
