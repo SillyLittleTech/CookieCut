@@ -101,7 +101,9 @@ export function initDom () {
   dom.templateGalleryBackBtn = document.getElementById(
     'template-gallery-back-btn'
   )
-  dom.templateGalleryStatus = document.getElementById('template-gallery-status')
+  dom.templateGalleryStatus = document.getElementById(
+    'template-gallery-status'
+  )
   dom.templateGalleryGrid = document.getElementById('template-gallery-grid')
   dom.previewBtn = document.getElementById('preview-btn')
   dom.editBtn = document.getElementById('edit-btn')

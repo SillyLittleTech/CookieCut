@@ -253,7 +253,8 @@ function handleRedoAction () {
 function isEditableKeyTarget (event) {
   const target = event.target
   if (!target || target === document.body) return false
-  const element = target.nodeType === Node.TEXT_NODE ? target.parentElement : target
+  const element =
+    target.nodeType === Node.TEXT_NODE ? target.parentElement : target
   if (!element || element.nodeType !== Node.ELEMENT_NODE) return false
   if (element.isContentEditable) return true
   if (element.matches('input, textarea')) return true
@@ -444,7 +445,9 @@ function restoreWorkingDocumentFromCache () {
       const normalizedRecipeData = parseImportedRecipeDataText(cachedText)
       if (normalizedRecipeData) {
         applyNormalizedRecipeData(normalizedRecipeData)
-        showDocumentTransferMessage('Recovered document from local autosave cache.')
+        showDocumentTransferMessage(
+          'Recovered document from local autosave cache.'
+        )
         return true
       }
     } catch {
@@ -681,7 +684,10 @@ async function loadTemplateFromSlot (slot) {
     showTemplateGalleryMessage(`Slot ${slot} is empty. Use + to upload.`)
     return
   }
-  await importDocumentPayloadText(templatePayload.payloadText, templatePayload.name)
+  await importDocumentPayloadText(
+    templatePayload.payloadText,
+    templatePayload.name
+  )
   showEditor()
 }
 
@@ -993,7 +999,9 @@ function showTemplateGallery () {
   renderTemplateGallerySlots()
   if (dom.builderPanel) dom.builderPanel.classList.add('hidden')
   if (dom.recipePanel) dom.recipePanel.classList.add('hidden')
-  if (dom.templateGalleryPanel) dom.templateGalleryPanel.classList.remove('hidden')
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.remove('hidden')
+  }
   if (dom.inlinePreview) dom.inlinePreview.classList.add('hidden')
   if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden')
   updateAppLayoutForPreviewMode()
@@ -1001,7 +1009,9 @@ function showTemplateGallery () {
 }
 
 function showPreview () {
-  if (dom.templateGalleryPanel) dom.templateGalleryPanel.classList.add('hidden')
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.add('hidden')
+  }
   renderPreview()
   dom.builderPanel.classList.add('hidden')
   dom.recipePanel.classList.remove('hidden')
@@ -1010,7 +1020,9 @@ function showPreview () {
 }
 
 function showEditor () {
-  if (dom.templateGalleryPanel) dom.templateGalleryPanel.classList.add('hidden')
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.add('hidden')
+  }
   dom.builderPanel.classList.remove('hidden')
   dom.recipePanel.classList.add('hidden')
   if (isInlineMode()) {
