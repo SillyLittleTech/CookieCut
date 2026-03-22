@@ -16,6 +16,7 @@ export const dom = {
   templateBrowserBtn: null,
   exportDocBtn: null,
   importDocBtn: null,
+  clearDocBtn: null,
   importDocInput: null,
   documentTransferStatus: null,
   templateGalleryPanel: null,
@@ -65,8 +66,19 @@ export const dom = {
   printModalTitle: null,
   printFileNameInput: null,
   printFileNameHelp: null,
+  printTemplateCheckbox: null,
+  printMarketplaceOptions: null,
+  printMarketplaceTitleInput: null,
+  printMarketplaceSummaryInput: null,
+  printMarketplaceTagsInput: null,
   cancelPrintBtn: null,
   confirmPrintBtn: null,
+  // Clear document modal
+  clearDocModal: null,
+  clearDocModalOverlay: null,
+  closeClearDocModalBtn: null,
+  cancelClearDocBtn: null,
+  confirmClearDocBtn: null,
   // Inline editor
   floatingAddBtn: null,
   inlinePreview: null,
@@ -95,6 +107,7 @@ export function initDom () {
   dom.templateBrowserBtn = document.getElementById('template-browser-btn')
   dom.exportDocBtn = document.getElementById('export-doc-btn')
   dom.importDocBtn = document.getElementById('import-doc-btn')
+  dom.clearDocBtn = document.getElementById('clear-doc-btn')
   dom.importDocInput = document.getElementById('import-doc-input')
   dom.documentTransferStatus = document.getElementById('doc-transfer-status')
   dom.templateGalleryPanel = document.getElementById('template-gallery-panel')
@@ -158,8 +171,29 @@ export function initDom () {
   dom.printModalTitle = document.getElementById('print-modal-title')
   dom.printFileNameInput = document.getElementById('print-file-name-input')
   dom.printFileNameHelp = document.getElementById('print-file-name-help')
+  dom.printTemplateCheckbox = document.getElementById('print-template-checkbox')
+  dom.printMarketplaceOptions = document.getElementById(
+    'print-marketplace-options'
+  )
+  dom.printMarketplaceTitleInput = document.getElementById(
+    'print-marketplace-title-input'
+  )
+  dom.printMarketplaceSummaryInput = document.getElementById(
+    'print-marketplace-summary-input'
+  )
+  dom.printMarketplaceTagsInput = document.getElementById(
+    'print-marketplace-tags-input'
+  )
   dom.cancelPrintBtn = document.getElementById('cancel-print-btn')
   dom.confirmPrintBtn = document.getElementById('confirm-print-btn')
+  // Clear document modal
+  dom.clearDocModal = document.getElementById('clear-doc-modal')
+  dom.clearDocModalOverlay = document.getElementById('clear-doc-modal-overlay')
+  dom.closeClearDocModalBtn = document.getElementById(
+    'close-clear-doc-modal-btn'
+  )
+  dom.cancelClearDocBtn = document.getElementById('cancel-clear-doc-btn')
+  dom.confirmClearDocBtn = document.getElementById('confirm-clear-doc-btn')
   // Inline editor
   dom.floatingAddBtn = document.getElementById('floating-add-btn')
   dom.inlinePreview = document.getElementById('inline-preview')

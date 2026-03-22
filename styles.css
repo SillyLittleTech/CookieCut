@@ -307,6 +307,13 @@
   background: #eff6ff;
 }
 
+/* --- Top toolbar icon-only controls --- */
+.top-toolbar-icon-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+}
+
 /* --- New "Text Bubble" Style (Stylized as a sticky note) --- */
 /* Base style for all "toasts" */
 .toast-base {

@@ -206,9 +206,23 @@ function observeRecipeMutations () {
 
 function startHistoryObserver () {
   if (historyObserverTimerId) return
-  historyObserverTimerId = setInterval(() => {
+  const runMutationObserver = () => {
+    if (typeof document.hasFocus === 'function' && !document.hasFocus()) return
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(
+        () => {
+          observeRecipeMutations()
+        },
+        { timeout: HISTORY_OBSERVER_INTERVAL_MS }
+      )
+      return
+    }
     observeRecipeMutations()
-  }, HISTORY_OBSERVER_INTERVAL_MS)
+  }
+  historyObserverTimerId = setInterval(
+    runMutationObserver,
+    HISTORY_OBSERVER_INTERVAL_MS
+  )
 }
 
 function applyRecipeSnapshot (snapshot) {
@@ -292,8 +306,21 @@ function safeLocalStorageSet (key, value) {
   }
 }
 
+function safeLocalStorageRemove (key) {
+  try {
+    globalThis.localStorage?.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function setCookieValue (name, value) {
   document.cookie = `${name}=${value}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax`
+}
+
+function removeCookieValue (name) {
+  document.cookie = `${name}=; path=/; max-age=0; samesite=lax`
 }
 
 function getCookieValue (name) {
@@ -322,6 +349,11 @@ function saveJsonCookie (name, payloadObject, maxChars) {
   )
   setCookieValue(name, fallback)
   return false
+}
+
+function clearWorkingDocumentCache () {
+  safeLocalStorageRemove(WORKING_DOCUMENT_STORAGE_KEY)
+  removeCookieValue(WORKING_DOCUMENT_COOKIE_KEY)
 }
 
 function normalizeImportedSettings (rawSettings) {
@@ -787,8 +819,8 @@ function getExportFileNameBase (preferredNameInput = '') {
   return safeName || 'cookiecut_document'
 }
 
-function buildDocumentPayload () {
-  return {
+function buildDocumentPayload (options = {}) {
+  const payload = {
     app: 'CookieCut',
     format: 'cookie_document',
     version: COOKIE_DOCUMENT_VERSION,
@@ -800,10 +832,14 @@ function buildDocumentPayload () {
       settings: { ...recipeData.settings }
     }
   }
+  if (options.marketplaceTemplate) {
+    payload.marketplaceTemplate = options.marketplaceTemplate
+  }
+  return payload
 }
 
-function exportDocumentFile (preferredFileName = '') {
-  const payloadText = JSON.stringify(buildDocumentPayload(), null, 2)
+function exportDocumentFile (preferredFileName = '', options = {}) {
+  const payloadText = JSON.stringify(buildDocumentPayload(options), null, 2)
   const blob = new Blob([payloadText], { type: 'application/json' })
   const objectUrl = URL.createObjectURL(blob)
   const linkEl = document.createElement('a')
@@ -1091,21 +1127,85 @@ function executePrint (fileName) {
   setTimeout(cleanup, 1500)
 }
 
+function setMarketplaceOptionsVisibility (visible) {
+  if (dom.printMarketplaceOptions) {
+    dom.printMarketplaceOptions.classList.toggle('hidden', !visible)
+  }
+}
+
+function resetMarketplaceOptionsInputs () {
+  if (dom.printTemplateCheckbox) dom.printTemplateCheckbox.checked = false
+  if (dom.printMarketplaceTitleInput) dom.printMarketplaceTitleInput.value = ''
+  if (dom.printMarketplaceSummaryInput) dom.printMarketplaceSummaryInput.value = ''
+  if (dom.printMarketplaceTagsInput) dom.printMarketplaceTagsInput.value = ''
+  setMarketplaceOptionsVisibility(false)
+}
+
+function buildMarketplaceTemplateMetadataFromModal () {
+  if (!dom.printTemplateCheckbox || !dom.printTemplateCheckbox.checked) {
+    return null
+  }
+  const templateTitle =
+    toStringOrFallback(dom.printMarketplaceTitleInput?.value, '').trim() ||
+    toStringOrFallback(recipeData.title, '').trim()
+  const summary = toStringOrFallback(dom.printMarketplaceSummaryInput?.value, '').trim()
+  const tags = toStringOrFallback(dom.printMarketplaceTagsInput?.value, '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+
+  return {
+    isTemplate: true,
+    title: templateTitle,
+    summary,
+    tags
+  }
+}
+
+function openClearDocumentModal () {
+  if (!dom.clearDocModal) return
+  dom.clearDocModal.classList.remove('hidden')
+}
+
+function closeClearDocumentModal () {
+  if (!dom.clearDocModal) return
+  dom.clearDocModal.classList.add('hidden')
+}
+
+function clearCurrentDocumentData () {
+  recipeData.title = ''
+  recipeData.description = ''
+  recipeData.items = []
+  recipeData.settings = { ...DEFAULT_RECIPE_SETTINGS }
+  closeClearDocumentModal()
+  syncUiFromRecipeData()
+  resetHistoryTracking()
+  autosaveKeystrokeCounter = 0
+  clearWorkingDocumentCache()
+  persistWorkingDocumentToCache()
+  showDocumentTransferMessage('Cleared the current working document.')
+}
+
 function updatePrintModalContentForAction (action) {
+  const isExport = action === PRINT_MODAL_ACTION_EXPORT
   if (dom.printModalTitle) {
     dom.printModalTitle.textContent =
-      action === PRINT_MODAL_ACTION_EXPORT
-        ? 'Export .cookie'
-        : 'Print / Download'
+      isExport ? 'Export .cookie' : 'Print / Download'
   }
   if (dom.printFileNameHelp) {
     dom.printFileNameHelp.textContent =
-      action === PRINT_MODAL_ACTION_EXPORT
+      isExport
         ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
         : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
   }
+  if (dom.printTemplateCheckbox) {
+    const templateToggleRow = dom.printTemplateCheckbox.closest(
+      '#print-template-toggle-wrap'
+    )
+    if (templateToggleRow) templateToggleRow.classList.toggle('hidden', !isExport)
+    if (!isExport) resetMarketplaceOptionsInputs()
+  }
   if (dom.confirmPrintBtn) {
-    const isExport = action === PRINT_MODAL_ACTION_EXPORT
     dom.confirmPrintBtn.textContent = isExport
       ? 'Export .cookie'
       : 'Print Recipe'
@@ -1124,6 +1224,9 @@ function openPrintModal (action = PRINT_MODAL_ACTION_PRINT) {
   updatePrintModalContentForAction(printModalAction)
   if (dom.printFileNameInput) {
     dom.printFileNameInput.value = recipeData.settings.fileName || ''
+  }
+  if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+    resetMarketplaceOptionsInputs()
   }
   dom.printModal.classList.remove('hidden')
 }
@@ -1445,6 +1548,9 @@ export function init () {
       handleExportRequest()
     })
   }
+  if (dom.clearDocBtn) {
+    dom.clearDocBtn.addEventListener('click', openClearDocumentModal)
+  }
   if (dom.importDocBtn && dom.importDocInput) {
     dom.importDocBtn.addEventListener('click', () => {
       dom.importDocInput.click()
@@ -1527,11 +1633,25 @@ export function init () {
     recipeData.settings.fileName = fileName
     closePrintModal()
     if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
-      exportDocumentFile(fileName)
+      exportDocumentFile(fileName, {
+        marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
+      })
       return
     }
     executePrint(fileName)
   })
+  if (dom.printTemplateCheckbox) {
+    dom.printTemplateCheckbox.addEventListener('change', (event) => {
+      setMarketplaceOptionsVisibility(Boolean(event.target.checked))
+      if (
+        event.target.checked &&
+        dom.printMarketplaceTitleInput &&
+        !dom.printMarketplaceTitleInput.value
+      ) {
+        dom.printMarketplaceTitleInput.value = recipeData.title || ''
+      }
+    })
+  }
   if (dom.printFileNameInput) {
     dom.printFileNameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -1540,6 +1660,20 @@ export function init () {
       }
       if (e.key === 'Escape') closePrintModal()
     })
+  }
+
+  // Clear Document Modal Listeners
+  if (dom.closeClearDocModalBtn) {
+    dom.closeClearDocModalBtn.addEventListener('click', closeClearDocumentModal)
+  }
+  if (dom.clearDocModalOverlay) {
+    dom.clearDocModalOverlay.addEventListener('click', closeClearDocumentModal)
+  }
+  if (dom.cancelClearDocBtn) {
+    dom.cancelClearDocBtn.addEventListener('click', closeClearDocumentModal)
+  }
+  if (dom.confirmClearDocBtn) {
+    dom.confirmClearDocBtn.addEventListener('click', clearCurrentDocumentData)
   }
 
   // Editor Mode select
