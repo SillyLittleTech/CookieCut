@@ -135,7 +135,7 @@ function doesImageOverlapTextItems (imageWrapper, imageItemId) {
   })
 }
 
-function applyFloatingImagePlacement (wrapper, item, surface) {
+function applyFloatingImagePlacement (wrapper, item) {
   const flowMode = getInlineImageFlowMode(item)
   const isFloating = flowMode !== 'around'
   wrapper.classList.toggle('inline-item--floating-image', isFloating)
@@ -166,7 +166,7 @@ function applyFloatingImagePlacement (wrapper, item, surface) {
   wrapper.style.zIndex = flowMode === 'over' ? '9' : '1'
 }
 
-function attachFloatingImageMoveInteraction (wrapper, frame, item, surface) {
+function attachFloatingImageMoveInteraction (wrapper, frame, item) {
   let startX = 0
   let startY = 0
   let startLeft = 0
@@ -1393,10 +1393,9 @@ export function renderInlinePreview () {
       contentRoot.appendChild(wrapper)
 
       if (item.type === 'image') {
-        const surface = getInlineSurface() || contentRoot
-        applyFloatingImagePlacement(wrapper, item, surface)
+        applyFloatingImagePlacement(wrapper, item)
         if (wrapper.dataset.freeMove === 'true') {
-          attachFloatingImageMoveInteraction(wrapper, frame, item, surface)
+          attachFloatingImageMoveInteraction(wrapper, frame, item)
         }
         renderedElement.addEventListener('click', (e) => {
           e.stopPropagation()

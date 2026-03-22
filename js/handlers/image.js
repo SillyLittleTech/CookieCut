@@ -42,11 +42,9 @@ export function getBuilderInput (item) {
 /**
  * Creates and returns an image preview DOM element.
  * @param {object} item
- * @param {string} fontStyle
- * @param {string} contentWithIcons - unused for images
  * @returns {HTMLElement}
  */
-export function renderPreviewElement (item, fontStyle, contentWithIcons) {
+export function renderPreviewElement (item) {
   const el = document.createElement('img')
   el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview'
   el.alt = item.alt
@@ -62,11 +60,9 @@ export function renderPreviewElement (item, fontStyle, contentWithIcons) {
  * Creates and returns an inline-editable image element.
  * The caller (inline.js) attaches the click/resizer event listener.
  * @param {object} item
- * @param {string} fontStyle
- * @param {string} contentWithIcons - unused for images
  * @returns {HTMLElement}
  */
-export function renderInlineElement (item, fontStyle, contentWithIcons) {
+export function renderInlineElement (item) {
   const el = document.createElement('img')
   el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview'
   el.alt = item.alt || ''
