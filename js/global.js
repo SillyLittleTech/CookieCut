@@ -255,7 +255,7 @@ function isEditableKeyTarget (event) {
   if (!target || target === document.body) return false
   const element =
     target.nodeType === Node.TEXT_NODE ? target.parentElement : target
-  if (!element || element.nodeType !== Node.ELEMENT_NODE) return false
+  if (element?.nodeType !== Node.ELEMENT_NODE) return false
   if (element.isContentEditable) return true
   if (element.matches('input, textarea')) return true
   return Boolean(element.closest('[contenteditable="true"]'))
@@ -722,10 +722,7 @@ async function loadTemplateFromSlot (slot) {
     showTemplateGalleryMessage(`Slot ${slot} is empty. Use + to upload.`)
     return
   }
-  await importDocumentPayloadText(
-    templatePayload.payloadText,
-    templatePayload.name
-  )
+  importDocumentPayloadText(templatePayload.payloadText, templatePayload.name)
   showEditor()
 }
 
@@ -854,7 +851,7 @@ function syncUiFromRecipeData () {
 
 async function importDocumentFile (file) {
   const rawText = await readTextFile(file)
-  await importDocumentPayloadText(rawText, file.name)
+  importDocumentPayloadText(rawText, file.name)
 }
 
 export function addItem (type, subtype = null) {
@@ -1370,21 +1367,27 @@ function handlePreviewModeChange (e) {
   }
 }
 
-function handleGlobalKeydown (event) {
+function handleHistoryKeyboardShortcut (event) {
   const hasPrimaryModifier = event.ctrlKey || event.metaKey
-  if (hasPrimaryModifier && !event.altKey && event.key.toLowerCase() === 'z') {
+  if (!hasPrimaryModifier || event.altKey) return false
+  const key = event.key.toLowerCase()
+  if (key === 'z') {
     if (event.shiftKey) {
       if (handleRedoAction()) event.preventDefault()
-      return
+      return true
     }
     if (handleUndoAction()) event.preventDefault()
-    return
+    return true
   }
-  if (hasPrimaryModifier && !event.altKey && event.key.toLowerCase() === 'y') {
+  if (key === 'y') {
     if (handleRedoAction()) event.preventDefault()
-    return
+    return true
   }
+  return false
+}
 
+function handleGlobalKeydown (event) {
+  if (handleHistoryKeyboardShortcut(event)) return
   if (!isEditableKeyTarget(event)) return
   if (!isMeaningfulKeystroke(event)) return
 
