@@ -962,6 +962,57 @@ function reorderItems (dragId, targetId) {
   }
 }
 
+function buildInlineStandardElement ({
+  item,
+  fontStyle,
+  contentWithIcons,
+  applyToText,
+  applyToTips
+}) {
+  let renderedElement = null
+
+  switch (item.type) {
+    case 'heading':
+      renderedElement = renderInlineHeadingElement(item, fontStyle, contentWithIcons)
+      break
+    case 'text':
+      renderedElement = renderInlineTextElement(item, fontStyle, contentWithIcons)
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      break
+    case 'image':
+      renderedElement = renderInlineImageElement(item, fontStyle, contentWithIcons)
+      break
+    case 'bubble':
+      renderedElement = renderInlineBubbleElement(item, fontStyle, contentWithIcons)
+      if (applyToTips) renderedElement.classList.add(`font-style-${fontStyle}`)
+      break
+    case 'link': {
+      renderedElement = renderInlineLinkElement(item, fontStyle, contentWithIcons)
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      const anchorEl = renderedElement.querySelector('a')
+      if (anchorEl) {
+        anchorEl.classList.add('inline-edit-link')
+        // Disable native dragging on the anchor so the wrapper remains the drag source.
+        anchorEl.draggable = false
+        anchorEl.addEventListener('dragstart', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        })
+        anchorEl.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          openLinkEditor(item)
+        })
+      }
+      break
+    }
+    default:
+      break
+  }
+
+  return renderedElement
+}
+
 // --- Inline Input / Blur Handlers ---
 
 export function handleInlineInput (e) {
@@ -1276,72 +1327,13 @@ export function renderInlinePreview () {
     stepCounter = 0
 
     {
-      let renderedElement = null
-
-      switch (item.type) {
-        case 'heading':
-          renderedElement = renderInlineHeadingElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          break
-        case 'text':
-          renderedElement = renderInlineTextElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToText) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          break
-        case 'image':
-          renderedElement = renderInlineImageElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          break
-        case 'bubble':
-          renderedElement = renderInlineBubbleElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToTips) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          break
-        case 'link': {
-          renderedElement = renderInlineLinkElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToText) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          const anchorEl = renderedElement.querySelector('a')
-          if (anchorEl) {
-            anchorEl.classList.add('inline-edit-link')
-            // Disable native dragging on the anchor so the wrapper remains the drag source.
-            anchorEl.draggable = false
-            anchorEl.addEventListener('dragstart', (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-            })
-            anchorEl.addEventListener('click', (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              openLinkEditor(item)
-            })
-          }
-          break
-        }
-        default:
-          break
-      }
+      const renderedElement = buildInlineStandardElement({
+        item,
+        fontStyle,
+        contentWithIcons,
+        applyToText,
+        applyToTips
+      })
 
       if (!renderedElement) return
 
