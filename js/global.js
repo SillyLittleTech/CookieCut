@@ -1136,7 +1136,9 @@ function setMarketplaceOptionsVisibility (visible) {
 function resetMarketplaceOptionsInputs () {
   if (dom.printTemplateCheckbox) dom.printTemplateCheckbox.checked = false
   if (dom.printMarketplaceTitleInput) dom.printMarketplaceTitleInput.value = ''
-  if (dom.printMarketplaceSummaryInput) dom.printMarketplaceSummaryInput.value = ''
+  if (dom.printMarketplaceSummaryInput) {
+    dom.printMarketplaceSummaryInput.value = ''
+  }
   if (dom.printMarketplaceTagsInput) dom.printMarketplaceTagsInput.value = ''
   setMarketplaceOptionsVisibility(false)
 }
@@ -1148,7 +1150,10 @@ function buildMarketplaceTemplateMetadataFromModal () {
   const templateTitle =
     toStringOrFallback(dom.printMarketplaceTitleInput?.value, '').trim() ||
     toStringOrFallback(recipeData.title, '').trim()
-  const summary = toStringOrFallback(dom.printMarketplaceSummaryInput?.value, '').trim()
+  const summary = toStringOrFallback(
+    dom.printMarketplaceSummaryInput?.value,
+    ''
+  ).trim()
   const tags = toStringOrFallback(dom.printMarketplaceTagsInput?.value, '')
     .split(',')
     .map((tag) => tag.trim())
@@ -1189,20 +1194,22 @@ function clearCurrentDocumentData () {
 function updatePrintModalContentForAction (action) {
   const isExport = action === PRINT_MODAL_ACTION_EXPORT
   if (dom.printModalTitle) {
-    dom.printModalTitle.textContent =
-      isExport ? 'Export .cookie' : 'Print / Download'
+    dom.printModalTitle.textContent = isExport
+      ? 'Export .cookie'
+      : 'Print / Download'
   }
   if (dom.printFileNameHelp) {
-    dom.printFileNameHelp.textContent =
-      isExport
-        ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
-        : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
+    dom.printFileNameHelp.textContent = isExport
+      ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
+      : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
   }
   if (dom.printTemplateCheckbox) {
     const templateToggleRow = dom.printTemplateCheckbox.closest(
       '#print-template-toggle-wrap'
     )
-    if (templateToggleRow) templateToggleRow.classList.toggle('hidden', !isExport)
+    if (templateToggleRow) {
+      templateToggleRow.classList.toggle('hidden', !isExport)
+    }
     if (!isExport) resetMarketplaceOptionsInputs()
   }
   if (dom.confirmPrintBtn) {
@@ -1664,7 +1671,10 @@ export function init () {
 
   // Clear Document Modal Listeners
   if (dom.closeClearDocModalBtn) {
-    dom.closeClearDocModalBtn.addEventListener('click', closeClearDocumentModal)
+    dom.closeClearDocModalBtn.addEventListener(
+      'click',
+      closeClearDocumentModal
+    )
   }
   if (dom.clearDocModalOverlay) {
     dom.clearDocModalOverlay.addEventListener('click', closeClearDocumentModal)

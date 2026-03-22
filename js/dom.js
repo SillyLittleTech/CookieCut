@@ -171,7 +171,9 @@ export function initDom () {
   dom.printModalTitle = document.getElementById('print-modal-title')
   dom.printFileNameInput = document.getElementById('print-file-name-input')
   dom.printFileNameHelp = document.getElementById('print-file-name-help')
-  dom.printTemplateCheckbox = document.getElementById('print-template-checkbox')
+  dom.printTemplateCheckbox = document.getElementById(
+    'print-template-checkbox'
+  )
   dom.printMarketplaceOptions = document.getElementById(
     'print-marketplace-options'
   )
