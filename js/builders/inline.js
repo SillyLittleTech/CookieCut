@@ -30,6 +30,374 @@ let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
+let inlineIsPagedMode = false
+const INLINE_BOX_MIN_WIDTH = 180
+const INLINE_BOX_MAX_WIDTH = 1200
+const INLINE_BOX_MIN_HEIGHT = 48
+const INLINE_BOX_MAX_HEIGHT = 860
+const INLINE_BOX_DEFAULT_FLEX_BASIS = 340
+const INLINE_IMAGE_FLOW_MODES = new Set(['around', 'over', 'under'])
+
+function normalizeInlineImageFlowMode (mode) {
+  if (INLINE_IMAGE_FLOW_MODES.has(mode)) return mode
+  return 'around'
+}
+
+function getInlineImageFlowMode (item) {
+  const mode = normalizeInlineImageFlowMode(item.inlineImageFlow)
+  item.inlineImageFlow = mode
+  return mode
+}
+
+function getInlineSurface () {
+  if (!dom.inlinePreview) return null
+  return (
+    dom.inlinePreview.querySelector('.inline-preview-flow') || dom.inlinePreview
+  )
+}
+
+function rectsOverlap (a, b) {
+  return !(
+    a.right <= b.left ||
+    a.left >= b.right ||
+    a.bottom <= b.top ||
+    a.top >= b.bottom
+  )
+}
+
+function moveItemNearVerticalAnchor (itemId, anchorY) {
+  const movingIndex = recipeData.items.findIndex(
+    (entry) => String(entry.id) === String(itemId)
+  )
+  if (movingIndex === -1) return
+  const surface = getInlineSurface()
+  if (!surface) return
+
+  const candidates = Array.from(surface.querySelectorAll('.inline-item'))
+    .map((node) => {
+      const id = node.dataset.id
+      const candidate = recipeData.items.find(
+        (entry) => String(entry.id) === id
+      )
+      return { node, id, candidate }
+    })
+    .filter(
+      ({ id, candidate }) =>
+        id &&
+        String(id) !== String(itemId) &&
+        candidate &&
+        (candidate.type !== 'image' ||
+          getInlineImageFlowMode(candidate) === 'around')
+    )
+    .map(({ node, id }) => ({ id, rect: node.getBoundingClientRect() }))
+    .sort((a, b) => {
+      const topDelta = a.rect.top - b.rect.top
+      if (Math.abs(topDelta) > 2) return topDelta
+      return a.rect.left - b.rect.left
+    })
+
+  if (!candidates.length) return
+  const [movingItem] = recipeData.items.splice(movingIndex, 1)
+
+  let insertBeforeId = null
+  for (const candidate of candidates) {
+    const midpointY = candidate.rect.top + candidate.rect.height / 2
+    if (anchorY < midpointY) {
+      insertBeforeId = candidate.id
+      break
+    }
+  }
+
+  if (!insertBeforeId) {
+    recipeData.items.push(movingItem)
+    return
+  }
+
+  const insertIndex = recipeData.items.findIndex(
+    (entry) => String(entry.id) === String(insertBeforeId)
+  )
+  if (insertIndex === -1) recipeData.items.push(movingItem)
+  else recipeData.items.splice(insertIndex, 0, movingItem)
+}
+
+function doesImageOverlapTextItems (imageWrapper, imageItemId) {
+  const surface = getInlineSurface()
+  if (!surface || !imageWrapper) return false
+  const imageRect = imageWrapper.getBoundingClientRect()
+
+  return Array.from(surface.querySelectorAll('.inline-item')).some((node) => {
+    if (String(node.dataset.id) === String(imageItemId)) return false
+    const nodeItem = recipeData.items.find(
+      (entry) => String(entry.id) === String(node.dataset.id)
+    )
+    if (!nodeItem || nodeItem.type === 'image') return false
+    return rectsOverlap(imageRect, node.getBoundingClientRect())
+  })
+}
+
+function applyFloatingImagePlacement (wrapper, item) {
+  const flowMode = getInlineImageFlowMode(item)
+  const isFloating = flowMode !== 'around'
+  wrapper.classList.toggle('inline-item--floating-image', isFloating)
+  wrapper.classList.toggle('inline-item--image-over', flowMode === 'over')
+  wrapper.classList.toggle('inline-item--image-under', flowMode === 'under')
+  wrapper.dataset.freeMove = isFloating ? 'true' : 'false'
+
+  if (!isFloating) {
+    wrapper.style.removeProperty('position')
+    wrapper.style.removeProperty('left')
+    wrapper.style.removeProperty('top')
+    wrapper.style.removeProperty('z-index')
+    wrapper.draggable = true
+    return
+  }
+
+  wrapper.draggable = false
+  wrapper.style.position = 'absolute'
+
+  const currentX = Number.parseFloat(item.inlineX)
+  const currentY = Number.parseFloat(item.inlineY)
+  const nextX = Number.isFinite(currentX) ? currentX : 24
+  const nextY = Number.isFinite(currentY) ? currentY : 24
+  item.inlineX = nextX
+  item.inlineY = nextY
+  wrapper.style.left = `${nextX}px`
+  wrapper.style.top = `${nextY}px`
+  wrapper.style.zIndex = flowMode === 'over' ? '9' : '1'
+}
+
+function attachFloatingImageMoveInteraction (wrapper, frame, item) {
+  let startX = 0
+  let startY = 0
+  let startLeft = 0
+  let startTop = 0
+  let active = false
+  let moved = false
+
+  frame.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('.inline-frame-handle')) return
+    if (event.target.closest('.inline-edit-image')) return
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+
+    startX = event.clientX
+    startY = event.clientY
+    startLeft = Number.parseFloat(item.inlineX) || 0
+    startTop = Number.parseFloat(item.inlineY) || 0
+    active = true
+    moved = false
+    try {
+      frame.setPointerCapture(event.pointerId)
+    } catch {
+      // Pointer capture may be unavailable.
+    }
+  })
+
+  frame.addEventListener('pointermove', (event) => {
+    if (!active || !event.buttons) return
+    const deltaX = event.clientX - startX
+    const deltaY = event.clientY - startY
+    moved = moved || Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2
+
+    const nextX = startLeft + deltaX
+    const nextY = startTop + deltaY
+
+    item.inlineX = nextX
+    item.inlineY = nextY
+    wrapper.style.left = `${nextX}px`
+    wrapper.style.top = `${nextY}px`
+  })
+
+  const stopMove = (event) => {
+    if (!active) return
+    active = false
+    if (event?.pointerId != null) {
+      try {
+        frame.releasePointerCapture(event.pointerId)
+      } catch {
+        // Pointer capture may already be released.
+      }
+    }
+    if (moved) {
+      wrapper.dataset.suppressImageClick = 'true'
+      setTimeout(() => {
+        if (wrapper.dataset.suppressImageClick === 'true') {
+          delete wrapper.dataset.suppressImageClick
+        }
+      }, 0)
+    }
+  }
+
+  frame.addEventListener('pointerup', stopMove)
+  frame.addEventListener('pointercancel', stopMove)
+}
+
+function normalizeInlineBoxMeasurement (value, min, max) {
+  const numeric = Number.parseFloat(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return null
+  return Math.min(max, Math.max(min, Math.round(numeric)))
+}
+
+function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
+  const width = normalizeInlineBoxMeasurement(
+    item.inlineWidth,
+    INLINE_BOX_MIN_WIDTH,
+    INLINE_BOX_MAX_WIDTH
+  )
+  const minHeight = normalizeInlineBoxMeasurement(
+    item.inlineMinHeight,
+    INLINE_BOX_MIN_HEIGHT,
+    INLINE_BOX_MAX_HEIGHT
+  )
+
+  if (width) {
+    item.inlineWidth = width
+    sizeTargetEl.style.width = `${width}px`
+    if (inlineIsPagedMode) {
+      sizeTargetEl.style.removeProperty('flex')
+    } else {
+      sizeTargetEl.style.flex = '0 0 auto'
+    }
+  } else {
+    delete item.inlineWidth
+    if (inlineIsPagedMode) {
+      sizeTargetEl.style.width = `${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+      sizeTargetEl.style.removeProperty('flex')
+    } else {
+      sizeTargetEl.style.removeProperty('width')
+      sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+    }
+  }
+
+  if (minHeight) {
+    item.inlineMinHeight = minHeight
+    frameEl.style.minHeight = `${minHeight}px`
+  } else {
+    delete item.inlineMinHeight
+    frameEl.style.removeProperty('min-height')
+  }
+}
+
+function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
+  const handle = document.createElement('div')
+  handle.className = `inline-frame-handle inline-frame-handle--${direction}`
+  handle.draggable = false
+  handle.title = 'Resize block'
+
+  let pointerStartX = 0
+  let pointerStartY = 0
+  let widthAtStart = 0
+  let heightAtStart = 0
+  let isResizing = false
+  let dragHost = null
+  let dragHostWasDraggable = false
+
+  const restoreDragHost = () => {
+    if (!dragHost) return
+    dragHost.draggable = dragHostWasDraggable
+    dragHost = null
+  }
+
+  const updateSizing = (width, minHeight) => {
+    if (width != null) item.inlineWidth = width
+    if (minHeight != null) item.inlineMinHeight = minHeight
+    syncInlineBoxSizing(item, sizeTargetEl, frameEl)
+    refreshInlinePreviewMetrics()
+  }
+
+  handle.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('dblclick', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing = true
+    pointerStartX = e.clientX
+    pointerStartY = e.clientY
+    widthAtStart = sizeTargetEl.getBoundingClientRect().width
+    heightAtStart = frameEl.getBoundingClientRect().height
+    frameEl.classList.add('inline-item-frame--resizing')
+    dragHost = handle.closest('.inline-item')
+    if (dragHost) {
+      dragHostWasDraggable = Boolean(dragHost.draggable)
+      dragHost.draggable = false
+    }
+    try {
+      handle.setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture may be unavailable; drag still works.
+    }
+  })
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!isResizing || !e.buttons) return
+    const deltaX = e.clientX - pointerStartX
+    const deltaY = e.clientY - pointerStartY
+    let widthArg = null
+    let minHeightArg = null
+
+    if (direction.includes('east')) {
+      const nextWidth = widthAtStart + deltaX
+      widthArg = Math.min(
+        INLINE_BOX_MAX_WIDTH,
+        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+      )
+    } else if (direction.includes('west')) {
+      const nextWidth = widthAtStart - deltaX
+      widthArg = Math.min(
+        INLINE_BOX_MAX_WIDTH,
+        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+      )
+    }
+
+    if (direction.includes('south')) {
+      const nextMinHeight = heightAtStart + deltaY
+      minHeightArg = Math.min(
+        INLINE_BOX_MAX_HEIGHT,
+        Math.max(INLINE_BOX_MIN_HEIGHT, nextMinHeight)
+      )
+    }
+
+    updateSizing(widthArg, minHeightArg)
+  })
+
+  const stopResizing = (e) => {
+    isResizing = false
+    frameEl.classList.remove('inline-item-frame--resizing')
+    if (e?.pointerId != null) {
+      try {
+        handle.releasePointerCapture(e.pointerId)
+      } catch {
+        // Pointer capture may already be released.
+      }
+    }
+    restoreDragHost()
+  }
+
+  handle.addEventListener('pointerup', stopResizing)
+  handle.addEventListener('pointercancel', stopResizing)
+  handle.addEventListener('lostpointercapture', () => {
+    isResizing = false
+    frameEl.classList.remove('inline-item-frame--resizing')
+    restoreDragHost()
+  })
+
+  return handle
+}
+
+function attachInlineBorderHandles (item, frameEl, sizeTargetEl) {
+  ['east', 'west', 'south-east', 'south-west'].forEach((direction) => {
+    frameEl.appendChild(
+      createInlineBorderHandle(item, frameEl, sizeTargetEl, direction)
+    )
+  })
+}
 
 // --- Inline Scale Handle ---
 
@@ -272,6 +640,22 @@ function syncLinkInputs (item) {
   if (hrefInput) hrefInput.value = item.href || ''
 }
 
+function syncImageInputs (item) {
+  const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
+  if (!itemEl) return
+  const srcInput = itemEl.querySelector('[data-key="src"]')
+  const altInput = itemEl.querySelector('[data-key="alt"]')
+  const sizeSlider = itemEl.querySelector('[data-key="size"]')
+  const sizeDisplay = itemEl.querySelector('[data-role="size-display"]')
+  const flowSelect = itemEl.querySelector('[data-key="inlineImageFlow"]')
+
+  if (srcInput) srcInput.value = item.src || ''
+  if (altInput) altInput.value = item.alt || ''
+  if (sizeSlider) sizeSlider.value = String(item.size || 350)
+  if (sizeDisplay) sizeDisplay.textContent = `${item.size || 350}px`
+  if (flowSelect) flowSelect.value = getInlineImageFlowMode(item)
+}
+
 function persistLinkChanges (item, text, href) {
   item.content = text.trim()
   item.href = href.trim()
@@ -286,7 +670,7 @@ function saveLinkAndRerender (item, text, href) {
   })
 }
 
-export function openImageResizer (imgEl, item) {
+export function openImageResizer (imgEl, item, wrapperEl = null) {
   closeActiveInlineEditors()
   const resizer = document.createElement('div')
   resizer.className = 'image-resizer-overlay'
@@ -305,25 +689,31 @@ export function openImageResizer (imgEl, item) {
   input.min = 100
   input.max = 1200
   input.step = 1
-  input.value = item.size || 350
+  const initialSize = Math.round(
+    normalizeInlineBoxMeasurement(item.inlineWidth, 100, 1200) ||
+      normalizeInlineBoxMeasurement(item.size, 100, 1200) ||
+      350
+  )
+  input.value = initialSize
   input.style.width = '300px'
   const label = document.createElement('span')
-  label.textContent = `${input.value}px`
+  label.textContent = `${initialSize}px`
   label.style.marginLeft = '10px'
+  item.size = initialSize
+  item.inlineWidth = initialSize
 
   input.addEventListener('input', () => {
-    const sizeValue = input.value
-    item.size = Number(sizeValue)
-    imgEl.style.maxWidth = `${sizeValue}px`
+    const sizeValue = Math.round(Number.parseFloat(input.value) || 350)
+    item.size = sizeValue
+    item.inlineWidth = sizeValue
     label.textContent = `${sizeValue}px`
-    // update builder input display if visible
-    const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
-    if (itemEl) {
-      const display = itemEl.querySelector('[data-role="size-display"]')
-      const slider = itemEl.querySelector('[data-key="size"]')
-      if (display) display.textContent = `${sizeValue}px`
-      if (slider) slider.value = sizeValue
+    if (wrapperEl) {
+      const frameEl = wrapperEl.querySelector('.inline-item-frame')
+      if (frameEl) {
+        syncInlineBoxSizing(item, wrapperEl, frameEl)
+      }
     }
+    syncImageInputs(item)
     refreshInlinePreviewMetrics()
   })
 
@@ -351,10 +741,36 @@ export function openImageResizer (imgEl, item) {
   altInput.style.display = 'block'
   altInput.style.marginTop = '4px'
 
+  const flowLabel = document.createElement('label')
+  flowLabel.textContent = 'Inline text flow'
+  flowLabel.style.display = 'block'
+  flowLabel.style.marginTop = '8px'
+
+  const flowSelect = document.createElement('select')
+  flowSelect.style.width = '420px'
+  flowSelect.style.display = 'block'
+  flowSelect.style.marginTop = '4px'
+  flowSelect.style.border = '1px solid #d1d5db'
+  flowSelect.style.borderRadius = '6px'
+  flowSelect.style.padding = '6px 8px';
+  [
+    { value: 'around', label: 'Around text' },
+    { value: 'over', label: 'Over text' },
+    { value: 'under', label: 'Under text' }
+  ].forEach((entry) => {
+    const option = document.createElement('option')
+    option.value = entry.value
+    option.textContent = entry.label
+    flowSelect.appendChild(option)
+  })
+  flowSelect.value = getInlineImageFlowMode(item)
+
   const applyBtn = document.createElement('button')
   applyBtn.textContent = 'Apply'
   applyBtn.className = 'ml-3 px-3 py-1 bg-blue-600 text-white rounded'
   applyBtn.addEventListener('click', () => {
+    const previousFlow = getInlineImageFlowMode(item)
+    const nextFlow = normalizeInlineImageFlowMode(flowSelect.value)
     const newUrl = urlInput.value.trim()
     const newAlt = altInput.value.trim()
     if (newUrl) {
@@ -369,14 +785,36 @@ export function openImageResizer (imgEl, item) {
     }
     item.alt = newAlt
     imgEl.alt = newAlt
-    // update builder inputs if visible
-    const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
-    if (itemEl) {
-      const srcInput = itemEl.querySelector('[data-key="src"]')
-      const altInputEl = itemEl.querySelector('[data-key="alt"]')
-      if (srcInput) srcInput.value = item.src
-      if (altInputEl) altInputEl.value = item.alt
+
+    if (previousFlow === 'around' && nextFlow !== 'around' && wrapperEl) {
+      const surface = getInlineSurface()
+      if (surface) {
+        const surfaceRect = surface.getBoundingClientRect()
+        const wrapperRect = wrapperEl.getBoundingClientRect()
+        item.inlineX = wrapperRect.left - surfaceRect.left
+        item.inlineY = wrapperRect.top - surfaceRect.top
+      }
     }
+
+    if (previousFlow !== 'around' && nextFlow === 'around') {
+      const anchorY = wrapperEl
+        ? wrapperEl.getBoundingClientRect().top +
+          wrapperEl.getBoundingClientRect().height / 2
+        : 0
+      const overlapsText = wrapperEl
+        ? doesImageOverlapTextItems(wrapperEl, item.id)
+        : false
+      delete item.inlineX
+      delete item.inlineY
+      if (overlapsText) {
+        moveItemNearVerticalAnchor(item.id, anchorY)
+      }
+    }
+
+    item.inlineImageFlow = nextFlow
+    syncImageInputs(item)
+    closeImageResizer()
+    renderInlinePreview()
     refreshInlinePreviewMetrics()
   })
 
@@ -391,6 +829,8 @@ export function openImageResizer (imgEl, item) {
   resizer.appendChild(urlInput)
   resizer.appendChild(altLabel)
   resizer.appendChild(altInput)
+  resizer.appendChild(flowLabel)
+  resizer.appendChild(flowSelect)
   resizer.appendChild(applyBtn)
   resizer.appendChild(closeBtn)
   document.body.appendChild(resizer)
@@ -522,6 +962,77 @@ function reorderItems (dragId, targetId) {
   }
 }
 
+function buildInlineStandardElement ({
+  item,
+  fontStyle,
+  contentWithIcons,
+  applyToText,
+  applyToTips
+}) {
+  let renderedElement = null
+
+  switch (item.type) {
+    case 'heading':
+      renderedElement = renderInlineHeadingElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
+      break
+    case 'text':
+      renderedElement = renderInlineTextElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      break
+    case 'image':
+      renderedElement = renderInlineImageElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
+      break
+    case 'bubble':
+      renderedElement = renderInlineBubbleElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
+      if (applyToTips) renderedElement.classList.add(`font-style-${fontStyle}`)
+      break
+    case 'link': {
+      renderedElement = renderInlineLinkElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      const anchorEl = renderedElement.querySelector('a')
+      if (anchorEl) {
+        anchorEl.classList.add('inline-edit-link')
+        // Disable native dragging on the anchor so the wrapper remains the drag source.
+        anchorEl.draggable = false
+        anchorEl.addEventListener('dragstart', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        })
+        anchorEl.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          openLinkEditor(item)
+        })
+      }
+      break
+    }
+    default:
+      break
+  }
+
+  return renderedElement
+}
+
 // --- Inline Input / Blur Handlers ---
 
 export function handleInlineInput (e) {
@@ -612,9 +1123,11 @@ export function renderInlinePreview () {
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPaged = recipeData.settings.previewMode === 'paged'
+  inlineIsPagedMode = isPaged
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
   dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
+  dom.inlinePreview.classList.toggle('inline-content-surface', !isPaged)
 
   let contentRoot = dom.inlinePreview
   let dropSurface = dom.inlinePreview
@@ -683,6 +1196,7 @@ export function renderInlinePreview () {
   // Title (editable)
   const h1 = document.createElement('h1')
   h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
+  h1.classList.add('inline-full-span')
   h1.contentEditable = true
   h1.dataset.key = 'title'
   h1.innerHTML = renderRichText(recipeData.title)
@@ -703,6 +1217,7 @@ export function renderInlinePreview () {
   descriptionParagraph.className = `text-gray-600 italic mb-4 ${
     applyToText ? `font-style-${fontStyle}` : ''
   }`.trim()
+  descriptionParagraph.classList.add('inline-full-span')
   descriptionParagraph.contentEditable = true
   descriptionParagraph.dataset.key = 'description'
   descriptionParagraph.innerHTML = renderRichText(recipeData.description)
@@ -740,6 +1255,10 @@ export function renderInlinePreview () {
       }
     })
 
+    if (node.dataset.freeMove === 'true') {
+      return
+    }
+
     node.addEventListener('dragstart', (ev) => {
       ev.dataTransfer.setData('text/plain', String(itemId))
       node.classList.add('dragging')
@@ -774,6 +1293,7 @@ export function renderInlinePreview () {
     currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
     currentList.className =
       type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
+    currentList.classList.add('inline-full-span')
     currentListType = type
     contentRoot.appendChild(currentList)
     return currentList
@@ -782,56 +1302,40 @@ export function renderInlinePreview () {
   recipeData.items.forEach((item) => {
     const contentWithIcons = renderRichText(item.content || '')
 
-    if (item.type === 'step') {
-      if (currentListType !== 'step') stepCounter = 0
-      stepCounter += 1
+    if (item.type === 'step' || item.type === 'bullet') {
+      const isStep = item.type === 'step'
+      if (isStep) {
+        if (currentListType !== 'step') stepCounter = 0
+        stepCounter += 1
+      }
 
-      const list = ensureListContainer('step')
+      const list = ensureListContainer(isStep ? 'step' : 'bullet')
       const li = document.createElement('li')
       li.className = 'inline-item inline-list-item'
       li.dataset.id = item.id
       li.draggable = true
 
-      const { badge, contentSpan } = renderInlineStepElement(
-        item,
-        fontStyle,
-        contentWithIcons,
-        stepCounter
-      )
+      const { badge, contentSpan } = isStep
+        ? renderInlineStepElement(
+          item,
+          fontStyle,
+          contentWithIcons,
+          stepCounter
+        )
+        : renderInlineBulletElement(item, fontStyle, contentWithIcons)
       li.appendChild(badge)
       if (applyToText) {
         contentSpan.classList.add(`font-style-${fontStyle}`)
       }
       const contentWrap = document.createElement('div')
       contentWrap.className = 'inline-list-content-wrap'
-      contentWrap.appendChild(contentSpan)
+      const contentFrame = document.createElement('div')
+      contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
+      contentFrame.appendChild(contentSpan)
+      contentWrap.appendChild(contentFrame)
       contentWrap.appendChild(createScaleHandle(item, contentSpan))
-      li.appendChild(contentWrap)
-      list.appendChild(li)
-      attachInlineItemInteractions(li, item.id)
-      return
-    }
-
-    if (item.type === 'bullet') {
-      const list = ensureListContainer('bullet')
-      const li = document.createElement('li')
-      li.className = 'inline-item inline-list-item'
-      li.dataset.id = item.id
-      li.draggable = true
-
-      const { badge, contentSpan } = renderInlineBulletElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      li.appendChild(badge)
-      if (applyToText) {
-        contentSpan.classList.add(`font-style-${fontStyle}`)
-      }
-      const contentWrap = document.createElement('div')
-      contentWrap.className = 'inline-list-content-wrap'
-      contentWrap.appendChild(contentSpan)
-      contentWrap.appendChild(createScaleHandle(item, contentSpan))
+      syncInlineBoxSizing(item, contentWrap, contentFrame)
+      attachInlineBorderHandles(item, contentFrame, contentWrap)
       li.appendChild(contentWrap)
       list.appendChild(li)
       attachInlineItemInteractions(li, item.id)
@@ -843,86 +1347,44 @@ export function renderInlinePreview () {
     stepCounter = 0
 
     {
-      let renderedElement = null
-
-      switch (item.type) {
-        case 'heading':
-          renderedElement = renderInlineHeadingElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          break
-        case 'text':
-          renderedElement = renderInlineTextElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToText) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          break
-        case 'image':
-          renderedElement = renderInlineImageElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          renderedElement.addEventListener('click', (e) => {
-            e.stopPropagation()
-            openImageResizer(renderedElement, item)
-          })
-          break
-        case 'bubble':
-          renderedElement = renderInlineBubbleElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToTips) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          break
-        case 'link': {
-          renderedElement = renderInlineLinkElement(
-            item,
-            fontStyle,
-            contentWithIcons
-          )
-          if (applyToText) {
-            renderedElement.classList.add(`font-style-${fontStyle}`)
-          }
-          const anchorEl = renderedElement.querySelector('a')
-          if (anchorEl) {
-            anchorEl.classList.add('inline-edit-link')
-            // Disable native dragging on the anchor so the wrapper remains the drag source.
-            anchorEl.draggable = false
-            anchorEl.addEventListener('dragstart', (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-            })
-            anchorEl.addEventListener('click', (e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              openLinkEditor(item)
-            })
-          }
-          break
-        }
-        default:
-          break
-      }
+      const renderedElement = buildInlineStandardElement({
+        item,
+        fontStyle,
+        contentWithIcons,
+        applyToText,
+        applyToTips
+      })
 
       if (!renderedElement) return
 
       const wrapper = document.createElement('div')
-      wrapper.className = 'inline-item'
+      wrapper.className = 'inline-item inline-layout-item'
       wrapper.dataset.id = item.id
       wrapper.draggable = true
-      wrapper.appendChild(renderedElement)
+      const frame = document.createElement('div')
+      frame.className = 'inline-item-frame'
+      frame.appendChild(renderedElement)
+      wrapper.appendChild(frame)
 
-      // Add scale handle for all text-containing elements
+      // Add border-handle resizing for modular items (including images).
+      if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
+        if (item.type === 'image') {
+          const normalizedImageWidth = normalizeInlineBoxMeasurement(
+            item.inlineWidth || item.size,
+            INLINE_BOX_MIN_WIDTH,
+            INLINE_BOX_MAX_WIDTH
+          )
+          if (normalizedImageWidth) {
+            item.inlineWidth = normalizedImageWidth
+            item.size = normalizedImageWidth
+          }
+        }
+        frame.classList.add('inline-item-frame-resizable')
+        syncInlineBoxSizing(item, wrapper, frame)
+        attachInlineBorderHandles(item, frame, wrapper)
+      }
+
+      // Add text scale handle for text-containing elements.
       if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
@@ -941,6 +1403,21 @@ export function renderInlinePreview () {
         setTimeout(() => renderedElement.focus(), 20)
       }
       contentRoot.appendChild(wrapper)
+
+      if (item.type === 'image') {
+        applyFloatingImagePlacement(wrapper, item)
+        if (wrapper.dataset.freeMove === 'true') {
+          attachFloatingImageMoveInteraction(wrapper, frame, item)
+        }
+        renderedElement.addEventListener('click', (e) => {
+          e.stopPropagation()
+          if (wrapper.dataset.suppressImageClick === 'true') {
+            delete wrapper.dataset.suppressImageClick
+            return
+          }
+          openImageResizer(renderedElement, item, wrapper)
+        })
+      }
 
       attachInlineItemInteractions(wrapper, item.id)
     }

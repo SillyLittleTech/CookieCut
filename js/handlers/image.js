@@ -1,14 +1,15 @@
-import { escapeHTML } from '../helpers.js';
+import { escapeHTML } from '../helpers.js'
 
 /**
  * Returns the builder input configuration for an image item.
  * @param {object} item
  * @returns {{ label: string, inputHtml: string }}
  */
-export function getBuilderInput(item) {
-    return {
-        label: 'Image',
-        inputHtml: `
+export function getBuilderInput (item) {
+  const imageFlowMode = item.inlineImageFlow || 'around'
+  return {
+    label: 'Image',
+    inputHtml: `
             <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-600">Image URL</label>
                 <input type="url" data-key="src" value="${escapeHTML(item.src)}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="https://...">
@@ -27,41 +28,48 @@ export function getBuilderInput(item) {
                     <span>Medium</span>
                     <span>Large</span>
                 </div>
+                <label class="block text-xs font-medium text-gray-600 pt-2">Inline Text Flow</label>
+                <select data-key="inlineImageFlow" class="w-full p-2 border border-gray-300 rounded-md bg-white">
+                    <option value="around" ${imageFlowMode === 'around' ? 'selected' : ''}>Around text</option>
+                    <option value="over" ${imageFlowMode === 'over' ? 'selected' : ''}>Over text</option>
+                    <option value="under" ${imageFlowMode === 'under' ? 'selected' : ''}>Under text</option>
+                </select>
             </div>
         `
-    };
+  }
 }
 
 /**
  * Creates and returns an image preview DOM element.
  * @param {object} item
- * @param {string} fontStyle
- * @param {string} contentWithIcons - unused for images
  * @returns {HTMLElement}
  */
-export function renderPreviewElement(item, fontStyle, contentWithIcons) {
-    const el = document.createElement('img');
-    el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview';
-    el.alt = item.alt;
-    el.style.maxWidth = `${item.size}px`;
-    el.onerror = function() { this.src = 'https://placehold.co/400x300?text=Invalid+Image'; this.onerror = null; };
-    return el;
+export function renderPreviewElement (item) {
+  const el = document.createElement('img')
+  el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview'
+  el.alt = item.alt
+  el.style.maxWidth = `${item.size}px`
+  el.onerror = function () {
+    this.src = 'https://placehold.co/400x300?text=Invalid+Image'
+    this.onerror = null
+  }
+  return el
 }
 
 /**
  * Creates and returns an inline-editable image element.
  * The caller (inline.js) attaches the click/resizer event listener.
  * @param {object} item
- * @param {string} fontStyle
- * @param {string} contentWithIcons - unused for images
  * @returns {HTMLElement}
  */
-export function renderInlineElement(item, fontStyle, contentWithIcons) {
-    const el = document.createElement('img');
-    el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview';
-    el.alt = item.alt || '';
-    el.style.maxWidth = `${item.size}px`;
-    el.dataset.id = item.id;
-    el.className = 'inline-edit-image';
-    return el;
+export function renderInlineElement (item) {
+  const el = document.createElement('img')
+  el.src = item.src || 'https://placehold.co/400x300?text=Image+Preview'
+  el.alt = item.alt || ''
+  el.style.width = '100%'
+  el.style.maxWidth = '100%'
+  el.style.height = 'auto'
+  el.dataset.id = item.id
+  el.className = 'inline-edit-image'
+  return el
 }

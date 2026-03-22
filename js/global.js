@@ -53,6 +53,8 @@ export function addItem (type, subtype = null) {
       newItem.src = ''
       newItem.alt = ''
       newItem.size = 350
+      newItem.inlineWidth = 350
+      newItem.inlineImageFlow = 'around'
       break
     case 'bubble':
       newItem.type = 'bubble'
@@ -163,7 +165,14 @@ export function enableInlineEditor () {
 }
 
 export function disableInlineEditor () {
-  if (dom.inlinePreview) dom.inlinePreview.classList.add('hidden')
+  if (dom.inlinePreview) {
+    dom.inlinePreview.classList.add('hidden')
+    // Reset mode-specific inline preview classes so .hidden always wins.
+    dom.inlinePreview.classList.remove(
+      'inline-content-surface',
+      'inline-paged-preview-active'
+    )
+  }
   if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden')
   closeFloatingAddMenu()
   closeImageResizer()
@@ -270,6 +279,9 @@ function handleLiveInput (e) {
 
   // If it's the size slider, also update the live pixel display
   if (key === 'size') {
+    if (item.type === 'image') {
+      item.inlineWidth = Number(value)
+    }
     const display = itemEl.querySelector('[data-role="size-display"]')
     if (display) {
       display.textContent = `${value}px`
@@ -294,6 +306,14 @@ function handleLiveInput (e) {
 
   if (key === 'href' && (!item.content || item.content.trim() === '')) {
     syncScalePreviewText(itemEl, item.href || '')
+  }
+
+  if (
+    isInlineMode() &&
+    item.type === 'image' &&
+    ['size', 'src', 'alt', 'inlineImageFlow'].includes(key)
+  ) {
+    renderInlinePreview()
   }
 }
 
