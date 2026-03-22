@@ -531,7 +531,9 @@ async function readTemplatePayloadForSlot (slot) {
   const cookieBackupValue = getCookieValue(getTemplateSlotCookieKey(slot))
   if (cookieBackupValue) {
     try {
-      const parsedCookieBackup = JSON.parse(decodeURIComponent(cookieBackupValue))
+      const parsedCookieBackup = JSON.parse(
+        decodeURIComponent(cookieBackupValue)
+      )
       if (typeof parsedCookieBackup.payloadText === 'string') {
         return {
           name: parsedCookieBackup.sourceName || `Custom Slot ${slot}`,
@@ -664,7 +666,10 @@ function renderTemplateGallerySlots () {
   }
 }
 
-function importDocumentPayloadText (rawText, sourceLabel = 'CookieCut document') {
+function importDocumentPayloadText (
+  rawText,
+  sourceLabel = 'CookieCut document'
+) {
   const normalizedRecipeData = parseImportedRecipeDataText(rawText)
   if (!normalizedRecipeData) {
     throw new Error('Invalid CookieCut document format.')
@@ -1391,7 +1396,9 @@ function handleGlobalKeydown (event) {
 
 async function handleTemplateGalleryGridClick (event) {
   const clickTarget =
-    event.target instanceof Element ? event.target : event.target?.parentElement
+    event.target instanceof Element
+      ? event.target
+      : event.target?.parentElement
   if (!clickTarget) return
   const card = clickTarget.closest('.template-slot-card')
   if (!card) return
