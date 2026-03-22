@@ -1,36 +1,113 @@
 <!-- === BUILDER PANEL === -->
-<div id="builder-panel" class="builder-panel w-full bg-white p-6 md:p-8 rounded-lg shadow-lg animate-fade-in">
-    <h1 class="text-4xl font-bold mb-6 text-gray-900 font-display">Recipe Builder</h1>
-
-    <!-- Basic Info -->
-    <div class="space-y-4">
-        <div>
-            <label for="recipe-title-input" class="block text-sm font-medium text-gray-700 mb-1">Recipe Title</label>
-            <input type="text" id="recipe-title-input" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" value="">
-        </div>
-        <div>
-            <label for="recipe-desc-input" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea id="recipe-desc-input" rows="3" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
-        </div>
+<div
+  id="builder-panel"
+  class="builder-panel w-full bg-white p-6 md:p-8 rounded-lg shadow-lg animate-fade-in"
+>
+  <!-- Document Transfer Controls -->
+  <div
+    class="mb-6 flex flex-col items-center gap-3 border-b border-gray-200 pb-6"
+  >
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <button
+        id="export-doc-btn"
+        class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none">save_alt</span>
+      </button>
+      <button
+        id="import-doc-btn"
+        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none">upload_file</span>
+      </button>
+      <input
+        id="import-doc-input"
+        type="file"
+        accept=".cookie,application/json"
+        class="hidden"
+      />
     </div>
+    <output
+      id="doc-transfer-status"
+      class="min-h-[1.25rem] text-sm text-gray-600 text-center"
+      aria-live="polite"
+    ></output>
+  </div>
 
-    <!-- Add Content Buttons -->
-    <div class="mt-6 flex flex-wrap gap-4 border-t border-gray-200 pt-6">
-        <button id="add-text-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Text ✏️</button>
-        <button id="add-image-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Image 🖼️</button>
-        <button id="add-toast-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Add Toast 🍞</button>
-        <button id="icon-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Badges 🔑</button>
-        <button id="settings-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95">Settings ⚙️</button>
+  <!-- Basic Info -->
+  <div class="space-y-4">
+    <div>
+      <label
+        for="recipe-title-input"
+        class="block text-sm font-medium text-gray-700 mb-1"
+        >Recipe Title</label
+      >
+      <input
+        type="text"
+        id="recipe-title-input"
+        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        value=""
+      />
     </div>
-
-    <!-- Dynamic Content Inputs -->
-    <h2 class="text-2xl font-bold mt-8 mb-4 font-display">Recipe Content</h2>
-    <div id="content-inputs" class="space-y-6">
-        <!-- JS will populate this area with input fields -->
+    <div>
+      <label
+        for="recipe-desc-input"
+        class="block text-sm font-medium text-gray-700 mb-1"
+        >Description</label
+      >
+      <textarea
+        id="recipe-desc-input"
+        rows="3"
+        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+      ></textarea>
     </div>
+  </div>
 
-    <!-- Preview Button -->
-    <button id="preview-btn" class="no-print mt-10 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide">
-        Preview Recipe
+  <!-- Add Content Buttons -->
+  <div class="mt-6 flex flex-wrap gap-4 border-t border-gray-200 pt-6">
+    <button
+      id="add-text-btn"
+      class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+    >
+      Add Text ✏️
     </button>
+    <button
+      id="add-image-btn"
+      class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+    >
+      Add Image 🖼️
+    </button>
+    <button
+      id="add-toast-btn"
+      class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+    >
+      Add Toast 🍞
+    </button>
+    <button
+      id="icon-key-btn"
+      class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+    >
+      Badges 🔑
+    </button>
+    <button
+      id="settings-btn"
+      class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+    >
+      Settings ⚙️
+    </button>
+  </div>
+
+  <!-- Dynamic Content Inputs -->
+  <!-- <h2 class="text-2xl font-bold mt-8 mb-4 font-display">Recipe Content</h2> -->
+  <div id="content-inputs" class="space-y-6">
+    <!-- JS will populate this area with input fields -->
+  </div>
+
+  <!-- Preview Button -->
+  <button
+    id="preview-btn"
+    class="no-print mt-10 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
+  >
+    Preview Recipe
+  </button>
 </div>

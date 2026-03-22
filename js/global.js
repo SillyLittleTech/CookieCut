@@ -23,10 +23,265 @@ import { initSelectionToolbar } from './toolbar.js'
 // --- ACTIONS ---
 let nextItemId = Date.now()
 let floatingAddMenuCloseHandler = null
+let documentTransferMessageTimer = null
+const COOKIE_DOCUMENT_VERSION = 1
+const VALID_ITEM_TYPES = new Set([
+  'heading',
+  'step',
+  'bullet',
+  'text',
+  'image',
+  'bubble',
+  'link'
+])
+const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
+const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
+const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
+const PRINT_MODAL_ACTION_PRINT = 'print'
+const PRINT_MODAL_ACTION_EXPORT = 'export'
+let printModalAction = PRINT_MODAL_ACTION_PRINT
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
   return nextItemId
+}
+
+function toStringOrFallback (value, fallback = '') {
+  return typeof value === 'string' ? value : fallback
+}
+
+function toFiniteNumberOrFallback (value, fallback) {
+  const normalized = Number(value)
+  return Number.isFinite(normalized) ? normalized : fallback
+}
+
+function toItemScale (value) {
+  return normalizeScale(toFiniteNumberOrFallback(value, 100))
+}
+
+function syncNextItemIdToRecipeItems () {
+  const maxImportedId = recipeData.items.reduce((maxId, item) => {
+    const normalizedId = Number(item?.id)
+    if (!Number.isFinite(normalizedId)) return maxId
+    return Math.max(maxId, normalizedId)
+  }, 0)
+  nextItemId = Math.max(nextItemId, maxImportedId)
+}
+
+function showDocumentTransferMessage (message, isError = false) {
+  if (!dom.documentTransferStatus) return
+  dom.documentTransferStatus.textContent = message
+  dom.documentTransferStatus.style.color = isError ? '#b91c1c' : '#374151'
+  clearTimeout(documentTransferMessageTimer)
+  documentTransferMessageTimer = setTimeout(() => {
+    if (dom.documentTransferStatus?.textContent === message) {
+      dom.documentTransferStatus.textContent = ''
+    }
+  }, 5000)
+}
+
+function normalizeImportedSettings (rawSettings) {
+  const source =
+    rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
+  return {
+    ...DEFAULT_RECIPE_SETTINGS,
+    ...source,
+    fontStyle:
+      source.fontStyle === 'serif' || source.fontStyle === 'sans'
+        ? source.fontStyle
+        : 'display',
+    fontApplyToText: Boolean(source.fontApplyToText),
+    fontApplyToTips: Boolean(source.fontApplyToTips),
+    editorMode: source.editorMode === 'inline' ? 'inline' : 'classic',
+    previewMode: source.previewMode === 'paged' ? 'paged' : 'continuous',
+    fileName: toStringOrFallback(source.fileName, '')
+  }
+}
+
+function normalizeImportedItem (rawItem, fallbackId) {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const type = toStringOrFallback(rawItem.type, '')
+  if (!VALID_ITEM_TYPES.has(type)) return null
+
+  const normalized = {
+    ...rawItem,
+    id: rawItem.id ?? fallbackId,
+    type
+  }
+
+  if (type === 'image') {
+    const size = toFiniteNumberOrFallback(rawItem.size, 350)
+    normalized.src = toStringOrFallback(rawItem.src, '')
+    normalized.alt = toStringOrFallback(rawItem.alt, '')
+    normalized.size = size
+    normalized.inlineWidth = toFiniteNumberOrFallback(
+      rawItem.inlineWidth,
+      size
+    )
+    normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
+      rawItem.inlineImageFlow
+    )
+      ? rawItem.inlineImageFlow
+      : 'around'
+    return normalized
+  }
+
+  normalized.content = toStringOrFallback(rawItem.content, '')
+
+  if (type === 'bubble') {
+    normalized.subtype = VALID_BUBBLE_SUBTYPES.has(rawItem.subtype)
+      ? rawItem.subtype
+      : 'note'
+  }
+  if (type === 'link') {
+    normalized.href = toStringOrFallback(rawItem.href, '')
+  }
+  normalized.scale = toItemScale(rawItem.scale)
+  return normalized
+}
+
+function normalizeImportedRecipeData (rawRecipeData) {
+  if (!rawRecipeData || typeof rawRecipeData !== 'object') return null
+
+  const fallbackIdBase = Date.now()
+  const normalizedItems = Array.isArray(rawRecipeData.items)
+    ? rawRecipeData.items
+      .map((item, index) =>
+        normalizeImportedItem(item, fallbackIdBase + index)
+      )
+      .filter(Boolean)
+    : []
+
+  return {
+    title: toStringOrFallback(rawRecipeData.title, ''),
+    description: toStringOrFallback(rawRecipeData.description, ''),
+    items: normalizedItems,
+    settings: normalizeImportedSettings(rawRecipeData.settings)
+  }
+}
+
+function isSafeExportFileNameChar (char) {
+  const code = char.codePointAt(0)
+  if (!Number.isFinite(code)) return false
+  if (code >= 48 && code <= 57) return true // 0-9
+  if (code >= 65 && code <= 90) return true // A-Z
+  if (code >= 97 && code <= 122) return true // a-z
+  return char === '_' || char === '-' || char === '.'
+}
+
+function getExportFileNameBase (preferredNameInput = '') {
+  const explicitName = toStringOrFallback(preferredNameInput, '').trim()
+  const fallbackName = toStringOrFallback(
+    recipeData.settings.fileName,
+    recipeData.title
+  ).trim()
+  const preferredName = explicitName || fallbackName
+  let safeName = ''
+  let previousWasUnderscore = false
+  for (const char of preferredName) {
+    if (isSafeExportFileNameChar(char)) {
+      safeName += char
+      previousWasUnderscore = false
+      continue
+    }
+    if (!previousWasUnderscore) {
+      safeName += '_'
+      previousWasUnderscore = true
+    }
+  }
+  while (safeName.startsWith('_')) {
+    safeName = safeName.slice(1)
+  }
+  while (safeName.endsWith('_')) {
+    safeName = safeName.slice(0, -1)
+  }
+  return safeName || 'cookiecut_document'
+}
+
+function buildDocumentPayload () {
+  return {
+    app: 'CookieCut',
+    format: 'cookie_document',
+    version: COOKIE_DOCUMENT_VERSION,
+    exportedAt: new Date().toISOString(),
+    recipeData: {
+      title: recipeData.title,
+      description: recipeData.description,
+      items: recipeData.items.map((item) => ({ ...item })),
+      settings: { ...recipeData.settings }
+    }
+  }
+}
+
+function exportDocumentFile (preferredFileName = '') {
+  const payloadText = JSON.stringify(buildDocumentPayload(), null, 2)
+  const blob = new Blob([payloadText], { type: 'application/json' })
+  const objectUrl = URL.createObjectURL(blob)
+  const linkEl = document.createElement('a')
+  const exportFileName = `${getExportFileNameBase(preferredFileName)}.cookie`
+  linkEl.href = objectUrl
+  linkEl.download = exportFileName
+  document.body.appendChild(linkEl)
+  linkEl.click()
+  linkEl.remove()
+  URL.revokeObjectURL(objectUrl)
+  showDocumentTransferMessage(`Exported ${exportFileName}`)
+}
+
+function readTextFile (file) {
+  return file.text()
+}
+
+function syncUiFromRecipeData () {
+  renderBuilderInputs()
+  dom.titleInput.value = recipeData.title
+  dom.descInput.value = recipeData.description
+  dom.titlePreview.innerHTML = renderRichText(recipeData.title)
+  dom.descPreview.innerHTML = renderRichText(recipeData.description)
+
+  if (dom.globalFontStyleSelect) {
+    dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
+  }
+  if (dom.editorModeSelect) {
+    dom.editorModeSelect.value = recipeData.settings.editorMode
+  }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.value = recipeData.settings.previewMode
+  }
+
+  dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
+  setEditorMode(recipeData.settings.editorMode)
+
+  if (isInlineMode()) {
+    renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+  updateAppLayoutForPreviewMode()
+}
+
+async function importDocumentFile (file) {
+  const rawText = await readTextFile(file)
+  const parsedPayload = JSON.parse(rawText)
+  const payloadRecipeData =
+    parsedPayload &&
+    typeof parsedPayload === 'object' &&
+    parsedPayload.recipeData
+      ? parsedPayload.recipeData
+      : parsedPayload
+
+  const normalizedRecipeData = normalizeImportedRecipeData(payloadRecipeData)
+  if (!normalizedRecipeData) {
+    throw new Error('Invalid CookieCut document format.')
+  }
+
+  recipeData.title = normalizedRecipeData.title
+  recipeData.description = normalizedRecipeData.description
+  recipeData.items = normalizedRecipeData.items
+  recipeData.settings = normalizedRecipeData.settings
+  syncNextItemIdToRecipeItems()
+  syncUiFromRecipeData()
+  showDocumentTransferMessage(`Imported ${file.name}`)
 }
 
 export function addItem (type, subtype = null) {
@@ -242,7 +497,37 @@ function executePrint (fileName) {
   setTimeout(cleanup, 1500)
 }
 
-function openPrintModal () {
+function updatePrintModalContentForAction (action) {
+  if (dom.printModalTitle) {
+    dom.printModalTitle.textContent =
+      action === PRINT_MODAL_ACTION_EXPORT
+        ? 'Export .cookie'
+        : 'Print / Download'
+  }
+  if (dom.printFileNameHelp) {
+    dom.printFileNameHelp.textContent =
+      action === PRINT_MODAL_ACTION_EXPORT
+        ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
+        : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
+  }
+  if (dom.confirmPrintBtn) {
+    const isExport = action === PRINT_MODAL_ACTION_EXPORT
+    dom.confirmPrintBtn.textContent = isExport
+      ? 'Export .cookie'
+      : 'Print Recipe'
+    dom.confirmPrintBtn.classList.toggle('bg-red-600', !isExport)
+    dom.confirmPrintBtn.classList.toggle('hover:bg-red-700', !isExport)
+    dom.confirmPrintBtn.classList.toggle('bg-indigo-600', isExport)
+    dom.confirmPrintBtn.classList.toggle('hover:bg-indigo-700', isExport)
+  }
+}
+
+function openPrintModal (action = PRINT_MODAL_ACTION_PRINT) {
+  printModalAction =
+    action === PRINT_MODAL_ACTION_EXPORT
+      ? PRINT_MODAL_ACTION_EXPORT
+      : PRINT_MODAL_ACTION_PRINT
+  updatePrintModalContentForAction(printModalAction)
   if (dom.printFileNameInput) {
     dom.printFileNameInput.value = recipeData.settings.fileName || ''
   }
@@ -254,7 +539,11 @@ function closePrintModal () {
 }
 
 function handlePrint () {
-  openPrintModal()
+  openPrintModal(PRINT_MODAL_ACTION_PRINT)
+}
+
+function handleExportRequest () {
+  openPrintModal(PRINT_MODAL_ACTION_EXPORT)
 }
 
 // --- MAIN INPUT HANDLERS ---
@@ -499,6 +788,30 @@ export function init () {
   dom.addTextBtn.addEventListener('click', openTextModal)
   dom.addImageBtn.addEventListener('click', () => addItem('image'))
   dom.addToastBtn.addEventListener('click', openToastModal)
+  if (dom.exportDocBtn) {
+    dom.exportDocBtn.addEventListener('click', () => {
+      handleExportRequest()
+    })
+  }
+  if (dom.importDocBtn && dom.importDocInput) {
+    dom.importDocBtn.addEventListener('click', () => {
+      dom.importDocInput.click()
+    })
+    dom.importDocInput.addEventListener('change', async (event) => {
+      const selectedFile = event.target.files?.[0]
+      event.target.value = ''
+      if (!selectedFile) return
+      try {
+        await importDocumentFile(selectedFile)
+      } catch (error) {
+        console.error('Failed to import CookieCut document:', error)
+        showDocumentTransferMessage(
+          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
+          true
+        )
+      }
+    })
+  }
 
   // Toast Modal Listeners
   dom.closeModalBtn.addEventListener('click', closeToastModal)
@@ -561,6 +874,10 @@ export function init () {
     const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
     recipeData.settings.fileName = fileName
     closePrintModal()
+    if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+      exportDocumentFile(fileName)
+      return
+    }
     executePrint(fileName)
   })
   if (dom.printFileNameInput) {

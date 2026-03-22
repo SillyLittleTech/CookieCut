@@ -13,6 +13,10 @@ export const dom = {
   addTextBtn: null,
   addImageBtn: null,
   addToastBtn: null,
+  exportDocBtn: null,
+  importDocBtn: null,
+  importDocInput: null,
+  documentTransferStatus: null,
   previewBtn: null,
   editBtn: null,
   printBtn: null,
@@ -53,7 +57,9 @@ export const dom = {
   printModal: null,
   printModalOverlay: null,
   closePrintModalBtn: null,
+  printModalTitle: null,
   printFileNameInput: null,
+  printFileNameHelp: null,
   cancelPrintBtn: null,
   confirmPrintBtn: null,
   // Inline editor
@@ -81,6 +87,10 @@ export function initDom () {
   dom.addTextBtn = document.getElementById('add-text-btn')
   dom.addImageBtn = document.getElementById('add-image-btn')
   dom.addToastBtn = document.getElementById('add-toast-btn')
+  dom.exportDocBtn = document.getElementById('export-doc-btn')
+  dom.importDocBtn = document.getElementById('import-doc-btn')
+  dom.importDocInput = document.getElementById('import-doc-input')
+  dom.documentTransferStatus = document.getElementById('doc-transfer-status')
   dom.previewBtn = document.getElementById('preview-btn')
   dom.editBtn = document.getElementById('edit-btn')
   dom.printBtn = document.getElementById('print-btn')
@@ -131,7 +141,9 @@ export function initDom () {
   dom.printModal = document.getElementById('print-modal')
   dom.printModalOverlay = document.getElementById('print-modal-overlay')
   dom.closePrintModalBtn = document.getElementById('close-print-modal-btn')
+  dom.printModalTitle = document.getElementById('print-modal-title')
   dom.printFileNameInput = document.getElementById('print-file-name-input')
+  dom.printFileNameHelp = document.getElementById('print-file-name-help')
   dom.cancelPrintBtn = document.getElementById('cancel-print-btn')
   dom.confirmPrintBtn = document.getElementById('confirm-print-btn')
   // Inline editor
