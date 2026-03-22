@@ -13,10 +13,15 @@ export const dom = {
   addTextBtn: null,
   addImageBtn: null,
   addToastBtn: null,
+  templateBrowserBtn: null,
   exportDocBtn: null,
   importDocBtn: null,
   importDocInput: null,
   documentTransferStatus: null,
+  templateGalleryPanel: null,
+  templateGalleryBackBtn: null,
+  templateGalleryStatus: null,
+  templateGalleryGrid: null,
   previewBtn: null,
   editBtn: null,
   printBtn: null,
@@ -87,10 +92,17 @@ export function initDom () {
   dom.addTextBtn = document.getElementById('add-text-btn')
   dom.addImageBtn = document.getElementById('add-image-btn')
   dom.addToastBtn = document.getElementById('add-toast-btn')
+  dom.templateBrowserBtn = document.getElementById('template-browser-btn')
   dom.exportDocBtn = document.getElementById('export-doc-btn')
   dom.importDocBtn = document.getElementById('import-doc-btn')
   dom.importDocInput = document.getElementById('import-doc-input')
   dom.documentTransferStatus = document.getElementById('doc-transfer-status')
+  dom.templateGalleryPanel = document.getElementById('template-gallery-panel')
+  dom.templateGalleryBackBtn = document.getElementById(
+    'template-gallery-back-btn'
+  )
+  dom.templateGalleryStatus = document.getElementById('template-gallery-status')
+  dom.templateGalleryGrid = document.getElementById('template-gallery-grid')
   dom.previewBtn = document.getElementById('preview-btn')
   dom.editBtn = document.getElementById('edit-btn')
   dom.printBtn = document.getElementById('print-btn')

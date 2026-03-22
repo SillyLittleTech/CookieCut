@@ -21,6 +21,7 @@ async function loadPartials () {
 
   // Builder and preview panels go inside the main app container
   await injectPartial(appContainer, 'partials/builder-panel.html')
+  await injectPartial(appContainer, 'partials/template-gallery.html')
   await injectPartial(appContainer, 'partials/preview-panel.html')
 
   // Modals and inline editor elements are appended directly to body

@@ -1,0 +1,26 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-03-22T00:00:00.000Z",
+  "recipeData": {
+    "title": "Bullet Starter",
+    "description": "Single bullet item template.",
+    "items": [
+      {
+        "id": 1301,
+        "type": "bullet",
+        "content": "Add one bullet point here.",
+        "scale": 100
+      }
+    ],
+    "settings": {
+      "fontStyle": "display",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "classic",
+      "previewMode": "continuous",
+      "fileName": "bullet-starter"
+    }
+  }
+}

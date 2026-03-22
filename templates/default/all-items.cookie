@@ -1,0 +1,67 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-03-22T00:00:00.000Z",
+  "recipeData": {
+    "title": "All Item Types Sampler",
+    "description": "A starter document showing one example of every CookieCut item.",
+    "items": [
+      {
+        "id": 1001,
+        "type": "heading",
+        "content": "Prep Station",
+        "scale": 100
+      },
+      {
+        "id": 1002,
+        "type": "step",
+        "content": "Wash and dry your produce before slicing.",
+        "scale": 100
+      },
+      {
+        "id": 1003,
+        "type": "bullet",
+        "content": "Use a sharp knife for even cuts.",
+        "scale": 100
+      },
+      {
+        "id": 1004,
+        "type": "text",
+        "content": "Keep the workspace tidy so plating is faster at the end.",
+        "scale": 100
+      },
+      {
+        "id": 1005,
+        "type": "image",
+        "src": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=900&q=80",
+        "alt": "A clean kitchen workstation",
+        "size": 380,
+        "inlineWidth": 380,
+        "inlineImageFlow": "around"
+      },
+      {
+        "id": 1006,
+        "type": "bubble",
+        "subtype": "tip",
+        "content": "Chill your mixing bowl for 10 minutes to keep cream stable.",
+        "scale": 100
+      },
+      {
+        "id": 1007,
+        "type": "link",
+        "content": "See the ingredient conversion table",
+        "href": "https://example.com/conversions",
+        "scale": 100
+      }
+    ],
+    "settings": {
+      "fontStyle": "display",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "classic",
+      "previewMode": "continuous",
+      "fileName": "all-items-sampler"
+    }
+  }
+}

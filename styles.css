@@ -201,6 +201,112 @@
   background: #fbcfe8;
 }
 
+/* --- Template gallery (shop-like slot grid) --- */
+.template-slot-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 190px;
+  gap: 10px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.template-slot-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
+}
+
+.template-slot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-slot-index {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+  font-weight: 700;
+}
+
+.template-slot-badge {
+  font-size: 0.72rem;
+  line-height: 1;
+  border-radius: 9999px;
+  padding: 6px 9px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.template-slot-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.template-slot-subtitle {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  flex-grow: 1;
+}
+
+.template-slot-action {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+}
+
+.template-slot-action-load {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.template-slot-action-load:hover {
+  background: #1d4ed8;
+}
+
+.template-slot-empty {
+  border-style: dashed;
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+}
+
+.template-slot-empty .template-slot-badge {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.template-slot-action-add {
+  background: #ffffff;
+  color: #2563eb;
+  border: 2px dashed #60a5fa;
+  font-size: 1.75rem;
+  line-height: 1;
+  min-height: 64px;
+}
+
+.template-slot-action-add:hover {
+  background: #eff6ff;
+}
+
 /* --- New "Text Bubble" Style (Stylized as a sticky note) --- */
 /* Base style for all "toasts" */
 .toast-base {
