@@ -753,7 +753,9 @@
   position: relative;
 }
 
-#inline-preview.inline-paged-preview-active .inline-preview-flow .inline-layout-item {
+#inline-preview.inline-paged-preview-active
+  .inline-preview-flow
+  .inline-layout-item {
   display: inline-flex;
   vertical-align: top;
   margin: 0 0.8rem 0.8rem 0;
