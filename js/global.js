@@ -23,10 +23,216 @@ import { initSelectionToolbar } from './toolbar.js'
 // --- ACTIONS ---
 let nextItemId = Date.now()
 let floatingAddMenuCloseHandler = null
+const COOKIE_DOCUMENT_VERSION = 1
+const VALID_ITEM_TYPES = new Set([
+  'heading',
+  'step',
+  'bullet',
+  'text',
+  'image',
+  'bubble',
+  'link'
+])
+const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
+const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
+const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
   return nextItemId
+}
+
+function toStringOrFallback (value, fallback = '') {
+  return typeof value === 'string' ? value : fallback
+}
+
+function toFiniteNumberOrFallback (value, fallback) {
+  const normalized = Number(value)
+  return Number.isFinite(normalized) ? normalized : fallback
+}
+
+function toItemScale (value) {
+  return normalizeScale(toFiniteNumberOrFallback(value, 100))
+}
+
+function syncNextItemIdToRecipeItems () {
+  const maxImportedId = recipeData.items.reduce((maxId, item) => {
+    const normalizedId = Number(item?.id)
+    if (!Number.isFinite(normalizedId)) return maxId
+    return Math.max(maxId, normalizedId)
+  }, 0)
+  nextItemId = Math.max(nextItemId, maxImportedId)
+}
+
+function normalizeImportedSettings (rawSettings) {
+  const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
+  return {
+    ...DEFAULT_RECIPE_SETTINGS,
+    ...source,
+    fontStyle:
+      source.fontStyle === 'serif' || source.fontStyle === 'sans'
+        ? source.fontStyle
+        : 'display',
+    fontApplyToText: Boolean(source.fontApplyToText),
+    fontApplyToTips: Boolean(source.fontApplyToTips),
+    editorMode: source.editorMode === 'inline' ? 'inline' : 'classic',
+    previewMode: source.previewMode === 'paged' ? 'paged' : 'continuous',
+    fileName: toStringOrFallback(source.fileName, '')
+  }
+}
+
+function normalizeImportedItem (rawItem, fallbackId) {
+  if (!rawItem || typeof rawItem !== 'object') return null
+  const type = toStringOrFallback(rawItem.type, '')
+  if (!VALID_ITEM_TYPES.has(type)) return null
+
+  const normalized = {
+    ...rawItem,
+    id: rawItem.id ?? fallbackId,
+    type
+  }
+
+  if (type === 'image') {
+    const size = toFiniteNumberOrFallback(rawItem.size, 350)
+    normalized.src = toStringOrFallback(rawItem.src, '')
+    normalized.alt = toStringOrFallback(rawItem.alt, '')
+    normalized.size = size
+    normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
+    normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
+      rawItem.inlineImageFlow
+    )
+      ? rawItem.inlineImageFlow
+      : 'around'
+    return normalized
+  }
+
+  normalized.content = toStringOrFallback(rawItem.content, '')
+
+  if (type === 'bubble') {
+    normalized.subtype = VALID_BUBBLE_SUBTYPES.has(rawItem.subtype)
+      ? rawItem.subtype
+      : 'note'
+  }
+  if (type === 'link') {
+    normalized.href = toStringOrFallback(rawItem.href, '')
+  }
+  normalized.scale = toItemScale(rawItem.scale)
+  return normalized
+}
+
+function normalizeImportedRecipeData (rawRecipeData) {
+  if (!rawRecipeData || typeof rawRecipeData !== 'object') return null
+
+  const fallbackIdBase = Date.now()
+  const normalizedItems = Array.isArray(rawRecipeData.items)
+    ? rawRecipeData.items
+        .map((item, index) => normalizeImportedItem(item, fallbackIdBase + index))
+        .filter(Boolean)
+    : []
+
+  return {
+    title: toStringOrFallback(rawRecipeData.title, ''),
+    description: toStringOrFallback(rawRecipeData.description, ''),
+    items: normalizedItems,
+    settings: normalizeImportedSettings(rawRecipeData.settings)
+  }
+}
+
+function getExportFileNameBase () {
+  const preferredName = toStringOrFallback(
+    recipeData.settings.fileName,
+    recipeData.title
+  ).trim()
+  const safeName = preferredName
+    .replace(/[^\w.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return safeName || 'cookiecut_document'
+}
+
+function buildDocumentPayload () {
+  return {
+    app: 'CookieCut',
+    format: 'cookie_document',
+    version: COOKIE_DOCUMENT_VERSION,
+    exportedAt: new Date().toISOString(),
+    recipeData: {
+      title: recipeData.title,
+      description: recipeData.description,
+      items: recipeData.items.map((item) => ({ ...item })),
+      settings: { ...recipeData.settings }
+    }
+  }
+}
+
+function exportDocumentFile () {
+  const payloadText = JSON.stringify(buildDocumentPayload(), null, 2)
+  const blob = new Blob([payloadText], { type: 'application/json' })
+  const objectUrl = URL.createObjectURL(blob)
+  const linkEl = document.createElement('a')
+  linkEl.href = objectUrl
+  linkEl.download = `${getExportFileNameBase()}.cookie`
+  document.body.appendChild(linkEl)
+  linkEl.click()
+  linkEl.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
+function readTextFile (file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Unable to read file contents.'))
+    reader.readAsText(file)
+  })
+}
+
+function syncUiFromRecipeData () {
+  renderBuilderInputs()
+  dom.titleInput.value = recipeData.title
+  dom.descInput.value = recipeData.description
+  dom.titlePreview.innerHTML = renderRichText(recipeData.title)
+  dom.descPreview.innerHTML = renderRichText(recipeData.description)
+
+  if (dom.globalFontStyleSelect) {
+    dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
+  }
+  if (dom.editorModeSelect) {
+    dom.editorModeSelect.value = recipeData.settings.editorMode
+  }
+  if (dom.previewModeSelect) {
+    dom.previewModeSelect.value = recipeData.settings.previewMode
+  }
+
+  dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
+  setEditorMode(recipeData.settings.editorMode)
+
+  if (isInlineMode()) {
+    renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+  updateAppLayoutForPreviewMode()
+}
+
+async function importDocumentFile (file) {
+  const rawText = await readTextFile(file)
+  const parsedPayload = JSON.parse(rawText)
+  const payloadRecipeData =
+    parsedPayload && typeof parsedPayload === 'object' && parsedPayload.recipeData
+      ? parsedPayload.recipeData
+      : parsedPayload
+
+  const normalizedRecipeData = normalizeImportedRecipeData(payloadRecipeData)
+  if (!normalizedRecipeData) {
+    throw new Error('Invalid CookieCut document format.')
+  }
+
+  recipeData.title = normalizedRecipeData.title
+  recipeData.description = normalizedRecipeData.description
+  recipeData.items = normalizedRecipeData.items
+  recipeData.settings = normalizedRecipeData.settings
+  syncNextItemIdToRecipeItems()
+  syncUiFromRecipeData()
 }
 
 export function addItem (type, subtype = null) {
@@ -499,6 +705,29 @@ export function init () {
   dom.addTextBtn.addEventListener('click', openTextModal)
   dom.addImageBtn.addEventListener('click', () => addItem('image'))
   dom.addToastBtn.addEventListener('click', openToastModal)
+  if (dom.exportDocBtn) {
+    dom.exportDocBtn.addEventListener('click', () => {
+      exportDocumentFile()
+    })
+  }
+  if (dom.importDocBtn && dom.importDocInput) {
+    dom.importDocBtn.addEventListener('click', () => {
+      dom.importDocInput.click()
+    })
+    dom.importDocInput.addEventListener('change', async (event) => {
+      const selectedFile = event.target.files && event.target.files[0]
+      event.target.value = ''
+      if (!selectedFile) return
+      try {
+        await importDocumentFile(selectedFile)
+      } catch (error) {
+        console.error('Failed to import CookieCut document:', error)
+        window.alert(
+          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.'
+        )
+      }
+    })
+  }
 
   // Toast Modal Listeners
   dom.closeModalBtn.addEventListener('click', closeToastModal)
