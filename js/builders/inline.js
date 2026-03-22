@@ -30,6 +30,7 @@ let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
+let inlineIsPagedMode = false
 const INLINE_BOX_MIN_WIDTH = 180
 const INLINE_BOX_MAX_WIDTH = 1200
 const INLINE_BOX_MIN_HEIGHT = 48
@@ -253,11 +254,20 @@ function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
   if (width) {
     item.inlineWidth = width
     sizeTargetEl.style.width = `${width}px`
-    sizeTargetEl.style.flex = '0 0 auto'
+    if (inlineIsPagedMode) {
+      sizeTargetEl.style.removeProperty('flex')
+    } else {
+      sizeTargetEl.style.flex = '0 0 auto'
+    }
   } else {
     delete item.inlineWidth
-    sizeTargetEl.style.removeProperty('width')
-    sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+    if (inlineIsPagedMode) {
+      sizeTargetEl.style.width = `${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+      sizeTargetEl.style.removeProperty('flex')
+    } else {
+      sizeTargetEl.style.removeProperty('width')
+      sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+    }
   }
 
   if (minHeight) {
@@ -1042,6 +1052,7 @@ export function renderInlinePreview () {
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPaged = recipeData.settings.previewMode === 'paged'
+  inlineIsPagedMode = isPaged
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
   dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)

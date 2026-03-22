@@ -750,6 +750,20 @@
   border-radius: 8px;
   box-sizing: border-box;
   scrollbar-gutter: stable both-edges;
+  position: relative;
+}
+
+#inline-preview.inline-paged-preview-active .inline-preview-flow .inline-layout-item {
+  display: inline-flex;
+  vertical-align: top;
+  margin: 0 0.8rem 0.8rem 0;
+}
+
+#inline-preview.inline-paged-preview-active
+  .inline-preview-flow
+  .inline-layout-item
+  .inline-item-frame {
+  width: 100%;
 }
 
 #inline-preview.inline-paged-preview-active .inline-preview-flow img,
