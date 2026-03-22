@@ -157,14 +157,39 @@ function normalizeImportedRecipeData (rawRecipeData) {
   }
 }
 
+function isSafeExportFileNameChar (char) {
+  const code = char.codePointAt(0)
+  if (!Number.isFinite(code)) return false
+  if (code >= 48 && code <= 57) return true // 0-9
+  if (code >= 65 && code <= 90) return true // A-Z
+  if (code >= 97 && code <= 122) return true // a-z
+  return char === '_' || char === '-' || char === '.'
+}
+
 function getExportFileNameBase () {
   const preferredName = toStringOrFallback(
     recipeData.settings.fileName,
     recipeData.title
   ).trim()
-  const safeName = preferredName
-    .replace(/[^\w.-]+/g, '_')
-    .replace(/^_+|_+$/g, '')
+  let safeName = ''
+  let previousWasUnderscore = false
+  for (const char of preferredName) {
+    if (isSafeExportFileNameChar(char)) {
+      safeName += char
+      previousWasUnderscore = false
+      continue
+    }
+    if (!previousWasUnderscore) {
+      safeName += '_'
+      previousWasUnderscore = true
+    }
+  }
+  while (safeName.startsWith('_')) {
+    safeName = safeName.slice(1)
+  }
+  while (safeName.endsWith('_')) {
+    safeName = safeName.slice(0, -1)
+  }
   return safeName || 'cookiecut_document'
 }
 
