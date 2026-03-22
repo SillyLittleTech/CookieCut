@@ -517,7 +517,9 @@ function updatePrintModalContentForAction (action) {
   }
   if (dom.confirmPrintBtn) {
     const isExport = action === PRINT_MODAL_ACTION_EXPORT
-    dom.confirmPrintBtn.textContent = isExport ? 'Export .cookie' : 'Print Recipe'
+    dom.confirmPrintBtn.textContent = isExport
+      ? 'Export .cookie'
+      : 'Print Recipe'
     dom.confirmPrintBtn.classList.toggle('bg-red-600', !isExport)
     dom.confirmPrintBtn.classList.toggle('hover:bg-red-700', !isExport)
     dom.confirmPrintBtn.classList.toggle('bg-indigo-600', isExport)
