@@ -37,6 +37,9 @@ const VALID_ITEM_TYPES = new Set([
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
+const PRINT_MODAL_ACTION_PRINT = 'print'
+const PRINT_MODAL_ACTION_EXPORT = 'export'
+let printModalAction = PRINT_MODAL_ACTION_PRINT
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
@@ -166,11 +169,13 @@ function isSafeExportFileNameChar (char) {
   return char === '_' || char === '-' || char === '.'
 }
 
-function getExportFileNameBase () {
-  const preferredName = toStringOrFallback(
+function getExportFileNameBase (preferredNameInput = '') {
+  const explicitName = toStringOrFallback(preferredNameInput, '').trim()
+  const fallbackName = toStringOrFallback(
     recipeData.settings.fileName,
     recipeData.title
   ).trim()
+  const preferredName = explicitName || fallbackName
   let safeName = ''
   let previousWasUnderscore = false
   for (const char of preferredName) {
@@ -208,12 +213,12 @@ function buildDocumentPayload () {
   }
 }
 
-function exportDocumentFile () {
+function exportDocumentFile (preferredFileName = '') {
   const payloadText = JSON.stringify(buildDocumentPayload(), null, 2)
   const blob = new Blob([payloadText], { type: 'application/json' })
   const objectUrl = URL.createObjectURL(blob)
   const linkEl = document.createElement('a')
-  const exportFileName = `${getExportFileNameBase()}.cookie`
+  const exportFileName = `${getExportFileNameBase(preferredFileName)}.cookie`
   linkEl.href = objectUrl
   linkEl.download = exportFileName
   document.body.appendChild(linkEl)
@@ -497,7 +502,35 @@ function executePrint (fileName) {
   setTimeout(cleanup, 1500)
 }
 
-function openPrintModal () {
+function updatePrintModalContentForAction (action) {
+  if (dom.printModalTitle) {
+    dom.printModalTitle.textContent =
+      action === PRINT_MODAL_ACTION_EXPORT
+        ? 'Export .cookie'
+        : 'Print / Download'
+  }
+  if (dom.printFileNameHelp) {
+    dom.printFileNameHelp.textContent =
+      action === PRINT_MODAL_ACTION_EXPORT
+        ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
+        : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
+  }
+  if (dom.confirmPrintBtn) {
+    const isExport = action === PRINT_MODAL_ACTION_EXPORT
+    dom.confirmPrintBtn.textContent = isExport ? 'Export .cookie' : 'Print Recipe'
+    dom.confirmPrintBtn.classList.toggle('bg-red-600', !isExport)
+    dom.confirmPrintBtn.classList.toggle('hover:bg-red-700', !isExport)
+    dom.confirmPrintBtn.classList.toggle('bg-indigo-600', isExport)
+    dom.confirmPrintBtn.classList.toggle('hover:bg-indigo-700', isExport)
+  }
+}
+
+function openPrintModal (action = PRINT_MODAL_ACTION_PRINT) {
+  printModalAction =
+    action === PRINT_MODAL_ACTION_EXPORT
+      ? PRINT_MODAL_ACTION_EXPORT
+      : PRINT_MODAL_ACTION_PRINT
+  updatePrintModalContentForAction(printModalAction)
   if (dom.printFileNameInput) {
     dom.printFileNameInput.value = recipeData.settings.fileName || ''
   }
@@ -509,7 +542,11 @@ function closePrintModal () {
 }
 
 function handlePrint () {
-  openPrintModal()
+  openPrintModal(PRINT_MODAL_ACTION_PRINT)
+}
+
+function handleExportRequest () {
+  openPrintModal(PRINT_MODAL_ACTION_EXPORT)
 }
 
 // --- MAIN INPUT HANDLERS ---
@@ -756,7 +793,7 @@ export function init () {
   dom.addToastBtn.addEventListener('click', openToastModal)
   if (dom.exportDocBtn) {
     dom.exportDocBtn.addEventListener('click', () => {
-      exportDocumentFile()
+      handleExportRequest()
     })
   }
   if (dom.importDocBtn && dom.importDocInput) {
@@ -840,6 +877,10 @@ export function init () {
     const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
     recipeData.settings.fileName = fileName
     closePrintModal()
+    if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+      exportDocumentFile(fileName)
+      return
+    }
     executePrint(fileName)
   })
   if (dom.printFileNameInput) {

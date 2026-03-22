@@ -57,7 +57,9 @@ export const dom = {
   printModal: null,
   printModalOverlay: null,
   closePrintModalBtn: null,
+  printModalTitle: null,
   printFileNameInput: null,
+  printFileNameHelp: null,
   cancelPrintBtn: null,
   confirmPrintBtn: null,
   // Inline editor
@@ -139,7 +141,9 @@ export function initDom () {
   dom.printModal = document.getElementById('print-modal')
   dom.printModalOverlay = document.getElementById('print-modal-overlay')
   dom.closePrintModalBtn = document.getElementById('close-print-modal-btn')
+  dom.printModalTitle = document.getElementById('print-modal-title')
   dom.printFileNameInput = document.getElementById('print-file-name-input')
+  dom.printFileNameHelp = document.getElementById('print-file-name-help')
   dom.cancelPrintBtn = document.getElementById('cancel-print-btn')
   dom.confirmPrintBtn = document.getElementById('confirm-print-btn')
   // Inline editor

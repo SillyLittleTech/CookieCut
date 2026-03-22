@@ -7,6 +7,38 @@
     Recipe Builder
   </h1>
 
+  <!-- Document Transfer Controls -->
+  <div class="mb-6 flex flex-col items-center gap-3 border-b border-gray-200 pb-6">
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <button
+        id="export-doc-btn"
+        class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none">save_alt</span>
+        Export .cookie
+      </button>
+      <button
+        id="import-doc-btn"
+        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none">upload_file</span>
+        Import .cookie
+      </button>
+      <input
+        id="import-doc-input"
+        type="file"
+        accept=".cookie,application/json"
+        class="hidden"
+      />
+    </div>
+    <p
+      id="doc-transfer-status"
+      class="min-h-[1.25rem] text-sm text-gray-600 text-center"
+      role="status"
+      aria-live="polite"
+    ></p>
+  </div>
+
   <!-- Basic Info -->
   <div class="space-y-4">
     <div>
@@ -68,31 +100,7 @@
     >
       Settings ⚙️
     </button>
-    <button
-      id="export-doc-btn"
-      class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
-    >
-      Export .cookie ⬇️
-    </button>
-    <button
-      id="import-doc-btn"
-      class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
-    >
-      Import .cookie ⬆️
-    </button>
-    <input
-      id="import-doc-input"
-      type="file"
-      accept=".cookie,application/json"
-      class="hidden"
-    />
   </div>
-  <p
-    id="doc-transfer-status"
-    class="mt-2 min-h-[1.25rem] text-sm text-gray-600"
-    role="status"
-    aria-live="polite"
-  ></p>
 
   <!-- Dynamic Content Inputs -->
   <h2 class="text-2xl font-bold mt-8 mb-4 font-display">Recipe Content</h2>
