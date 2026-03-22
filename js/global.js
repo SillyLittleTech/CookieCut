@@ -65,7 +65,8 @@ function syncNextItemIdToRecipeItems () {
 }
 
 function normalizeImportedSettings (rawSettings) {
-  const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
+  const source =
+    rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
   return {
     ...DEFAULT_RECIPE_SETTINGS,
     ...source,
@@ -97,7 +98,10 @@ function normalizeImportedItem (rawItem, fallbackId) {
     normalized.src = toStringOrFallback(rawItem.src, '')
     normalized.alt = toStringOrFallback(rawItem.alt, '')
     normalized.size = size
-    normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
+    normalized.inlineWidth = toFiniteNumberOrFallback(
+      rawItem.inlineWidth,
+      size
+    )
     normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
       rawItem.inlineImageFlow
     )
@@ -126,8 +130,10 @@ function normalizeImportedRecipeData (rawRecipeData) {
   const fallbackIdBase = Date.now()
   const normalizedItems = Array.isArray(rawRecipeData.items)
     ? rawRecipeData.items
-        .map((item, index) => normalizeImportedItem(item, fallbackIdBase + index))
-        .filter(Boolean)
+      .map((item, index) =>
+        normalizeImportedItem(item, fallbackIdBase + index)
+      )
+      .filter(Boolean)
     : []
 
   return {
@@ -218,7 +224,9 @@ async function importDocumentFile (file) {
   const rawText = await readTextFile(file)
   const parsedPayload = JSON.parse(rawText)
   const payloadRecipeData =
-    parsedPayload && typeof parsedPayload === 'object' && parsedPayload.recipeData
+    parsedPayload &&
+    typeof parsedPayload === 'object' &&
+    parsedPayload.recipeData
       ? parsedPayload.recipeData
       : parsedPayload
 
