@@ -973,21 +973,41 @@ function buildInlineStandardElement ({
 
   switch (item.type) {
     case 'heading':
-      renderedElement = renderInlineHeadingElement(item, fontStyle, contentWithIcons)
+      renderedElement = renderInlineHeadingElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
       break
     case 'text':
-      renderedElement = renderInlineTextElement(item, fontStyle, contentWithIcons)
+      renderedElement = renderInlineTextElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
       if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
       break
     case 'image':
-      renderedElement = renderInlineImageElement(item, fontStyle, contentWithIcons)
+      renderedElement = renderInlineImageElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
       break
     case 'bubble':
-      renderedElement = renderInlineBubbleElement(item, fontStyle, contentWithIcons)
+      renderedElement = renderInlineBubbleElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
       if (applyToTips) renderedElement.classList.add(`font-style-${fontStyle}`)
       break
     case 'link': {
-      renderedElement = renderInlineLinkElement(item, fontStyle, contentWithIcons)
+      renderedElement = renderInlineLinkElement(
+        item,
+        fontStyle,
+        contentWithIcons
+      )
       if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
       const anchorEl = renderedElement.querySelector('a')
       if (anchorEl) {
