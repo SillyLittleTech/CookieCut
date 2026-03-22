@@ -48,10 +48,6 @@ function getInlineImageFlowMode (item) {
   return mode
 }
 
-function clampValue (value, min, max) {
-  return Math.min(max, Math.max(min, value))
-}
-
 function getInlineSurface () {
   if (!dom.inlinePreview) return null
   return (
@@ -158,23 +154,10 @@ function applyFloatingImagePlacement (wrapper, item, surface) {
   wrapper.draggable = false
   wrapper.style.position = 'absolute'
 
-  const surfaceRect = surface.getBoundingClientRect()
-  const wrapperRect = wrapper.getBoundingClientRect()
-  const width = wrapperRect.width || item.inlineWidth || item.size || 320
-  const height = wrapperRect.height || 120
-  const maxX = Math.max(
-    0,
-    surfaceRect.width - Math.min(width, surfaceRect.width)
-  )
-  const maxY = Math.max(
-    0,
-    surfaceRect.height - Math.min(height, surfaceRect.height)
-  )
-
   const currentX = Number.parseFloat(item.inlineX)
   const currentY = Number.parseFloat(item.inlineY)
-  const nextX = Number.isFinite(currentX) ? clampValue(currentX, 0, maxX) : 24
-  const nextY = Number.isFinite(currentY) ? clampValue(currentY, 0, maxY) : 24
+  const nextX = Number.isFinite(currentX) ? currentX : 24
+  const nextY = Number.isFinite(currentY) ? currentY : 24
   item.inlineX = nextX
   item.inlineY = nextY
   wrapper.style.left = `${nextX}px`
@@ -216,12 +199,8 @@ function attachFloatingImageMoveInteraction (wrapper, frame, item, surface) {
     const deltaY = event.clientY - startY
     moved = moved || Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2
 
-    const surfaceRect = surface.getBoundingClientRect()
-    const wrapperRect = wrapper.getBoundingClientRect()
-    const maxX = Math.max(0, surfaceRect.width - wrapperRect.width)
-    const maxY = Math.max(0, surfaceRect.height - wrapperRect.height)
-    const nextX = clampValue(startLeft + deltaX, 0, maxX)
-    const nextY = clampValue(startTop + deltaY, 0, maxY)
+    const nextX = startLeft + deltaX
+    const nextY = startTop + deltaY
 
     item.inlineX = nextX
     item.inlineY = nextY
@@ -802,16 +781,8 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
       if (surface) {
         const surfaceRect = surface.getBoundingClientRect()
         const wrapperRect = wrapperEl.getBoundingClientRect()
-        item.inlineX = clampValue(
-          wrapperRect.left - surfaceRect.left,
-          0,
-          surfaceRect.width
-        )
-        item.inlineY = clampValue(
-          wrapperRect.top - surfaceRect.top,
-          0,
-          surfaceRect.height
-        )
+        item.inlineX = wrapperRect.left - surfaceRect.left
+        item.inlineY = wrapperRect.top - surfaceRect.top
       }
     }
 
