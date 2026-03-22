@@ -554,25 +554,44 @@ function createTemplateSlotCard ({
   const card = document.createElement('div')
   card.className = 'template-slot-card'
   card.dataset.slot = String(slot)
-  card.innerHTML = `
-    <div class="template-slot-head">
-      <span class="template-slot-index">Slot ${slot}</span>
-      <span class="template-slot-badge">${categoryLabel}</span>
-    </div>
-    <h3 class="template-slot-title">${title}</h3>
-    <p class="template-slot-subtitle">${subtitle}</p>
-    <button type="button" class="template-slot-action ${buttonClassName}">
-      ${buttonLabel}
-    </button>
-  `
+
+  const head = document.createElement('div')
+  head.className = 'template-slot-head'
+
+  const slotIndex = document.createElement('span')
+  slotIndex.className = 'template-slot-index'
+  slotIndex.textContent = `Slot ${slot}`
+
+  const badge = document.createElement('span')
+  badge.className = 'template-slot-badge'
+  badge.textContent = categoryLabel
+
+  head.appendChild(slotIndex)
+  head.appendChild(badge)
+
+  const titleEl = document.createElement('h3')
+  titleEl.className = 'template-slot-title'
+  titleEl.textContent = title
+
+  const subtitleEl = document.createElement('p')
+  subtitleEl.className = 'template-slot-subtitle'
+  subtitleEl.textContent = subtitle
+
+  const action = document.createElement('button')
+  action.type = 'button'
+  action.className = `template-slot-action ${buttonClassName}`
+  action.textContent = buttonLabel
+
+  card.appendChild(head)
+  card.appendChild(titleEl)
+  card.appendChild(subtitleEl)
+  card.appendChild(action)
+
   if (isEmpty) {
     card.classList.add('template-slot-empty')
-    const action = card.querySelector('.template-slot-action')
-    if (action) {
-      action.innerHTML = '<span aria-hidden="true">+</span>'
-      action.setAttribute('aria-label', `Upload template for slot ${slot}`)
-      action.title = `Upload .cookie to slot ${slot}`
-    }
+    action.textContent = '+'
+    action.setAttribute('aria-label', `Upload template for slot ${slot}`)
+    action.title = `Upload .cookie to slot ${slot}`
   }
   return card
 }
