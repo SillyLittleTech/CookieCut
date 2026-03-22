@@ -229,12 +229,7 @@ function exportDocumentFile (preferredFileName = '') {
 }
 
 function readTextFile (file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('Unable to read file contents.'))
-    reader.readAsText(file)
-  })
+  return file.text()
 }
 
 function syncUiFromRecipeData () {
