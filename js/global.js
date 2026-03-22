@@ -165,7 +165,14 @@ export function enableInlineEditor () {
 }
 
 export function disableInlineEditor () {
-  if (dom.inlinePreview) dom.inlinePreview.classList.add('hidden')
+  if (dom.inlinePreview) {
+    dom.inlinePreview.classList.add('hidden')
+    // Reset mode-specific inline preview classes so .hidden always wins.
+    dom.inlinePreview.classList.remove(
+      'inline-content-surface',
+      'inline-paged-preview-active'
+    )
+  }
   if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden')
   closeFloatingAddMenu()
   closeImageResizer()

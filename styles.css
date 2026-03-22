@@ -702,6 +702,10 @@
   min-height: 220px;
 }
 
+#inline-preview.hidden {
+  display: none !important;
+}
+
 #inline-preview .inline-full-span {
   flex: 1 1 100%;
   width: 100%;
