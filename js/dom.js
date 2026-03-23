@@ -94,6 +94,9 @@ export const dom = {
   inlinePreview: null,
   // Document tabs
   tabBar: null,
+  // Dark mode toggle
+  darkModeToggle: null,
+  darkModeIcon: null,
   // Preview mode / stats
   recipeFlow: null,
   previewStats: null,
@@ -223,6 +226,9 @@ export function initDom () {
   dom.inlinePreview = document.getElementById('inline-preview')
   // Document tabs
   dom.tabBar = document.getElementById('tabs-bar')
+  // Dark mode toggle
+  dom.darkModeToggle = document.getElementById('dark-mode-toggle')
+  dom.darkModeIcon = document.getElementById('dark-mode-icon')
   // Preview mode / stats
   dom.recipeFlow = document.getElementById('recipe-flow')
   dom.previewStats = document.getElementById('preview-stats')
