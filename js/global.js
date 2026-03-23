@@ -1752,18 +1752,18 @@ async function handleTemplateGalleryGridClick (event) {
   }
 }
 
-// --- INIT ---
-
-export function init () {
+function initializePreviewModeSetting () {
   if (!recipeData.settings.previewMode) {
     recipeData.settings.previewMode = 'continuous'
   }
+}
 
-  // Main info
+function bindMainInfoListeners () {
   dom.titleInput.addEventListener('input', handleUpdateMain)
   dom.descInput.addEventListener('input', handleUpdateMain)
+}
 
-  // "Add" buttons
+function bindTopToolbarListeners () {
   dom.addTextBtn.addEventListener('click', openTextModal)
   dom.addImageBtn.addEventListener('click', () => addItem('image'))
   dom.addToastBtn.addEventListener('click', openToastModal)
@@ -1771,9 +1771,7 @@ export function init () {
     dom.templateBrowserBtn.addEventListener('click', showTemplateGallery)
   }
   if (dom.exportDocBtn) {
-    dom.exportDocBtn.addEventListener('click', () => {
-      handleExportRequest()
-    })
+    dom.exportDocBtn.addEventListener('click', handleExportRequest)
   }
   if (dom.clearDocBtn) {
     dom.clearDocBtn.addEventListener('click', openClearDocumentModal)
@@ -1782,23 +1780,26 @@ export function init () {
     dom.importDocBtn.addEventListener('click', () => {
       dom.importDocInput.click()
     })
-    dom.importDocInput.addEventListener('change', async (event) => {
-      const selectedFile = event.target.files?.[0]
-      event.target.value = ''
-      if (!selectedFile) return
-      try {
-        await importDocumentFile(selectedFile)
-      } catch (error) {
-        console.error('Failed to import CookieCut document:', error)
-        showDocumentTransferMessage(
-          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
-          true
-        )
-      }
-    })
+    dom.importDocInput.addEventListener('change', handleImportDocumentChange)
   }
+}
 
-  // Toast Modal Listeners
+async function handleImportDocumentChange (event) {
+  const selectedFile = event.target.files?.[0]
+  event.target.value = ''
+  if (!selectedFile) return
+  try {
+    await importDocumentFile(selectedFile)
+  } catch (error) {
+    console.error('Failed to import CookieCut document:', error)
+    showDocumentTransferMessage(
+      'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
+      true
+    )
+  }
+}
+
+function bindToastModalListeners () {
   dom.closeModalBtn.addEventListener('click', closeToastModal)
   dom.toastModalOverlay.addEventListener('click', closeToastModal)
   dom.toastTypeTipBtn.addEventListener('click', () =>
@@ -1810,8 +1811,9 @@ export function init () {
   dom.toastTypeNoteBtn.addEventListener('click', () =>
     handleToastSelection('note')
   )
+}
 
-  // Text Modal Listeners
+function bindTextModalListeners () {
   dom.closeTextModalBtn.addEventListener('click', closeTextModal)
   dom.textModalOverlay.addEventListener('click', closeTextModal)
   dom.textTypeHeadingBtn.addEventListener('click', () =>
@@ -1829,17 +1831,19 @@ export function init () {
   dom.textTypeLinkBtn.addEventListener('click', () =>
     handleTextSelection('link')
   )
+}
 
-  // Icon Key Modal Listeners
+function bindIconModalListeners () {
   dom.iconKeyBtn.addEventListener('click', openIconKeyModal)
   dom.closeIconKeyModalBtn.addEventListener('click', closeIconKeyModal)
   dom.iconKeyModalOverlay.addEventListener('click', closeIconKeyModal)
-  dom.iconSearchInput.addEventListener('input', (e) =>
-    renderIconList(e.target.value)
+  dom.iconSearchInput.addEventListener('input', (event) =>
+    renderIconList(event.target.value)
   )
   dom.iconListContainer.addEventListener('click', handleIconListClick)
+}
 
-  // Settings Modal Listeners
+function bindSettingsModalListeners () {
   dom.settingsBtn.addEventListener('click', openSettingsModal)
   dom.closeSettingsModalBtn.addEventListener('click', closeSettingsModal)
   dom.settingsModalOverlay.addEventListener('click', closeSettingsModal)
@@ -1850,23 +1854,26 @@ export function init () {
   if (dom.fontApplyTipsCheckbox) {
     dom.fontApplyTipsCheckbox.addEventListener('change', handleFontScopeChange)
   }
+}
 
-  // Print Modal Listeners
+function handlePrintConfirmClick () {
+  const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
+  recipeData.settings.fileName = fileName
+  closePrintModal()
+  if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+    exportDocumentFile(fileName, {
+      marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
+    })
+    return
+  }
+  executePrint(fileName)
+}
+
+function bindPrintModalListeners () {
   dom.closePrintModalBtn.addEventListener('click', closePrintModal)
   dom.printModalOverlay.addEventListener('click', closePrintModal)
   dom.cancelPrintBtn.addEventListener('click', closePrintModal)
-  dom.confirmPrintBtn.addEventListener('click', () => {
-    const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
-    recipeData.settings.fileName = fileName
-    closePrintModal()
-    if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
-      exportDocumentFile(fileName, {
-        marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
-      })
-      return
-    }
-    executePrint(fileName)
-  })
+  dom.confirmPrintBtn.addEventListener('click', handlePrintConfirmClick)
   if (dom.printTemplateCheckbox) {
     dom.printTemplateCheckbox.addEventListener('change', (event) => {
       setMarketplaceOptionsVisibility(Boolean(event.target.checked))
@@ -1880,16 +1887,17 @@ export function init () {
     })
   }
   if (dom.printFileNameInput) {
-    dom.printFileNameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
+    dom.printFileNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
         dom.confirmPrintBtn.click()
       }
-      if (e.key === 'Escape') closePrintModal()
+      if (event.key === 'Escape') closePrintModal()
     })
   }
+}
 
-  // Clear Document Modal Listeners
+function bindClearAndCloseTabModalListeners () {
   if (dom.closeClearDocModalBtn) {
     dom.closeClearDocModalBtn.addEventListener(
       'click',
@@ -1905,7 +1913,7 @@ export function init () {
   if (dom.confirmClearDocBtn) {
     dom.confirmClearDocBtn.addEventListener('click', clearCurrentDocumentData)
   }
-  // Close Tab Confirmation Modal Listeners
+
   if (dom.closeTabModalDismissBtn) {
     dom.closeTabModalDismissBtn.addEventListener('click', closeCloseTabModal)
   }
@@ -1918,11 +1926,12 @@ export function init () {
   if (dom.confirmCloseTabBtn) {
     dom.confirmCloseTabBtn.addEventListener('click', confirmCloseTabFromModal)
   }
+}
 
-  // Editor Mode select
+function bindEditorAndTemplateListeners () {
   if (dom.editorModeSelect) {
-    dom.editorModeSelect.addEventListener('change', (e) => {
-      setEditorMode(e.target.value)
+    dom.editorModeSelect.addEventListener('change', (event) => {
+      setEditorMode(event.target.value)
     })
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
@@ -1935,53 +1944,54 @@ export function init () {
     dom.templateGalleryBackBtn.addEventListener('click', showEditor)
   }
   if (dom.templateGalleryGrid) {
-    dom.templateGalleryGrid.addEventListener('click', (event) => {
-      handleTemplateGalleryGridClick(event)
-    })
+    dom.templateGalleryGrid.addEventListener(
+      'click',
+      handleTemplateGalleryGridClick
+    )
   }
+}
 
-  updateAppLayoutForPreviewMode()
+function bindFloatingAddButtonListeners () {
+  if (!dom.floatingAddBtn) return
+  dom.floatingAddBtn.addEventListener('click', (event) => {
+    event.stopPropagation()
+    let menu = document.getElementById('floating-add-menu')
+    if (menu) {
+      menu.remove()
+      return
+    }
+    menu = document.createElement('div')
+    menu.id = 'floating-add-menu'
+    menu.style.position = 'fixed'
+    menu.style.right = '96px'
+    menu.style.bottom = '24px'
+    menu.style.zIndex = 70
+    menu.style.background = 'white'
+    menu.style.padding = '8px'
+    menu.style.borderRadius = '8px'
+    menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
 
-  // Floating add button behavior
-  if (dom.floatingAddBtn) {
-    dom.floatingAddBtn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      let menu = document.getElementById('floating-add-menu')
-      if (menu) {
+    const makeBtn = (label, callback) => {
+      const buttonEl = document.createElement('button')
+      buttonEl.textContent = label
+      buttonEl.className = 'px-3 py-2 block w-full text-left'
+      buttonEl.addEventListener('click', () => {
+        callback()
         menu.remove()
-        return
-      }
-      menu = document.createElement('div')
-      menu.id = 'floating-add-menu'
-      menu.style.position = 'fixed'
-      menu.style.right = '96px'
-      menu.style.bottom = '24px'
-      menu.style.zIndex = 70
-      menu.style.background = 'white'
-      menu.style.padding = '8px'
-      menu.style.borderRadius = '8px'
-      menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+      })
+      return buttonEl
+    }
 
-      const makeBtn = (label, cb) => {
-        const buttonEl = document.createElement('button')
-        buttonEl.textContent = label
-        buttonEl.className = 'px-3 py-2 block w-full text-left'
-        buttonEl.addEventListener('click', () => {
-          cb()
-          menu.remove()
-        })
-        return buttonEl
-      }
+    menu.appendChild(makeBtn('Add Text', () => openTextModal()))
+    menu.appendChild(makeBtn('Add Image', () => addItem('image')))
+    menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
+    menu.appendChild(makeBtn('Print', () => handlePrint()))
 
-      menu.appendChild(makeBtn('Add Text', () => openTextModal()))
-      menu.appendChild(makeBtn('Add Image', () => addItem('image')))
-      menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
-      menu.appendChild(makeBtn('Print', () => handlePrint()))
-
-      document.body.appendChild(menu)
-      // click outside to close
-      setTimeout(() => {
-        document.addEventListener('click', function _close (ev) {
+    document.body.appendChild(menu)
+    setTimeout(() => {
+      document.addEventListener(
+        'click',
+        function handleFloatingAddOutsideClick (ev) {
           const menuEl = document.getElementById('floating-add-menu')
           if (
             menuEl &&
@@ -1990,23 +2000,24 @@ export function init () {
           ) {
             menuEl.remove()
           }
-          document.removeEventListener('click', _close)
-        })
-      }, 10)
-    })
-  }
+          document.removeEventListener('click', handleFloatingAddOutsideClick)
+        }
+      )
+    }, 10)
+  })
+}
 
-  // Dynamic item handlers
+function bindCoreEditorListeners () {
   dom.contentInputs.addEventListener('input', handleLiveInput)
   dom.contentInputs.addEventListener('click', handleContentInputClick)
   initSelectionToolbar()
-
-  // View Toggle Listeners
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
-  dom.printBtn.addEventListener('click', () => handlePrint())
+  dom.printBtn.addEventListener('click', handlePrint)
   document.addEventListener('keydown', handleGlobalKeydown)
+}
 
+function bindPreviewResizeListener () {
   let previewResizeTimer = null
   window.addEventListener('resize', () => {
     const inPagedClassicPreview =
@@ -2021,8 +2032,9 @@ export function init () {
       if (inPagedInlinePreview) refreshInlinePreviewMetrics()
     }, 120)
   })
+}
 
-  // Initial render
+function performInitialRender () {
   renderBuilderInputs()
   dom.titleInput.value = recipeData.title
   dom.descInput.value = recipeData.description
@@ -2030,10 +2042,29 @@ export function init () {
   dom.descPreview.innerHTML = renderRichText(recipeData.description)
   dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
-  // Initialize editor mode (inline is experimental and OFF by default)
   setEditorMode(recipeData.settings.editorMode)
   renderTemplateGallerySlots()
   restoreWorkingDocumentFromCache()
   resetHistoryTracking()
   startHistoryObserver()
+}
+
+// --- INIT ---
+
+export function init () {
+  initializePreviewModeSetting()
+  bindMainInfoListeners()
+  bindTopToolbarListeners()
+  bindToastModalListeners()
+  bindTextModalListeners()
+  bindIconModalListeners()
+  bindSettingsModalListeners()
+  bindPrintModalListeners()
+  bindClearAndCloseTabModalListeners()
+  bindEditorAndTemplateListeners()
+  updateAppLayoutForPreviewMode()
+  bindFloatingAddButtonListeners()
+  bindCoreEditorListeners()
+  bindPreviewResizeListener()
+  performInitialRender()
 }
