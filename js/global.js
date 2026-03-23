@@ -26,6 +26,7 @@ import {
   switchToTab,
   closeTab,
   renameTab,
+  moveTab,
   initTabsState,
   persistTabsToCache,
   restoreTabsFromCache
@@ -574,6 +575,7 @@ function renderTabBar () {
     tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
     tabEl.setAttribute('tabindex', isActive ? '0' : '-1')
     tabEl.title = tab.label
+    tabEl.draggable = true
 
     const labelEl = document.createElement('span')
     labelEl.className = 'tab-label'
@@ -613,6 +615,49 @@ function renderTabBar () {
         }
       }
     })
+
+    tabEl.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', tab.id)
+      tabEl.classList.add('tab-item--dragging')
+    })
+
+    tabEl.addEventListener('dragend', () => {
+      tabEl.classList.remove('tab-item--dragging')
+      tabBar
+        .querySelectorAll('.tab-item--drag-over')
+        .forEach((el) => el.classList.remove('tab-item--drag-over'))
+    })
+
+    tabEl.addEventListener('dragover', (e) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      const draggingId = e.dataTransfer.getData('text/plain')
+      if (draggingId !== tab.id) {
+        tabBar
+          .querySelectorAll('.tab-item--drag-over')
+          .forEach((el) => el.classList.remove('tab-item--drag-over'))
+        tabEl.classList.add('tab-item--drag-over')
+      }
+    })
+
+    tabEl.addEventListener('dragleave', (e) => {
+      if (!tabEl.contains(e.relatedTarget)) {
+        tabEl.classList.remove('tab-item--drag-over')
+      }
+    })
+
+    tabEl.addEventListener('drop', (e) => {
+      e.preventDefault()
+      const fromId = e.dataTransfer.getData('text/plain')
+      tabEl.classList.remove('tab-item--drag-over')
+      if (fromId && fromId !== tab.id) {
+        moveTab(fromId, tab.id)
+        renderTabBar()
+        persistTabsToCache()
+      }
+    })
+
     tabBar.appendChild(tabEl)
   })
 
