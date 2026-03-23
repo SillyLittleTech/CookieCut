@@ -81,6 +81,8 @@ export const dom = {
   // Inline editor
   floatingAddBtn: null,
   inlinePreview: null,
+  // Document tabs
+  tabBar: null,
   // Preview mode / stats
   recipeFlow: null,
   previewStats: null,
@@ -195,6 +197,8 @@ export function initDom () {
   // Inline editor
   dom.floatingAddBtn = document.getElementById('floating-add-btn')
   dom.inlinePreview = document.getElementById('inline-preview')
+  // Document tabs
+  dom.tabBar = document.getElementById('tabs-bar')
   // Preview mode / stats
   dom.recipeFlow = document.getElementById('recipe-flow')
   dom.previewStats = document.getElementById('preview-stats')

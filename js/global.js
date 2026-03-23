@@ -19,6 +19,18 @@ import {
   refreshInlinePreviewMetrics
 } from './builders/inline.js'
 import { initSelectionToolbar } from './toolbar.js'
+import {
+  tabsState,
+  getActiveTab,
+  saveCurrentTabSnapshot,
+  createTab,
+  switchToTab,
+  closeTab,
+  renameTab,
+  initTabsState,
+  persistTabsToCache,
+  restoreTabsFromCache
+} from './tabs.js'
 
 // --- ACTIONS ---
 let nextItemId = Date.now()
@@ -457,6 +469,7 @@ function applyNormalizedRecipeData (normalizedRecipeData) {
 }
 
 function persistWorkingDocumentToCache () {
+  persistTabsToCache()
   const payload = buildDocumentPayload()
   const payloadText = JSON.stringify(payload)
   safeLocalStorageSet(WORKING_DOCUMENT_STORAGE_KEY, payloadText)
@@ -471,12 +484,34 @@ function persistWorkingDocumentToCache () {
 }
 
 function restoreWorkingDocumentFromCache () {
+  // Try tabs state first (highest priority — restores multi-document session)
+  const tabsRecipeData = restoreTabsFromCache()
+  if (tabsRecipeData) {
+    try {
+      const normalized = normalizeImportedRecipeData(tabsRecipeData)
+      if (normalized) {
+        applyNormalizedRecipeData(normalized)
+        renderTabBar()
+        showDocumentTransferMessage('Recovered session from local autosave.')
+        return true
+      }
+    } catch {
+      // Fall through to single-document fallbacks.
+    }
+    // Reset invalid tabs state before falling through.
+    tabsState.tabs = []
+    tabsState.activeTabId = null
+  }
+
+  // Fall back to old single-document working document key.
   const cachedText = safeLocalStorageGet(WORKING_DOCUMENT_STORAGE_KEY)
   if (cachedText) {
     try {
       const normalizedRecipeData = parseImportedRecipeDataText(cachedText)
       if (normalizedRecipeData) {
+        initTabsState(normalizedRecipeData)
         applyNormalizedRecipeData(normalizedRecipeData)
+        renderTabBar()
         showDocumentTransferMessage(
           'Recovered document from local autosave cache.'
         )
@@ -488,22 +523,160 @@ function restoreWorkingDocumentFromCache () {
   }
 
   const cookieValue = getCookieValue(WORKING_DOCUMENT_COOKIE_KEY)
-  if (!cookieValue) return false
+  if (!cookieValue) {
+    initTabsState()
+    renderTabBar()
+    return false
+  }
 
   try {
     const parsedCookie = JSON.parse(decodeURIComponent(cookieValue))
-    if (!parsedCookie || typeof parsedCookie !== 'object') return false
+    if (!parsedCookie || typeof parsedCookie !== 'object') {
+      initTabsState()
+      renderTabBar()
+      return false
+    }
     const payloadText = JSON.stringify(
       parsedCookie.payload ? parsedCookie.payload : parsedCookie
     )
     const normalizedRecipeData = parseImportedRecipeDataText(payloadText)
-    if (!normalizedRecipeData) return false
+    if (!normalizedRecipeData) {
+      initTabsState()
+      renderTabBar()
+      return false
+    }
+    initTabsState(normalizedRecipeData)
     applyNormalizedRecipeData(normalizedRecipeData)
+    renderTabBar()
     showDocumentTransferMessage('Recovered document from cookie backup.')
     return true
   } catch {
+    initTabsState()
+    renderTabBar()
     return false
   }
+}
+
+// --- TAB BAR UI ---
+
+function renderTabBar () {
+  const tabBar = dom.tabBar
+  if (!tabBar) return
+  tabBar.innerHTML = ''
+
+  tabsState.tabs.forEach((tab) => {
+    const isActive = tab.id === tabsState.activeTabId
+
+    const tabEl = document.createElement('div')
+    tabEl.className = isActive ? 'tab-item tab-item--active' : 'tab-item'
+    tabEl.dataset.tabId = tab.id
+    tabEl.setAttribute('role', 'tab')
+    tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    tabEl.title = tab.label
+
+    const labelEl = document.createElement('span')
+    labelEl.className = 'tab-label'
+    labelEl.textContent = tab.label
+    labelEl.title = 'Double-click to rename'
+    labelEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation()
+      startTabRename(tab.id, labelEl)
+    })
+
+    const closeBtn = document.createElement('button')
+    closeBtn.className = 'tab-close-btn'
+    closeBtn.setAttribute('aria-label', `Close ${tab.label}`)
+    closeBtn.innerHTML =
+      '<span class="material-icons" style="font-size:14px;line-height:1;">close</span>'
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      handleCloseTab(tab.id)
+    })
+
+    tabEl.appendChild(labelEl)
+    tabEl.appendChild(closeBtn)
+    tabEl.addEventListener('click', () => handleSwitchTab(tab.id))
+    tabBar.appendChild(tabEl)
+  })
+
+  const newTabBtn = document.createElement('button')
+  newTabBtn.className = 'tab-new-btn'
+  newTabBtn.title = 'New document'
+  newTabBtn.setAttribute('aria-label', 'New document')
+  newTabBtn.innerHTML =
+    '<span class="material-icons" style="font-size:16px;line-height:1;">add</span>'
+  newTabBtn.addEventListener('click', handleNewTab)
+  tabBar.appendChild(newTabBtn)
+}
+
+function startTabRename (tabId, labelEl) {
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.value = labelEl.textContent
+  input.className = 'tab-rename-input'
+  labelEl.replaceWith(input)
+  input.focus()
+  input.select()
+
+  let committed = false
+  const commit = () => {
+    if (committed) return
+    committed = true
+    const newLabel = input.value.trim()
+    if (newLabel) renameTab(tabId, newLabel)
+    renderTabBar()
+    persistTabsToCache()
+  }
+
+  input.addEventListener('blur', commit)
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      input.blur()
+    } else if (e.key === 'Escape') {
+      committed = true
+      renderTabBar()
+    }
+  })
+}
+
+function handleSwitchTab (id) {
+  const newRecipeData = switchToTab(id)
+  if (!newRecipeData) return
+  try {
+    const normalized = normalizeImportedRecipeData(newRecipeData)
+    applyNormalizedRecipeData(normalized || newRecipeData)
+  } catch {
+    applyNormalizedRecipeData(newRecipeData)
+  }
+  resetHistoryTracking()
+  renderTabBar()
+  persistTabsToCache()
+}
+
+function handleNewTab () {
+  saveCurrentTabSnapshot()
+  const newTab = createTab()
+  tabsState.activeTabId = newTab.id
+  applyNormalizedRecipeData(newTab.savedRecipeData)
+  resetHistoryTracking()
+  renderTabBar()
+  persistTabsToCache()
+}
+
+function handleCloseTab (id) {
+  const result = closeTab(id)
+  if (result) {
+    try {
+      const normalized = normalizeImportedRecipeData(result.recipeData)
+      applyNormalizedRecipeData(normalized || result.recipeData)
+    } catch {
+      applyNormalizedRecipeData(result.recipeData)
+    }
+    resetHistoryTracking()
+  }
+  renderTabBar()
+  persistTabsToCache()
 }
 
 function getTemplateSlotBuiltin (slot) {

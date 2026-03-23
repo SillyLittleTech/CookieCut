@@ -1212,3 +1212,116 @@
     display: none !important;
   }
 }
+
+/* --- Document Tab Bar --- */
+.tabs-bar {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+  min-height: 36px;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  max-width: 180px;
+  min-width: 80px;
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.1s, color 0.1s;
+  color: #6b7280;
+  background: transparent;
+  position: relative;
+  bottom: -2px;
+}
+
+.tab-item:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.tab-item--active {
+  background: #fff;
+  color: #1d4ed8;
+  border-color: #e5e7eb;
+  border-bottom-color: #fff;
+  font-weight: 600;
+}
+
+.tab-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+  line-height: 1;
+}
+
+.tab-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tab-rename-input {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid #93c5fd;
+  border-radius: 3px;
+  padding: 0 4px;
+  outline: none;
+  min-width: 0;
+  background: #eff6ff;
+  color: #1e40af;
+  max-width: 130px;
+}
+
+.tab-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  align-self: center;
+  margin-left: 4px;
+}
+
+.tab-new-btn:hover {
+  background: #dbeafe;
+  color: #2563eb;
+}
