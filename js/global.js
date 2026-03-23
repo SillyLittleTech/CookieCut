@@ -111,6 +111,7 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
   }
 ])
 let printModalAction = PRINT_MODAL_ACTION_PRINT
+let pendingCloseTabId = null
 let templateGalleryMessageTimer = null
 let autosaveKeystrokeCounter = 0
 let undoHistory = []
@@ -678,6 +679,16 @@ function handleNewTab () {
 }
 
 function handleCloseTab (id) {
+  saveCurrentTabSnapshot()
+  const targetTab = tabsState.tabs.find((tab) => tab.id === id)
+  if (targetTab && tabHasContent(targetTab.savedRecipeData)) {
+    openCloseTabModal(id)
+    return
+  }
+  closeTabById(id)
+}
+
+function closeTabById (id) {
   const result = closeTab(id)
   if (result) {
     applyNormalizedRecipeData(
@@ -687,6 +698,13 @@ function handleCloseTab (id) {
   }
   renderTabBar()
   persistTabsToCache()
+}
+
+function tabHasContent (tabRecipeData) {
+  if (!tabRecipeData || typeof tabRecipeData !== 'object') return false
+  if (toStringOrFallback(tabRecipeData.title, '').trim()) return true
+  if (toStringOrFallback(tabRecipeData.description, '').trim()) return true
+  return Array.isArray(tabRecipeData.items) && tabRecipeData.items.length > 0
 }
 
 function getTemplateSlotBuiltin (slot) {
@@ -1354,6 +1372,31 @@ function closeClearDocumentModal () {
   dom.clearDocModal.classList.add('hidden')
 }
 
+function openCloseTabModal (id) {
+  if (!dom.closeTabModal) {
+    closeTabById(id)
+    return
+  }
+  pendingCloseTabId = id
+  dom.closeTabModal.classList.remove('hidden')
+}
+
+function closeCloseTabModal () {
+  if (!dom.closeTabModal) return
+  pendingCloseTabId = null
+  dom.closeTabModal.classList.add('hidden')
+}
+
+function confirmCloseTabFromModal () {
+  if (!pendingCloseTabId) {
+    closeCloseTabModal()
+    return
+  }
+  const tabIdToClose = pendingCloseTabId
+  closeCloseTabModal()
+  closeTabById(tabIdToClose)
+}
+
 function clearCurrentDocumentData () {
   recipeData.title = ''
   recipeData.description = ''
@@ -1861,6 +1904,19 @@ export function init () {
   }
   if (dom.confirmClearDocBtn) {
     dom.confirmClearDocBtn.addEventListener('click', clearCurrentDocumentData)
+  }
+  // Close Tab Confirmation Modal Listeners
+  if (dom.closeTabModalDismissBtn) {
+    dom.closeTabModalDismissBtn.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.closeTabModalOverlay) {
+    dom.closeTabModalOverlay.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.cancelCloseTabBtn) {
+    dom.cancelCloseTabBtn.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.confirmCloseTabBtn) {
+    dom.confirmCloseTabBtn.addEventListener('click', confirmCloseTabFromModal)
   }
 
   // Editor Mode select
