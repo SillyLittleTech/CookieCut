@@ -6,7 +6,9 @@ import { recipeData } from './state.js'
 export const tabsState = {
   tabs: [],
   activeTabId: null,
-  nextTabNum: 1
+  nextTabNum: 1,
+  groups: [],
+  nextGroupNum: 1
 }
 
 const TABS_STORAGE_KEY = 'cookiecut_tabs_state'
@@ -108,6 +110,102 @@ export function moveTab (fromId, toId) {
   return true
 }
 
+export function createGroup (label = null) {
+  const id = `grp_${Date.now()}_${tabsState.nextGroupNum++}`
+  const group = {
+    id,
+    label: label || `Group ${tabsState.groups.length + 1}`,
+    color: 'b',
+    collapsed: false
+  }
+  tabsState.groups.push(group)
+  return group
+}
+
+export function renameGroup (id, newLabel) {
+  const group = tabsState.groups.find((g) => g.id === id)
+  if (group && newLabel.trim()) {
+    group.label = newLabel.trim()
+  }
+}
+
+export function setGroupColor (id, color) {
+  const group = tabsState.groups.find((g) => g.id === id)
+  if (group) group.color = color
+}
+
+export function toggleGroupCollapse (id) {
+  const group = tabsState.groups.find((g) => g.id === id)
+  if (group) group.collapsed = !group.collapsed
+}
+
+export function addTabToGroup (tabId, groupId) {
+  const tab = tabsState.tabs.find((t) => t.id === tabId)
+  if (tab) tab.groupId = groupId
+}
+
+export function removeTabFromGroup (tabId) {
+  const tab = tabsState.tabs.find((t) => t.id === tabId)
+  if (tab) delete tab.groupId
+}
+
+export function getGroupTabs (groupId) {
+  return tabsState.tabs.filter((t) => t.groupId === groupId)
+}
+
+export function closeGroupTabs (groupId) {
+  const groupTabIds = new Set(
+    tabsState.tabs.filter((t) => t.groupId === groupId).map((t) => t.id)
+  )
+
+  const groupIdx = tabsState.groups.findIndex((g) => g.id === groupId)
+  if (groupIdx !== -1) tabsState.groups.splice(groupIdx, 1)
+
+  if (groupTabIds.size === 0) return null
+
+  const wasActiveInGroup = groupTabIds.has(tabsState.activeTabId)
+
+  tabsState.tabs = tabsState.tabs.filter((t) => !groupTabIds.has(t.id))
+
+  if (tabsState.tabs.length === 0) {
+    const newTab = createTab()
+    tabsState.activeTabId = newTab.id
+    return { newActiveId: newTab.id, recipeData: newTab.savedRecipeData }
+  }
+
+  if (wasActiveInGroup) {
+    const newActiveTab = tabsState.tabs[0]
+    tabsState.activeTabId = newActiveTab.id
+    return {
+      newActiveId: tabsState.activeTabId,
+      recipeData: newActiveTab.savedRecipeData
+    }
+  }
+
+  return null
+}
+
+export function ungroupGroup (groupId) {
+  tabsState.tabs.forEach((t) => {
+    if (t.groupId === groupId) delete t.groupId
+  })
+  const idx = tabsState.groups.findIndex((g) => g.id === groupId)
+  if (idx !== -1) tabsState.groups.splice(idx, 1)
+}
+
+export function moveGroup (groupId, beforeTabId) {
+  const groupTabs = tabsState.tabs.filter((t) => t.groupId === groupId)
+  if (groupTabs.length === 0) return false
+
+  tabsState.tabs = tabsState.tabs.filter((t) => t.groupId !== groupId)
+
+  const insertIdx = tabsState.tabs.findIndex((t) => t.id === beforeTabId)
+  const pos = insertIdx === -1 ? tabsState.tabs.length : insertIdx
+
+  tabsState.tabs.splice(pos, 0, ...groupTabs)
+  return true
+}
+
 export function initTabsState (initialRecipeData = null) {
   if (tabsState.tabs.length > 0) return
   const tab = createTab(initialRecipeData)
@@ -121,10 +219,13 @@ export function persistTabsToCache () {
       tabs: tabsState.tabs.map((t) => ({
         id: t.id,
         label: t.label,
+        groupId: t.groupId,
         savedRecipeData: t.savedRecipeData
       })),
       activeTabId: tabsState.activeTabId,
-      nextTabNum: tabsState.nextTabNum
+      nextTabNum: tabsState.nextTabNum,
+      groups: tabsState.groups.map((g) => ({ ...g })),
+      nextGroupNum: tabsState.nextGroupNum
     }
     globalThis.localStorage?.setItem(TABS_STORAGE_KEY, JSON.stringify(state))
   } catch {
@@ -156,6 +257,15 @@ export function restoreTabsFromCache () {
       state.nextTabNum > tabsState.nextTabNum
     ) {
       tabsState.nextTabNum = state.nextTabNum
+    }
+    if (Array.isArray(state.groups)) {
+      tabsState.groups = state.groups
+    }
+    if (
+      typeof state.nextGroupNum === 'number' &&
+      state.nextGroupNum > tabsState.nextGroupNum
+    ) {
+      tabsState.nextGroupNum = state.nextGroupNum
     }
     const activeTab =
       tabsState.tabs.find((t) => t.id === tabsState.activeTabId) || null
