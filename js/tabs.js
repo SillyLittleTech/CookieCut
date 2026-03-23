@@ -116,7 +116,7 @@ export function persistTabsToCache () {
       activeTabId: tabsState.activeTabId,
       nextTabNum: tabsState.nextTabNum
     }
-    localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(state))
+    globalThis.localStorage?.setItem(TABS_STORAGE_KEY, JSON.stringify(state))
   } catch {
     // Ignore storage errors.
   }
@@ -124,21 +124,31 @@ export function persistTabsToCache () {
 
 export function restoreTabsFromCache () {
   try {
-    const raw = localStorage.getItem(TABS_STORAGE_KEY)
+    const raw = globalThis.localStorage?.getItem(TABS_STORAGE_KEY)
     if (!raw) return null
     const state = JSON.parse(raw)
     if (!state || !Array.isArray(state.tabs) || state.tabs.length === 0) {
       return null
     }
-    tabsState.tabs = state.tabs
-    tabsState.activeTabId = state.activeTabId
+    const restoredTabs = state.tabs
+    // Resolve a valid activeTabId; fall back to the first tab if stored ID is invalid.
+    let resolvedActiveTabId = state.activeTabId
+    const hasValidActiveTab = restoredTabs.some(
+      (t) => t && t.id === resolvedActiveTabId
+    )
+    if (!hasValidActiveTab && restoredTabs[0]?.id != null) {
+      resolvedActiveTabId = restoredTabs[0].id
+    }
+    tabsState.tabs = restoredTabs
+    tabsState.activeTabId = resolvedActiveTabId
     if (
       typeof state.nextTabNum === 'number' &&
       state.nextTabNum > tabsState.nextTabNum
     ) {
       tabsState.nextTabNum = state.nextTabNum
     }
-    const activeTab = getActiveTab()
+    const activeTab =
+      tabsState.tabs.find((t) => t.id === tabsState.activeTabId) || null
     return activeTab ? activeTab.savedRecipeData : null
   } catch {
     return null

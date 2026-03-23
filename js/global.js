@@ -571,6 +571,7 @@ function renderTabBar () {
     tabEl.dataset.tabId = tab.id
     tabEl.setAttribute('role', 'tab')
     tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    tabEl.setAttribute('tabindex', isActive ? '0' : '-1')
     tabEl.title = tab.label
 
     const labelEl = document.createElement('span')
@@ -595,6 +596,22 @@ function renderTabBar () {
     tabEl.appendChild(labelEl)
     tabEl.appendChild(closeBtn)
     tabEl.addEventListener('click', () => handleSwitchTab(tab.id))
+    tabEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        handleSwitchTab(tab.id)
+      } else if (e.key === 'ArrowRight') {
+        const next = tabEl.nextElementSibling
+        if (next && next.dataset.tabId) {
+          next.focus()
+        }
+      } else if (e.key === 'ArrowLeft') {
+        const prev = tabEl.previousElementSibling
+        if (prev && prev.dataset.tabId) {
+          prev.focus()
+        }
+      }
+    })
     tabBar.appendChild(tabEl)
   })
 
@@ -642,7 +659,9 @@ function startTabRename (tabId, labelEl) {
 function handleSwitchTab (id) {
   const newRecipeData = switchToTab(id)
   if (!newRecipeData) return
-  applyNormalizedRecipeData(newRecipeData)
+  applyNormalizedRecipeData(
+    normalizeImportedRecipeData(newRecipeData) ?? newRecipeData
+  )
   resetHistoryTracking()
   renderTabBar()
   persistTabsToCache()
@@ -661,7 +680,9 @@ function handleNewTab () {
 function handleCloseTab (id) {
   const result = closeTab(id)
   if (result) {
-    applyNormalizedRecipeData(result.recipeData)
+    applyNormalizedRecipeData(
+      normalizeImportedRecipeData(result.recipeData) ?? result.recipeData
+    )
     resetHistoryTracking()
   }
   renderTabBar()
