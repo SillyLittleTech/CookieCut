@@ -1491,7 +1491,9 @@
   border-radius: 50%;
   border: 2px solid #94a3b8;
   cursor: pointer;
-  transition: transform 0.1s, border-color 0.1s;
+  transition:
+    transform 0.1s,
+    border-color 0.1s;
   flex-shrink: 0;
 }
 
@@ -1513,7 +1515,15 @@
   flex-shrink: 0;
 }
 
-.swatch-y { background: #fef08a; }
-.swatch-b { background: #bfdbfe; }
-.swatch-g { background: #bbf7d0; }
-.swatch-p { background: #fbcfe8; }
+.swatch-y {
+  background: #fef08a;
+}
+.swatch-b {
+  background: #bfdbfe;
+}
+.swatch-g {
+  background: #bbf7d0;
+}
+.swatch-p {
+  background: #fbcfe8;
+}

@@ -583,7 +583,7 @@ function renderTabBar () {
   if (!tabBar) return
   tabBar.innerHTML = ''
 
-  let lastGroupId = undefined
+  let lastGroupId
 
   tabsState.tabs.forEach((tab) => {
     const isActive = tab.id === tabsState.activeTabId
@@ -696,9 +696,7 @@ function buildGroupHeader (group, tabBar) {
     if (fromData.startsWith('group:')) {
       const fromGroupId = fromData.slice(6)
       // Move the dragged group before the first tab of the drop-target group
-      const firstGroupTab = tabsState.tabs.find(
-        (t) => t.groupId === group.id
-      )
+      const firstGroupTab = tabsState.tabs.find((t) => t.groupId === group.id)
       if (firstGroupTab) {
         moveGroup(fromGroupId, firstGroupTab.id)
         renderTabBar()
@@ -706,9 +704,7 @@ function buildGroupHeader (group, tabBar) {
       }
     } else {
       // A tab was dropped onto a group header: move it before the first group tab
-      const firstGroupTab = tabsState.tabs.find(
-        (t) => t.groupId === group.id
-      )
+      const firstGroupTab = tabsState.tabs.find((t) => t.groupId === group.id)
       if (firstGroupTab) {
         moveTab(fromData, firstGroupTab.id)
         renderTabBar()
@@ -726,7 +722,10 @@ function buildTabElement (tab, isActive, tabBar) {
   if (tab.groupId) {
     const group = tabsState.groups.find((g) => g.id === tab.groupId)
     if (group) {
-      tabEl.classList.add(`tab-item--grouped`, `tab-group-color-${group.color}-tab`)
+      tabEl.classList.add(
+        'tab-item--grouped',
+        `tab-group-color-${group.color}-tab`
+      )
     }
   }
   tabEl.dataset.tabId = tab.id
