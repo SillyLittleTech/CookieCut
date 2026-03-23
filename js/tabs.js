@@ -98,6 +98,16 @@ export function renameTab (id, newLabel) {
   }
 }
 
+export function moveTab (fromId, toId) {
+  if (fromId === toId) return false
+  const fromIdx = tabsState.tabs.findIndex((t) => t.id === fromId)
+  const toIdx = tabsState.tabs.findIndex((t) => t.id === toId)
+  if (fromIdx === -1 || toIdx === -1) return false
+  const [tab] = tabsState.tabs.splice(fromIdx, 1)
+  tabsState.tabs.splice(toIdx, 0, tab)
+  return true
+}
+
 export function initTabsState (initialRecipeData = null) {
   if (tabsState.tabs.length > 0) return
   const tab = createTab(initialRecipeData)

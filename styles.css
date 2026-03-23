@@ -1231,7 +1231,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px 4px 12px;
-  cursor: pointer;
+  cursor: grab;
   border: 1px solid transparent;
   border-bottom: none;
   border-radius: 6px 6px 0 0;
@@ -1330,4 +1330,15 @@
 .tab-new-btn:hover {
   background: #dbeafe;
   color: #2563eb;
+}
+
+.tab-item--dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.tab-item--drag-over {
+  border-left: 2px solid #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
