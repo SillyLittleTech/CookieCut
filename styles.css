@@ -1224,6 +1224,14 @@
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
   min-height: 36px;
+  /* Full-bleed: extend to full viewport width */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  box-sizing: border-box;
 }
 
 .tab-item {
@@ -1531,4 +1539,136 @@
 }
 .swatch-p {
   background: #fbcfe8;
+}
+
+/* === Dark Mode Overrides === */
+
+/* Tab bar in dark mode */
+.dark .tabs-bar {
+  border-bottom-color: #374151;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.dark .tab-item {
+  color: #9ca3af;
+}
+
+.dark .tab-item:hover {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.dark .tab-item--active {
+  background: #1f2937;
+  color: #60a5fa;
+  border-color: #374151;
+  border-bottom-color: #1f2937;
+}
+
+.dark .tab-close-btn {
+  color: #6b7280;
+}
+
+.dark .tab-close-btn:hover {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.dark .tab-new-btn {
+  color: #6b7280;
+}
+
+.dark .tab-new-btn:hover {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark .tab-rename-input {
+  background: #1e3a8a;
+  color: #bfdbfe;
+  border-color: #3b82f6;
+}
+
+/* Tab context menu in dark mode */
+.dark .tab-ctx-menu {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .tab-ctx-item {
+  color: #e5e7eb;
+}
+
+.dark .tab-ctx-item:hover {
+  background: #374151;
+}
+
+.dark .tab-ctx-icon {
+  color: #9ca3af;
+}
+
+.dark .tab-ctx-divider {
+  background: #374151;
+}
+
+/* Builder panel in dark mode */
+.dark .builder-panel {
+  background: #1f2937;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Settings modal in dark mode */
+.dark #settings-modal > div:last-child {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.dark #settings-modal label,
+.dark #settings-modal legend,
+.dark #settings-modal p {
+  color: #d1d5db;
+}
+
+.dark #settings-modal h3 {
+  color: #f9fafb;
+}
+
+.dark #settings-modal select,
+.dark #settings-modal input[type="text"] {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+/* Inline preview dark mode */
+.dark #inline-preview {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+/* Content inputs in dark mode */
+.dark .item-card {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+.dark .item-card input,
+.dark .item-card textarea,
+.dark .item-card select {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dark .item-card label,
+.dark .item-card .item-label {
+  color: #d1d5db;
+}
+
+/* Print overrides — hide dark mode toggle */
+@media print {
+  #dark-mode-toggle {
+    display: none !important;
+  }
 }

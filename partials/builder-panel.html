@@ -1,11 +1,11 @@
 <!-- === BUILDER PANEL === -->
 <div
   id="builder-panel"
-  class="builder-panel w-full bg-white p-6 md:p-8 rounded-lg shadow-lg animate-fade-in"
+  class="builder-panel w-full bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-lg animate-fade-in"
 >
   <!-- Document Transfer Controls -->
   <div
-    class="mb-6 flex flex-col items-center gap-3 border-b border-gray-200 pb-6"
+    class="mb-4 flex flex-col items-center gap-3 border-b border-gray-200 dark:border-gray-700 pb-4"
   >
     <div class="flex flex-wrap items-center justify-center gap-3">
       <button
@@ -40,6 +40,22 @@
       >
         <span class="material-icons text-base leading-none">delete_sweep</span>
       </button>
+      <button
+        id="settings-btn"
+        aria-label="Open settings"
+        title="Settings"
+        class="top-toolbar-icon-btn inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none">settings</span>
+      </button>
+      <button
+        id="dark-mode-toggle"
+        aria-label="Toggle dark mode"
+        title="Toggle Dark Mode"
+        class="top-toolbar-icon-btn inline-flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
+      >
+        <span class="material-icons text-base leading-none" id="dark-mode-icon">dark_mode</span>
+      </button>
       <input
         id="import-doc-input"
         type="file"
@@ -49,7 +65,7 @@
     </div>
     <output
       id="doc-transfer-status"
-      class="min-h-[1.25rem] text-sm text-gray-600 text-center"
+      class="min-h-[1.25rem] text-sm text-gray-600 dark:text-gray-400 text-center"
       aria-live="polite"
     ></output>
   </div>
@@ -70,12 +86,12 @@
       <div class="flex items-center justify-between mb-1">
         <label
           for="recipe-title-input"
-          class="block text-sm font-medium text-gray-700"
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >Recipe Title</label
         >
         <label
           id="hide-title-toggle"
-          class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none"
+          class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none"
         >
           <input
             type="checkbox"
@@ -89,7 +105,7 @@
       <input
         type="text"
         id="recipe-title-input"
-        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
         value=""
       />
     </div>
@@ -97,12 +113,12 @@
       <div class="flex items-center justify-between mb-1">
         <label
           for="recipe-desc-input"
-          class="block text-sm font-medium text-gray-700"
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >Description</label
         >
         <label
           id="hide-desc-toggle"
-          class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none"
+          class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none"
         >
           <input
             type="checkbox"
@@ -116,13 +132,13 @@
       <textarea
         id="recipe-desc-input"
         rows="3"
-        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
       ></textarea>
     </div>
   </div>
 
   <!-- Add Content Buttons -->
-  <div class="mt-6 flex flex-wrap gap-4 border-t border-gray-200 pt-6">
+  <div class="mt-6 flex flex-wrap justify-center gap-4 border-t border-gray-200 dark:border-gray-700 pt-6">
     <button
       id="add-text-btn"
       class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
@@ -146,12 +162,6 @@
       class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
     >
       Badge 🔑
-    </button>
-    <button
-      id="settings-btn"
-      class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-md hover:shadow-lg transform transition-all duration-150 hover:scale-[1.03] active:scale-95"
-    >
-      Settings ⚙️
     </button>
   </div>
 

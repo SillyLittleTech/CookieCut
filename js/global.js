@@ -2244,6 +2244,20 @@ function bindTopToolbarListeners () {
     })
     dom.importDocInput.addEventListener('change', handleImportDocumentChange)
   }
+  if (dom.darkModeToggle) {
+    const savedDark = localStorage.getItem('cookiecut-dark-mode') === 'true'
+    if (savedDark) {
+      document.documentElement.classList.add('dark')
+      if (dom.darkModeIcon) dom.darkModeIcon.textContent = 'light_mode'
+    }
+    dom.darkModeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark')
+      localStorage.setItem('cookiecut-dark-mode', String(isDark))
+      if (dom.darkModeIcon) {
+        dom.darkModeIcon.textContent = isDark ? 'light_mode' : 'dark_mode'
+      }
+    })
+  }
 }
 
 async function handleImportDocumentChange (event) {
