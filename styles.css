@@ -1241,7 +1241,9 @@
   min-width: 80px;
   white-space: nowrap;
   user-select: none;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   color: #6b7280;
   background: transparent;
   position: relative;
@@ -1281,7 +1283,9 @@
   color: #9ca3af;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   line-height: 1;
 }
 
@@ -1316,7 +1320,9 @@
   background: transparent;
   color: #9ca3af;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   align-self: center;
   margin-left: 4px;
 }
