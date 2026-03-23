@@ -1193,44 +1193,70 @@ export function renderInlinePreview () {
     inlinePagedFlow = flow
   }
 
-  // Title (editable)
-  const h1 = document.createElement('h1')
-  h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
-  h1.classList.add('inline-full-span')
-  h1.contentEditable = true
-  h1.dataset.key = 'title'
-  h1.innerHTML = renderRichText(recipeData.title)
-  // Outline for empty title so users notice it's editable
-  if (!recipeData.title || recipeData.title.trim() === '') {
-    h1.classList.add('new-text-outline')
-    const removeOutline = () => {
-      h1.classList.remove('new-text-outline')
-      h1.removeEventListener('input', removeOutline)
+  // Title (editable) — skip if hidden
+  if (!recipeData.settings?.hideTitle) {
+    const h1 = document.createElement('h1')
+    h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
+    h1.classList.add('inline-full-span')
+    h1.contentEditable = true
+    h1.dataset.key = 'title'
+    h1.innerHTML = renderRichText(recipeData.title)
+    // Outline for empty title so users notice it's editable
+    if (!recipeData.title || recipeData.title.trim() === '') {
+      h1.classList.add('new-text-outline')
+      const removeOutline = () => {
+        h1.classList.remove('new-text-outline')
+        h1.removeEventListener('input', removeOutline)
+      }
+      h1.addEventListener('input', removeOutline)
+      setTimeout(() => h1.focus(), 20)
     }
-    h1.addEventListener('input', removeOutline)
-    setTimeout(() => h1.focus(), 20)
+    h1.addEventListener('dblclick', async (ev) => {
+      ev.stopPropagation()
+      if (await openInlineDeleteConfirm('Hide the title from preview?')) {
+        recipeData.settings.hideTitle = true
+        if (dom.hideTitleCheckbox) dom.hideTitleCheckbox.checked = true
+        import('./classic.js').then(({ renderBuilderInputs }) => {
+          renderBuilderInputs()
+          renderInlinePreview()
+        })
+      }
+    })
+    contentRoot.appendChild(h1)
   }
-  contentRoot.appendChild(h1)
 
-  // Description (editable)
-  const descriptionParagraph = document.createElement('p')
-  descriptionParagraph.className = `text-gray-600 italic mb-4 ${
-    applyToText ? `font-style-${fontStyle}` : ''
-  }`.trim()
-  descriptionParagraph.classList.add('inline-full-span')
-  descriptionParagraph.contentEditable = true
-  descriptionParagraph.dataset.key = 'description'
-  descriptionParagraph.innerHTML = renderRichText(recipeData.description)
-  // Outline for empty description
-  if (!recipeData.description || recipeData.description.trim() === '') {
-    descriptionParagraph.classList.add('new-text-outline')
-    const removeOutlineDesc = () => {
-      descriptionParagraph.classList.remove('new-text-outline')
-      descriptionParagraph.removeEventListener('input', removeOutlineDesc)
+  // Description (editable) — skip if hidden
+  if (!recipeData.settings?.hideDescription) {
+    const descriptionParagraph = document.createElement('p')
+    descriptionParagraph.className = `text-gray-600 italic mb-4 ${
+      applyToText ? `font-style-${fontStyle}` : ''
+    }`.trim()
+    descriptionParagraph.classList.add('inline-full-span')
+    descriptionParagraph.contentEditable = true
+    descriptionParagraph.dataset.key = 'description'
+    descriptionParagraph.innerHTML = renderRichText(recipeData.description)
+    // Outline for empty description
+    if (!recipeData.description || recipeData.description.trim() === '') {
+      descriptionParagraph.classList.add('new-text-outline')
+      const removeOutlineDesc = () => {
+        descriptionParagraph.classList.remove('new-text-outline')
+        descriptionParagraph.removeEventListener('input', removeOutlineDesc)
+      }
+      descriptionParagraph.addEventListener('input', removeOutlineDesc)
     }
-    descriptionParagraph.addEventListener('input', removeOutlineDesc)
+    descriptionParagraph.addEventListener('dblclick', async (ev) => {
+      ev.stopPropagation()
+      if (await openInlineDeleteConfirm('Hide the description from preview?')) {
+        recipeData.settings.hideDescription = true
+        if (dom.hideDescCheckbox) dom.hideDescCheckbox.checked = true
+        import('./classic.js').then(({ renderBuilderInputs }) => {
+          renderBuilderInputs()
+          renderInlinePreview()
+        })
+      }
+    })
+    contentRoot.appendChild(descriptionParagraph)
   }
-  contentRoot.appendChild(descriptionParagraph)
 
   // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
   let currentList = null

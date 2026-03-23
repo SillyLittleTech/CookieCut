@@ -49,6 +49,11 @@ export const dom = {
   closeIconKeyModalBtn: null,
   iconSearchInput: null,
   iconListContainer: null,
+  // Hide title/description checkboxes
+  hideTitleCheckbox: null,
+  hideDescCheckbox: null,
+  hideTitleToggle: null,
+  hideDescToggle: null,
   // Settings Modal
   settingsBtn: null,
   settingsModal: null,
@@ -153,6 +158,11 @@ export function initDom () {
   )
   dom.iconSearchInput = document.getElementById('icon-search-input')
   dom.iconListContainer = document.getElementById('icon-list-container')
+  // Hide title/description checkboxes
+  dom.hideTitleCheckbox = document.getElementById('hide-title-checkbox')
+  dom.hideDescCheckbox = document.getElementById('hide-desc-checkbox')
+  dom.hideTitleToggle = document.getElementById('hide-title-toggle')
+  dom.hideDescToggle = document.getElementById('hide-desc-toggle')
   // Settings Modal
   dom.settingsBtn = document.getElementById('settings-btn')
   dom.settingsModal = document.getElementById('settings-modal')
