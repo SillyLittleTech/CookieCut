@@ -562,7 +562,9 @@ function renderTabBar () {
     }
 
     // Skip tabs in collapsed groups
-    if (tabsState.groups.find((g) => g.id === currentGroupId)?.collapsed) return
+    if (tabsState.groups.find((g) => g.id === currentGroupId)?.collapsed) {
+      return
+    }
 
     tabBar.appendChild(buildTabElement(tab, isActive, tabBar))
   })
