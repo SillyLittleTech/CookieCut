@@ -76,48 +76,6 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
     name: 'All Item Types',
     subtitle: 'One sample for every item type',
     path: 'templates/default/all-items.cookie'
-  },
-  {
-    slot: 2,
-    name: 'Heading Starter',
-    subtitle: 'Single heading block',
-    path: 'templates/default/heading.cookie'
-  },
-  {
-    slot: 3,
-    name: 'Step Starter',
-    subtitle: 'Single numbered step',
-    path: 'templates/default/step.cookie'
-  },
-  {
-    slot: 4,
-    name: 'Bullet Starter',
-    subtitle: 'Single bullet point',
-    path: 'templates/default/bullet.cookie'
-  },
-  {
-    slot: 5,
-    name: 'Text Starter',
-    subtitle: 'Single paragraph block',
-    path: 'templates/default/text.cookie'
-  },
-  {
-    slot: 6,
-    name: 'Image Starter',
-    subtitle: 'Single image block',
-    path: 'templates/default/image.cookie'
-  },
-  {
-    slot: 7,
-    name: 'Toast Starter',
-    subtitle: 'Single note/tip block',
-    path: 'templates/default/bubble.cookie'
-  },
-  {
-    slot: 8,
-    name: 'Link Starter',
-    subtitle: 'Single link block',
-    path: 'templates/default/link.cookie'
   }
 ])
 let printModalAction = PRINT_MODAL_ACTION_PRINT
