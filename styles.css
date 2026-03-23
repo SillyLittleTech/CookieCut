@@ -1543,7 +1543,11 @@
 
 /* === Dark Mode Overrides === */
 
-/* Base: body background and text */
+/* Base: html + body background and text */
+html.dark {
+  background-color: #111827;
+}
+
 .dark body {
   background-color: #111827;
   color: #f3f4f6;
@@ -1746,11 +1750,54 @@
   background: #1f2937;
   border-color: #374151;
   color: #e5e7eb;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .template-slot-card:hover {
+  border-color: #4b5563;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5);
 }
 
 .dark .template-slot-card h3,
 .dark .template-slot-card p {
   color: #d1d5db;
+}
+
+.dark .template-slot-index {
+  color: #9ca3af;
+}
+
+.dark .template-slot-title {
+  color: #f3f4f6;
+}
+
+.dark .template-slot-subtitle {
+  color: #9ca3af;
+}
+
+.dark .template-slot-badge {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark .template-slot-empty {
+  border-color: #3b82f6;
+  background: linear-gradient(180deg, #1e3a8a22 0%, #1e40af22 100%);
+}
+
+.dark .template-slot-empty .template-slot-badge {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.dark .template-slot-action-add {
+  background: #1f2937;
+  color: #60a5fa;
+  border-color: #3b82f6;
+}
+
+.dark .template-slot-action-add:hover {
+  background: #1e3a8a;
 }
 
 /* Inline preview */
