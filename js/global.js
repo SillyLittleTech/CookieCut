@@ -602,12 +602,12 @@ function renderTabBar () {
         handleSwitchTab(tab.id)
       } else if (e.key === 'ArrowRight') {
         const next = tabEl.nextElementSibling
-        if (next && next.dataset.tabId) {
+        if (next?.dataset.tabId) {
           next.focus()
         }
       } else if (e.key === 'ArrowLeft') {
         const prev = tabEl.previousElementSibling
-        if (prev && prev.dataset.tabId) {
+        if (prev?.dataset.tabId) {
           prev.focus()
         }
       }
