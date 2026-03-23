@@ -1944,7 +1944,10 @@ function bindEditorAndTemplateListeners () {
     dom.templateGalleryBackBtn.addEventListener('click', showEditor)
   }
   if (dom.templateGalleryGrid) {
-    dom.templateGalleryGrid.addEventListener('click', handleTemplateGalleryGridClick)
+    dom.templateGalleryGrid.addEventListener(
+      'click',
+      handleTemplateGalleryGridClick
+    )
   }
 }
 
