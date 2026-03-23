@@ -544,7 +544,7 @@ function renderTabBar () {
   if (!tabBar) return
   tabBar.innerHTML = ''
 
-  let lastGroupId
+  let lastGroupId = null
 
   tabsState.tabs.forEach((tab) => {
     const isActive = tab.id === tabsState.activeTabId
@@ -562,10 +562,7 @@ function renderTabBar () {
     }
 
     // Skip tabs in collapsed groups
-    if (currentGroupId) {
-      const group = tabsState.groups.find((g) => g.id === currentGroupId)
-      if (group && group.collapsed) return
-    }
+    if (tabsState.groups.find((g) => g.id === currentGroupId)?.collapsed) return
 
     tabBar.appendChild(buildTabElement(tab, isActive, tabBar))
   })
