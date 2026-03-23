@@ -1544,6 +1544,12 @@
 /* === Dark Mode Overrides === */
 
 /* Base: html + body background and text */
+html,
+body {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
 html.dark {
   background-color: #111827;
 }
@@ -1551,6 +1557,14 @@ html.dark {
 .dark body {
   background-color: #111827;
   color: #f3f4f6;
+}
+
+.template-gallery-shell {
+  background-color: #ffffff;
+}
+
+.dark .template-gallery-shell {
+  background-color: #1f2937;
 }
 
 /* Builder panel — transparent (no box) in light and dark */
