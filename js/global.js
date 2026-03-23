@@ -643,12 +643,7 @@ function startTabRename (tabId, labelEl) {
 function handleSwitchTab (id) {
   const newRecipeData = switchToTab(id)
   if (!newRecipeData) return
-  try {
-    const normalized = normalizeImportedRecipeData(newRecipeData)
-    applyNormalizedRecipeData(normalized || newRecipeData)
-  } catch {
-    applyNormalizedRecipeData(newRecipeData)
-  }
+  applyNormalizedRecipeData(newRecipeData)
   resetHistoryTracking()
   renderTabBar()
   persistTabsToCache()
@@ -667,12 +662,7 @@ function handleNewTab () {
 function handleCloseTab (id) {
   const result = closeTab(id)
   if (result) {
-    try {
-      const normalized = normalizeImportedRecipeData(result.recipeData)
-      applyNormalizedRecipeData(normalized || result.recipeData)
-    } catch {
-      applyNormalizedRecipeData(result.recipeData)
-    }
+    applyNormalizedRecipeData(result.recipeData)
     resetHistoryTracking()
   }
   renderTabBar()

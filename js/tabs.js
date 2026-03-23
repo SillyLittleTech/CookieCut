@@ -5,12 +5,11 @@ import { recipeData } from './state.js'
 
 export const tabsState = {
   tabs: [],
-  activeTabId: null
+  activeTabId: null,
+  nextTabNum: 1
 }
 
 const TABS_STORAGE_KEY = 'cookiecut_tabs_state'
-
-let nextTabNum = 1
 
 function makeEmptyRecipeData () {
   return {
@@ -49,7 +48,7 @@ export function saveCurrentTabSnapshot () {
 }
 
 export function createTab (initialRecipeData = null) {
-  const id = `tab_${Date.now()}_${nextTabNum++}`
+  const id = `tab_${Date.now()}_${tabsState.nextTabNum++}`
   const tab = {
     id,
     label: `Document ${tabsState.tabs.length + 1}`,
@@ -115,7 +114,7 @@ export function persistTabsToCache () {
         savedRecipeData: t.savedRecipeData
       })),
       activeTabId: tabsState.activeTabId,
-      nextTabNum
+      nextTabNum: tabsState.nextTabNum
     }
     localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(state))
   } catch {
@@ -133,8 +132,11 @@ export function restoreTabsFromCache () {
     }
     tabsState.tabs = state.tabs
     tabsState.activeTabId = state.activeTabId
-    if (typeof state.nextTabNum === 'number' && state.nextTabNum > nextTabNum) {
-      nextTabNum = state.nextTabNum
+    if (
+      typeof state.nextTabNum === 'number' &&
+      state.nextTabNum > tabsState.nextTabNum
+    ) {
+      tabsState.nextTabNum = state.nextTabNum
     }
     const activeTab = getActiveTab()
     return activeTab ? activeTab.savedRecipeData : null
