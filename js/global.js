@@ -29,7 +29,16 @@ import {
   moveTab,
   initTabsState,
   persistTabsToCache,
-  restoreTabsFromCache
+  restoreTabsFromCache,
+  createGroup,
+  renameGroup,
+  setGroupColor,
+  toggleGroupCollapse,
+  addTabToGroup,
+  removeTabFromGroup,
+  closeGroupTabs,
+  ungroupGroup,
+  moveGroup
 } from './tabs.js'
 
 // --- ACTIONS ---
@@ -67,48 +76,6 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
     name: 'All Item Types',
     subtitle: 'One sample for every item type',
     path: 'templates/default/all-items.cookie'
-  },
-  {
-    slot: 2,
-    name: 'Heading Starter',
-    subtitle: 'Single heading block',
-    path: 'templates/default/heading.cookie'
-  },
-  {
-    slot: 3,
-    name: 'Step Starter',
-    subtitle: 'Single numbered step',
-    path: 'templates/default/step.cookie'
-  },
-  {
-    slot: 4,
-    name: 'Bullet Starter',
-    subtitle: 'Single bullet point',
-    path: 'templates/default/bullet.cookie'
-  },
-  {
-    slot: 5,
-    name: 'Text Starter',
-    subtitle: 'Single paragraph block',
-    path: 'templates/default/text.cookie'
-  },
-  {
-    slot: 6,
-    name: 'Image Starter',
-    subtitle: 'Single image block',
-    path: 'templates/default/image.cookie'
-  },
-  {
-    slot: 7,
-    name: 'Toast Starter',
-    subtitle: 'Single note/tip block',
-    path: 'templates/default/bubble.cookie'
-  },
-  {
-    slot: 8,
-    name: 'Link Starter',
-    subtitle: 'Single link block',
-    path: 'templates/default/link.cookie'
   }
 ])
 let printModalAction = PRINT_MODAL_ACTION_PRINT
@@ -560,105 +527,46 @@ function restoreWorkingDocumentFromCache () {
 
 // --- TAB BAR UI ---
 
+let tabCtxMenuDismissHandler = null
+let groupCtxMenuDismissHandler = null
+
+function clearDragOverHighlights (tabBar) {
+  tabBar
+    .querySelectorAll('.tab-item--drag-over, .tab-group-header--drag-over')
+    .forEach((el) => {
+      el.classList.remove('tab-item--drag-over')
+      el.classList.remove('tab-group-header--drag-over')
+    })
+}
+
 function renderTabBar () {
   const tabBar = dom.tabBar
   if (!tabBar) return
   tabBar.innerHTML = ''
 
+  let lastGroupId = null
+
   tabsState.tabs.forEach((tab) => {
     const isActive = tab.id === tabsState.activeTabId
+    const currentGroupId = tab.groupId || null
 
-    const tabEl = document.createElement('div')
-    tabEl.className = isActive ? 'tab-item tab-item--active' : 'tab-item'
-    tabEl.dataset.tabId = tab.id
-    tabEl.setAttribute('role', 'tab')
-    tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
-    tabEl.setAttribute('tabindex', isActive ? '0' : '-1')
-    tabEl.title = tab.label
-    tabEl.draggable = true
-
-    const labelEl = document.createElement('span')
-    labelEl.className = 'tab-label'
-    labelEl.textContent = tab.label
-    labelEl.title = 'Double-click to rename'
-    labelEl.addEventListener('dblclick', (e) => {
-      e.stopPropagation()
-      startTabRename(tab.id, labelEl)
-    })
-
-    const closeBtn = document.createElement('button')
-    closeBtn.className = 'tab-close-btn'
-    closeBtn.setAttribute('aria-label', `Close ${tab.label}`)
-    closeBtn.innerHTML =
-      '<span class="material-icons" style="font-size:14px;line-height:1;">close</span>'
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      handleCloseTab(tab.id)
-    })
-
-    tabEl.appendChild(labelEl)
-    tabEl.appendChild(closeBtn)
-    tabEl.addEventListener('click', () => handleSwitchTab(tab.id))
-    tabEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        handleSwitchTab(tab.id)
-      } else if (e.key === 'ArrowRight') {
-        const next = tabEl.nextElementSibling
-        if (next?.dataset.tabId) {
-          next.focus()
-        }
-      } else if (e.key === 'ArrowLeft') {
-        const prev = tabEl.previousElementSibling
-        if (prev?.dataset.tabId) {
-          prev.focus()
+    // Render group header when group changes
+    if (currentGroupId !== lastGroupId) {
+      lastGroupId = currentGroupId
+      if (currentGroupId) {
+        const group = tabsState.groups.find((g) => g.id === currentGroupId)
+        if (group) {
+          tabBar.appendChild(buildGroupHeader(group, tabBar))
         }
       }
-    })
+    }
 
-    tabEl.addEventListener('dragstart', (e) => {
-      e.dataTransfer.effectAllowed = 'move'
-      e.dataTransfer.setData('text/plain', tab.id)
-      tabEl.classList.add('tab-item--dragging')
-    })
+    // Skip tabs in collapsed groups
+    if (tabsState.groups.find((g) => g.id === currentGroupId)?.collapsed) {
+      return
+    }
 
-    tabEl.addEventListener('dragend', () => {
-      tabEl.classList.remove('tab-item--dragging')
-      tabBar
-        .querySelectorAll('.tab-item--drag-over')
-        .forEach((el) => el.classList.remove('tab-item--drag-over'))
-    })
-
-    tabEl.addEventListener('dragover', (e) => {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
-      const draggingId = e.dataTransfer.getData('text/plain')
-      if (draggingId !== tab.id) {
-        tabBar
-          .querySelectorAll('.tab-item--drag-over')
-          .forEach((el) => el.classList.remove('tab-item--drag-over'))
-        tabEl.classList.add('tab-item--drag-over')
-      }
-    })
-
-    tabEl.addEventListener('dragleave', (e) => {
-      if (!tabEl.contains(e.relatedTarget)) {
-        tabEl.classList.remove('tab-item--drag-over')
-      }
-    })
-
-    tabEl.addEventListener('drop', (e) => {
-      e.preventDefault()
-      const fromId = e.dataTransfer.getData('text/plain')
-      tabEl.classList.remove('tab-item--drag-over')
-      if (fromId && fromId !== tab.id) {
-        moveTab(fromId, tab.id)
-        renderTabBar()
-        persistTabsToCache()
-      }
-    })
-
-    tabBar.appendChild(tabEl)
+    tabBar.appendChild(buildTabElement(tab, isActive, tabBar))
   })
 
   const newTabBtn = document.createElement('button')
@@ -669,6 +577,237 @@ function renderTabBar () {
     '<span class="material-icons" style="font-size:16px;line-height:1;">add</span>'
   newTabBtn.addEventListener('click', handleNewTab)
   tabBar.appendChild(newTabBtn)
+}
+
+function buildGroupHeader (group, tabBar) {
+  const headerEl = document.createElement('div')
+  headerEl.className = `tab-group-header tab-group-color-${group.color}${group.collapsed ? ' tab-group-header--collapsed' : ''}`
+  headerEl.dataset.groupId = group.id
+  headerEl.draggable = true
+  headerEl.title = group.label
+  headerEl.setAttribute('role', 'button')
+  headerEl.setAttribute('tabindex', '0')
+  headerEl.setAttribute('aria-expanded', group.collapsed ? 'false' : 'true')
+
+  const collapseIcon = document.createElement('span')
+  collapseIcon.className = 'material-icons tab-group-collapse-icon'
+  collapseIcon.style.fontSize = '14px'
+  collapseIcon.style.lineHeight = '1'
+  collapseIcon.textContent = group.collapsed ? 'chevron_right' : 'expand_more'
+
+  const labelEl = document.createElement('span')
+  labelEl.className = 'tab-group-label'
+  labelEl.textContent = group.label
+
+  headerEl.appendChild(collapseIcon)
+  headerEl.appendChild(labelEl)
+
+  // Use a deferred timer so a double-click on the label can cancel the collapse.
+  let collapseTimer = null
+
+  // Single click: collapse/expand (skip the second click in a double-click)
+  headerEl.addEventListener('click', (e) => {
+    if (e.detail > 1) return
+    clearTimeout(collapseTimer)
+    collapseTimer = setTimeout(() => {
+      toggleGroupCollapse(group.id)
+      renderTabBar()
+      persistTabsToCache()
+    }, 200)
+  })
+
+  // Double-click on label: rename (cancels the pending collapse)
+  labelEl.addEventListener('dblclick', (e) => {
+    e.stopPropagation()
+    clearTimeout(collapseTimer)
+    startGroupRename(group.id, labelEl)
+  })
+
+  // Keyboard: Enter/Space to toggle collapse; context-menu key for right-click menu
+  headerEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      toggleGroupCollapse(group.id)
+      renderTabBar()
+      persistTabsToCache()
+    } else if (e.key === 'ContextMenu') {
+      e.preventDefault()
+      const rect = headerEl.getBoundingClientRect()
+      showGroupContextMenu(group.id, rect.left, rect.bottom)
+    }
+  })
+
+  // Right-click: context menu
+  headerEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    showGroupContextMenu(group.id, e.clientX, e.clientY)
+  })
+
+  // Drag-and-drop: dragging the group header moves all group tabs
+  headerEl.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', `group:${group.id}`)
+    headerEl.classList.add('tab-group-header--dragging')
+  })
+
+  headerEl.addEventListener('dragend', () => {
+    headerEl.classList.remove('tab-group-header--dragging')
+    clearDragOverHighlights(tabBar)
+  })
+
+  headerEl.addEventListener('dragover', (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const draggingData = e.dataTransfer.getData('text/plain')
+    if (draggingData !== `group:${group.id}`) {
+      clearDragOverHighlights(tabBar)
+      headerEl.classList.add('tab-group-header--drag-over')
+    }
+  })
+
+  headerEl.addEventListener('dragleave', (e) => {
+    if (!headerEl.contains(e.relatedTarget)) {
+      headerEl.classList.remove('tab-group-header--drag-over')
+    }
+  })
+
+  headerEl.addEventListener('drop', (e) => {
+    e.preventDefault()
+    const fromData = e.dataTransfer.getData('text/plain')
+    headerEl.classList.remove('tab-group-header--drag-over')
+    if (!fromData || fromData === `group:${group.id}`) return
+
+    if (fromData.startsWith('group:')) {
+      const fromGroupId = fromData.slice(6)
+      // Move the dragged group before the first tab of the drop-target group
+      const firstGroupTab = tabsState.tabs.find((t) => t.groupId === group.id)
+      if (firstGroupTab) {
+        moveGroup(fromGroupId, firstGroupTab.id)
+        renderTabBar()
+        persistTabsToCache()
+      }
+    } else {
+      // A tab was dropped onto a group header: move it before the first group tab
+      const firstGroupTab = tabsState.tabs.find((t) => t.groupId === group.id)
+      if (firstGroupTab) {
+        moveTab(fromData, firstGroupTab.id)
+        renderTabBar()
+        persistTabsToCache()
+      }
+    }
+  })
+
+  return headerEl
+}
+
+function buildTabElement (tab, isActive, tabBar) {
+  const tabEl = document.createElement('div')
+  tabEl.className = isActive ? 'tab-item tab-item--active' : 'tab-item'
+  if (tab.groupId) {
+    const group = tabsState.groups.find((g) => g.id === tab.groupId)
+    if (group) {
+      tabEl.classList.add(
+        'tab-item--grouped',
+        `tab-group-color-${group.color}-tab`
+      )
+    }
+  }
+  tabEl.dataset.tabId = tab.id
+  tabEl.setAttribute('role', 'tab')
+  tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
+  tabEl.setAttribute('tabindex', isActive ? '0' : '-1')
+  tabEl.title = tab.label
+  tabEl.draggable = true
+
+  const labelEl = document.createElement('span')
+  labelEl.className = 'tab-label'
+  labelEl.textContent = tab.label
+  labelEl.title = 'Double-click to rename'
+  labelEl.addEventListener('dblclick', (e) => {
+    e.stopPropagation()
+    startTabRename(tab.id, labelEl)
+  })
+
+  const closeBtn = document.createElement('button')
+  closeBtn.className = 'tab-close-btn'
+  closeBtn.setAttribute('aria-label', `Close ${tab.label}`)
+  closeBtn.innerHTML =
+    '<span class="material-icons" style="font-size:14px;line-height:1;">close</span>'
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    handleCloseTab(tab.id)
+  })
+
+  tabEl.appendChild(labelEl)
+  tabEl.appendChild(closeBtn)
+  tabEl.addEventListener('click', () => handleSwitchTab(tab.id))
+  tabEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleSwitchTab(tab.id)
+    } else if (e.key === 'ArrowRight') {
+      const next = tabEl.nextElementSibling
+      if (next?.dataset.tabId) {
+        next.focus()
+      }
+    } else if (e.key === 'ArrowLeft') {
+      const prev = tabEl.previousElementSibling
+      if (prev?.dataset.tabId) {
+        prev.focus()
+      }
+    }
+  })
+
+  // Right-click: tab context menu
+  tabEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    showTabContextMenu(tab.id, e.clientX, e.clientY)
+  })
+
+  tabEl.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', tab.id)
+    tabEl.classList.add('tab-item--dragging')
+  })
+
+  tabEl.addEventListener('dragend', () => {
+    tabEl.classList.remove('tab-item--dragging')
+    clearDragOverHighlights(tabBar)
+  })
+
+  tabEl.addEventListener('dragover', (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const draggingData = e.dataTransfer.getData('text/plain')
+    if (draggingData !== tab.id) {
+      clearDragOverHighlights(tabBar)
+      tabEl.classList.add('tab-item--drag-over')
+    }
+  })
+
+  tabEl.addEventListener('dragleave', (e) => {
+    if (!tabEl.contains(e.relatedTarget)) {
+      tabEl.classList.remove('tab-item--drag-over')
+    }
+  })
+
+  tabEl.addEventListener('drop', (e) => {
+    e.preventDefault()
+    const fromData = e.dataTransfer.getData('text/plain')
+    tabEl.classList.remove('tab-item--drag-over')
+    if (!fromData || fromData === tab.id) return
+
+    if (fromData.startsWith('group:')) {
+      const fromGroupId = fromData.slice(6)
+      moveGroup(fromGroupId, tab.id)
+    } else {
+      moveTab(fromData, tab.id)
+    }
+    renderTabBar()
+    persistTabsToCache()
+  })
+
+  return tabEl
 }
 
 function startTabRename (tabId, labelEl) {
@@ -700,6 +839,246 @@ function startTabRename (tabId, labelEl) {
       renderTabBar()
     }
   })
+}
+
+function startGroupRename (groupId, labelEl) {
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.value = labelEl.textContent
+  input.className = 'tab-rename-input'
+  labelEl.replaceWith(input)
+  input.focus()
+  input.select()
+
+  let committed = false
+  const commit = () => {
+    if (committed) return
+    committed = true
+    const newLabel = input.value.trim()
+    if (newLabel) renameGroup(groupId, newLabel)
+    renderTabBar()
+    persistTabsToCache()
+  }
+
+  input.addEventListener('blur', commit)
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      input.blur()
+    } else if (e.key === 'Escape') {
+      committed = true
+      renderTabBar()
+    }
+  })
+}
+
+function closeTabContextMenu () {
+  const existing = document.getElementById('tab-ctx-menu')
+  if (existing) existing.remove()
+  if (tabCtxMenuDismissHandler) {
+    document.removeEventListener('mousedown', tabCtxMenuDismissHandler)
+    tabCtxMenuDismissHandler = null
+  }
+}
+
+function showTabContextMenu (tabId, x, y) {
+  closeTabContextMenu()
+  closeGroupContextMenu()
+
+  const tab = tabsState.tabs.find((t) => t.id === tabId)
+  if (!tab) return
+
+  const menu = document.createElement('div')
+  menu.id = 'tab-ctx-menu'
+  menu.className = 'tab-ctx-menu'
+  menu.style.left = `${x}px`
+  menu.style.top = `${y}px`
+
+  if (tab.groupId) {
+    // Already in a group
+    const removeItem = document.createElement('button')
+    removeItem.className = 'tab-ctx-item'
+    removeItem.innerHTML =
+      '<span class="material-icons tab-ctx-icon">label_off</span>Remove from group'
+    removeItem.addEventListener('click', () => {
+      closeTabContextMenu()
+      removeTabFromGroup(tabId)
+      renderTabBar()
+      persistTabsToCache()
+    })
+    menu.appendChild(removeItem)
+  } else {
+    // Not in a group — offer to create a new group
+    const newGroupItem = document.createElement('button')
+    newGroupItem.className = 'tab-ctx-item'
+    newGroupItem.innerHTML =
+      '<span class="material-icons tab-ctx-icon">workspaces</span>Add to new group'
+    newGroupItem.addEventListener('click', () => {
+      closeTabContextMenu()
+      const group = createGroup()
+      addTabToGroup(tabId, group.id)
+      renderTabBar()
+      persistTabsToCache()
+    })
+    menu.appendChild(newGroupItem)
+
+    // Offer to add to existing groups
+    if (tabsState.groups.length > 0) {
+      const divider = document.createElement('div')
+      divider.className = 'tab-ctx-divider'
+      menu.appendChild(divider)
+
+      tabsState.groups.forEach((group) => {
+        const groupItem = document.createElement('button')
+        groupItem.className = 'tab-ctx-item'
+        const swatch = document.createElement('span')
+        swatch.className = `tab-ctx-swatch swatch-${group.color}`
+        groupItem.appendChild(swatch)
+        groupItem.appendChild(
+          document.createTextNode(`Add to "${group.label}"`)
+        )
+        groupItem.addEventListener('click', () => {
+          closeTabContextMenu()
+          addTabToGroup(tabId, group.id)
+          renderTabBar()
+          persistTabsToCache()
+        })
+        menu.appendChild(groupItem)
+      })
+    }
+  }
+
+  document.body.appendChild(menu)
+
+  // Adjust position if off-screen
+  requestAnimationFrame(() => {
+    const rect = menu.getBoundingClientRect()
+    if (rect.right > window.innerWidth) {
+      menu.style.left = `${x - rect.width}px`
+    }
+    if (rect.bottom > window.innerHeight) {
+      menu.style.top = `${y - rect.height}px`
+    }
+  })
+
+  const dismiss = (e) => {
+    if (!menu.contains(e.target)) {
+      closeTabContextMenu()
+    }
+  }
+  tabCtxMenuDismissHandler = dismiss
+  setTimeout(
+    () => document.addEventListener('mousedown', tabCtxMenuDismissHandler),
+    0
+  )
+}
+
+function closeGroupContextMenu () {
+  const existing = document.getElementById('tab-group-ctx-menu')
+  if (existing) existing.remove()
+  if (groupCtxMenuDismissHandler) {
+    document.removeEventListener('mousedown', groupCtxMenuDismissHandler)
+    groupCtxMenuDismissHandler = null
+  }
+}
+
+function showGroupContextMenu (groupId, x, y) {
+  closeGroupContextMenu()
+  closeTabContextMenu()
+
+  const group = tabsState.groups.find((g) => g.id === groupId)
+  if (!group) return
+
+  const menu = document.createElement('div')
+  menu.id = 'tab-group-ctx-menu'
+  menu.className = 'tab-ctx-menu'
+  menu.style.left = `${x}px`
+  menu.style.top = `${y}px`
+
+  // Color palette row
+  const colorRow = document.createElement('div')
+  colorRow.className = 'tab-ctx-color-row'
+
+  const colorOptions = [
+    { code: 'y', label: 'Yellow' },
+    { code: 'b', label: 'Blue' },
+    { code: 'g', label: 'Green' },
+    { code: 'p', label: 'Pink' }
+  ]
+  colorOptions.forEach(({ code, label }) => {
+    const swatch = document.createElement('button')
+    swatch.className = `tab-ctx-color-swatch swatch-${code}${group.color === code ? ' tab-ctx-color-swatch--active' : ''}`
+    swatch.title = label
+    swatch.setAttribute('aria-label', `Color: ${label}`)
+    swatch.addEventListener('click', () => {
+      closeGroupContextMenu()
+      setGroupColor(groupId, code)
+      renderTabBar()
+      persistTabsToCache()
+    })
+    colorRow.appendChild(swatch)
+  })
+  menu.appendChild(colorRow)
+
+  const divider = document.createElement('div')
+  divider.className = 'tab-ctx-divider'
+  menu.appendChild(divider)
+
+  // Close all tabs in group
+  const closeAllItem = document.createElement('button')
+  closeAllItem.className = 'tab-ctx-item'
+  closeAllItem.innerHTML =
+    '<span class="material-icons tab-ctx-icon">playlist_remove</span>Close all tabs'
+  closeAllItem.addEventListener('click', () => {
+    closeGroupContextMenu()
+    const result = closeGroupTabs(groupId)
+    if (result) {
+      applyNormalizedRecipeData(
+        normalizeImportedRecipeData(result.recipeData) ?? result.recipeData
+      )
+      resetHistoryTracking()
+    }
+    renderTabBar()
+    persistTabsToCache()
+  })
+  menu.appendChild(closeAllItem)
+
+  // Ungroup
+  const ungroupItem = document.createElement('button')
+  ungroupItem.className = 'tab-ctx-item'
+  ungroupItem.innerHTML =
+    '<span class="material-icons tab-ctx-icon">tab_unselected</span>Ungroup'
+  ungroupItem.addEventListener('click', () => {
+    closeGroupContextMenu()
+    ungroupGroup(groupId)
+    renderTabBar()
+    persistTabsToCache()
+  })
+  menu.appendChild(ungroupItem)
+
+  document.body.appendChild(menu)
+
+  // Adjust position if off-screen
+  requestAnimationFrame(() => {
+    const rect = menu.getBoundingClientRect()
+    if (rect.right > window.innerWidth) {
+      menu.style.left = `${x - rect.width}px`
+    }
+    if (rect.bottom > window.innerHeight) {
+      menu.style.top = `${y - rect.height}px`
+    }
+  })
+
+  const dismiss = (e) => {
+    if (!menu.contains(e.target)) {
+      closeGroupContextMenu()
+    }
+  }
+  groupCtxMenuDismissHandler = dismiss
+  setTimeout(
+    () => document.addEventListener('mousedown', groupCtxMenuDismissHandler),
+    0
+  )
 }
 
 function handleSwitchTab (id) {
@@ -1762,6 +2141,10 @@ function handleHistoryKeyboardShortcut (event) {
 }
 
 function handleGlobalKeydown (event) {
+  if (event.key === 'Escape') {
+    closeTabContextMenu()
+    closeGroupContextMenu()
+  }
   if (handleHistoryKeyboardShortcut(event)) return
   if (!isEditableKeyTarget(event)) return
   if (!isMeaningfulKeystroke(event)) return
