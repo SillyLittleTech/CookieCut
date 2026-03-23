@@ -1944,7 +1944,10 @@ function bindEditorAndTemplateListeners () {
     dom.templateGalleryBackBtn.addEventListener('click', showEditor)
   }
   if (dom.templateGalleryGrid) {
-    dom.templateGalleryGrid.addEventListener('click', handleTemplateGalleryGridClick)
+    dom.templateGalleryGrid.addEventListener(
+      'click',
+      handleTemplateGalleryGridClick
+    )
   }
 }
 
@@ -1986,17 +1989,20 @@ function bindFloatingAddButtonListeners () {
 
     document.body.appendChild(menu)
     setTimeout(() => {
-      document.addEventListener('click', function handleFloatingAddOutsideClick (ev) {
-        const menuEl = document.getElementById('floating-add-menu')
-        if (
-          menuEl &&
-          !menuEl.contains(ev.target) &&
-          ev.target !== dom.floatingAddBtn
-        ) {
-          menuEl.remove()
+      document.addEventListener(
+        'click',
+        function handleFloatingAddOutsideClick (ev) {
+          const menuEl = document.getElementById('floating-add-menu')
+          if (
+            menuEl &&
+            !menuEl.contains(ev.target) &&
+            ev.target !== dom.floatingAddBtn
+          ) {
+            menuEl.remove()
+          }
+          document.removeEventListener('click', handleFloatingAddOutsideClick)
         }
-        document.removeEventListener('click', handleFloatingAddOutsideClick)
-      })
+      )
     }, 10)
   })
 }
