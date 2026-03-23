@@ -2507,9 +2507,11 @@ function bindFloatingAddButtonListeners () {
         makeRestoreBtn('Show Title', () => {
           recipeData.settings.hideTitle = false
           if (dom.hideTitleCheckbox) dom.hideTitleCheckbox.checked = false
-          import('./builders/inline.js').then(({ renderInlinePreview: renderInline }) => {
-            renderInline()
-          })
+          import('./builders/inline.js').then(
+            ({ renderInlinePreview: renderInline }) => {
+              renderInline()
+            }
+          )
         })
       )
     }
@@ -2518,9 +2520,11 @@ function bindFloatingAddButtonListeners () {
         makeRestoreBtn('Show Description', () => {
           recipeData.settings.hideDescription = false
           if (dom.hideDescCheckbox) dom.hideDescCheckbox.checked = false
-          import('./builders/inline.js').then(({ renderInlinePreview: renderInline }) => {
-            renderInline()
-          })
+          import('./builders/inline.js').then(
+            ({ renderInlinePreview: renderInline }) => {
+              renderInline()
+            }
+          )
         })
       )
     }
