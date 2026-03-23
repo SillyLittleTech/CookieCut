@@ -21,7 +21,6 @@ import {
 import { initSelectionToolbar } from './toolbar.js'
 import {
   tabsState,
-  getActiveTab,
   saveCurrentTabSnapshot,
   createTab,
   switchToTab,
