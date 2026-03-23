@@ -527,6 +527,9 @@ function restoreWorkingDocumentFromCache () {
 
 // --- TAB BAR UI ---
 
+let tabCtxMenuDismissHandler = null
+let groupCtxMenuDismissHandler = null
+
 function clearDragOverHighlights (tabBar) {
   tabBar
     .querySelectorAll('.tab-item--drag-over, .tab-group-header--drag-over')
@@ -583,6 +586,9 @@ function buildGroupHeader (group, tabBar) {
   headerEl.dataset.groupId = group.id
   headerEl.draggable = true
   headerEl.title = group.label
+  headerEl.setAttribute('role', 'button')
+  headerEl.setAttribute('tabindex', '0')
+  headerEl.setAttribute('aria-expanded', group.collapsed ? 'false' : 'true')
 
   const collapseIcon = document.createElement('span')
   collapseIcon.className = 'material-icons tab-group-collapse-icon'
@@ -597,18 +603,39 @@ function buildGroupHeader (group, tabBar) {
   headerEl.appendChild(collapseIcon)
   headerEl.appendChild(labelEl)
 
-  // Single click: collapse/expand
+  // Use a deferred timer so a double-click on the label can cancel the collapse.
+  let collapseTimer = null
+
+  // Single click: collapse/expand (skip the second click in a double-click)
   headerEl.addEventListener('click', (e) => {
-    if (e.target.closest('.tab-group-label') && e.detail === 2) return
-    toggleGroupCollapse(group.id)
-    renderTabBar()
-    persistTabsToCache()
+    if (e.detail > 1) return
+    clearTimeout(collapseTimer)
+    collapseTimer = setTimeout(() => {
+      toggleGroupCollapse(group.id)
+      renderTabBar()
+      persistTabsToCache()
+    }, 200)
   })
 
-  // Double-click on label: rename
+  // Double-click on label: rename (cancels the pending collapse)
   labelEl.addEventListener('dblclick', (e) => {
     e.stopPropagation()
+    clearTimeout(collapseTimer)
     startGroupRename(group.id, labelEl)
+  })
+
+  // Keyboard: Enter/Space to toggle collapse; context-menu key for right-click menu
+  headerEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      toggleGroupCollapse(group.id)
+      renderTabBar()
+      persistTabsToCache()
+    } else if (e.key === 'ContextMenu') {
+      e.preventDefault()
+      const rect = headerEl.getBoundingClientRect()
+      showGroupContextMenu(group.id, rect.left, rect.bottom)
+    }
   })
 
   // Right-click: context menu
@@ -849,10 +876,15 @@ function startGroupRename (groupId, labelEl) {
 function closeTabContextMenu () {
   const existing = document.getElementById('tab-ctx-menu')
   if (existing) existing.remove()
+  if (tabCtxMenuDismissHandler) {
+    document.removeEventListener('mousedown', tabCtxMenuDismissHandler)
+    tabCtxMenuDismissHandler = null
+  }
 }
 
 function showTabContextMenu (tabId, x, y) {
   closeTabContextMenu()
+  closeGroupContextMenu()
 
   const tab = tabsState.tabs.find((t) => t.id === tabId)
   if (!tab) return
@@ -933,19 +965,24 @@ function showTabContextMenu (tabId, x, y) {
   const dismiss = (e) => {
     if (!menu.contains(e.target)) {
       closeTabContextMenu()
-      document.removeEventListener('mousedown', dismiss)
     }
   }
-  setTimeout(() => document.addEventListener('mousedown', dismiss), 0)
+  tabCtxMenuDismissHandler = dismiss
+  setTimeout(() => document.addEventListener('mousedown', tabCtxMenuDismissHandler), 0)
 }
 
 function closeGroupContextMenu () {
   const existing = document.getElementById('tab-group-ctx-menu')
   if (existing) existing.remove()
+  if (groupCtxMenuDismissHandler) {
+    document.removeEventListener('mousedown', groupCtxMenuDismissHandler)
+    groupCtxMenuDismissHandler = null
+  }
 }
 
 function showGroupContextMenu (groupId, x, y) {
   closeGroupContextMenu()
+  closeTabContextMenu()
 
   const group = tabsState.groups.find((g) => g.id === groupId)
   if (!group) return
@@ -1033,10 +1070,10 @@ function showGroupContextMenu (groupId, x, y) {
   const dismiss = (e) => {
     if (!menu.contains(e.target)) {
       closeGroupContextMenu()
-      document.removeEventListener('mousedown', dismiss)
     }
   }
-  setTimeout(() => document.addEventListener('mousedown', dismiss), 0)
+  groupCtxMenuDismissHandler = dismiss
+  setTimeout(() => document.addEventListener('mousedown', groupCtxMenuDismissHandler), 0)
 }
 
 function handleSwitchTab (id) {

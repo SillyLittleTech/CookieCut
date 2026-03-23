@@ -146,7 +146,19 @@ export function addTabToGroup (tabId, groupId) {
 
 export function removeTabFromGroup (tabId) {
   const tab = tabsState.tabs.find((t) => t.id === tabId)
-  if (tab) delete tab.groupId
+  if (!tab || !tab.groupId) return
+
+  const groupId = tab.groupId
+  delete tab.groupId
+
+  // Automatically remove the group if it no longer has any tabs
+  const remainingGroupTabs = getGroupTabs(groupId)
+  if (remainingGroupTabs.length === 0) {
+    const groupIdx = tabsState.groups.findIndex((g) => g.id === groupId)
+    if (groupIdx !== -1) {
+      tabsState.groups.splice(groupIdx, 1)
+    }
+  }
 }
 
 export function getGroupTabs (groupId) {
@@ -194,6 +206,10 @@ export function ungroupGroup (groupId) {
 }
 
 export function moveGroup (groupId, beforeTabId) {
+  // No-op if the target tab belongs to the group being moved
+  const targetTab = tabsState.tabs.find((t) => t.id === beforeTabId)
+  if (targetTab && targetTab.groupId === groupId) return false
+
   const groupTabs = tabsState.tabs.filter((t) => t.groupId === groupId)
   if (groupTabs.length === 0) return false
 
