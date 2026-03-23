@@ -39,7 +39,74 @@ const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 const PRINT_MODAL_ACTION_PRINT = 'print'
 const PRINT_MODAL_ACTION_EXPORT = 'export'
+const TEMPLATE_SLOT_COUNT = 12
+const TEMPLATE_SLOT_STORAGE_PREFIX = 'cookiecut_template_slot_'
+const TEMPLATE_SLOT_COOKIE_PREFIX = 'cookiecut_template_slot_'
+const TEMPLATE_SLOT_COOKIE_MAX_CHARS = 3600
+const WORKING_DOCUMENT_STORAGE_KEY = 'cookiecut_working_document'
+const WORKING_DOCUMENT_COOKIE_KEY = 'cookiecut_working_document'
+const WORKING_DOCUMENT_COOKIE_MAX_CHARS = 3600
+const KEYSTROKES_PER_AUTOSAVE = 3
+const HISTORY_LIMIT = 5
+const HISTORY_OBSERVER_INTERVAL_MS = 250
+const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
+  {
+    slot: 1,
+    name: 'All Item Types',
+    subtitle: 'One sample for every item type',
+    path: 'templates/default/all-items.cookie'
+  },
+  {
+    slot: 2,
+    name: 'Heading Starter',
+    subtitle: 'Single heading block',
+    path: 'templates/default/heading.cookie'
+  },
+  {
+    slot: 3,
+    name: 'Step Starter',
+    subtitle: 'Single numbered step',
+    path: 'templates/default/step.cookie'
+  },
+  {
+    slot: 4,
+    name: 'Bullet Starter',
+    subtitle: 'Single bullet point',
+    path: 'templates/default/bullet.cookie'
+  },
+  {
+    slot: 5,
+    name: 'Text Starter',
+    subtitle: 'Single paragraph block',
+    path: 'templates/default/text.cookie'
+  },
+  {
+    slot: 6,
+    name: 'Image Starter',
+    subtitle: 'Single image block',
+    path: 'templates/default/image.cookie'
+  },
+  {
+    slot: 7,
+    name: 'Toast Starter',
+    subtitle: 'Single note/tip block',
+    path: 'templates/default/bubble.cookie'
+  },
+  {
+    slot: 8,
+    name: 'Link Starter',
+    subtitle: 'Single link block',
+    path: 'templates/default/link.cookie'
+  }
+])
 let printModalAction = PRINT_MODAL_ACTION_PRINT
+let templateGalleryMessageTimer = null
+let autosaveKeystrokeCounter = 0
+let undoHistory = []
+let redoHistory = []
+let lastTrackedRecipeSnapshot = ''
+let isApplyingHistorySnapshot = false
+let historyObserverTimerId = null
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
@@ -78,6 +145,215 @@ function showDocumentTransferMessage (message, isError = false) {
       dom.documentTransferStatus.textContent = ''
     }
   }, 5000)
+}
+
+function showTemplateGalleryMessage (message, isError = false) {
+  if (!dom.templateGalleryStatus) return
+  dom.templateGalleryStatus.textContent = message
+  dom.templateGalleryStatus.style.color = isError ? '#b91c1c' : '#334155'
+  clearTimeout(templateGalleryMessageTimer)
+  templateGalleryMessageTimer = setTimeout(() => {
+    if (dom.templateGalleryStatus?.textContent === message) {
+      dom.templateGalleryStatus.textContent = ''
+    }
+  }, 5000)
+}
+
+function createRecipeSnapshot () {
+  return {
+    title: recipeData.title,
+    description: recipeData.description,
+    items: recipeData.items.map((item) => ({ ...item })),
+    settings: { ...recipeData.settings }
+  }
+}
+
+function serializeRecipeSnapshot (snapshot) {
+  return JSON.stringify(snapshot)
+}
+
+function getCurrentRecipeSnapshotSerialized () {
+  return serializeRecipeSnapshot(createRecipeSnapshot())
+}
+
+function resetHistoryTracking () {
+  undoHistory = []
+  redoHistory = []
+  lastTrackedRecipeSnapshot = getCurrentRecipeSnapshotSerialized()
+}
+
+function observeRecipeMutations () {
+  const currentSnapshotSerialized = getCurrentRecipeSnapshotSerialized()
+  if (isApplyingHistorySnapshot) {
+    lastTrackedRecipeSnapshot = currentSnapshotSerialized
+    return
+  }
+  if (!lastTrackedRecipeSnapshot) {
+    lastTrackedRecipeSnapshot = currentSnapshotSerialized
+    return
+  }
+  if (currentSnapshotSerialized === lastTrackedRecipeSnapshot) return
+
+  try {
+    undoHistory.push(JSON.parse(lastTrackedRecipeSnapshot))
+    if (undoHistory.length > HISTORY_LIMIT) undoHistory.shift()
+  } catch {
+    // Ignore invalid historical snapshot payloads.
+  }
+  redoHistory = []
+  lastTrackedRecipeSnapshot = currentSnapshotSerialized
+}
+
+function startHistoryObserver () {
+  if (historyObserverTimerId) return
+  const runMutationObserver = () => {
+    if (typeof document.hasFocus === 'function' && !document.hasFocus()) return
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(
+        () => {
+          observeRecipeMutations()
+        },
+        { timeout: HISTORY_OBSERVER_INTERVAL_MS }
+      )
+      return
+    }
+    observeRecipeMutations()
+  }
+  historyObserverTimerId = setInterval(
+    runMutationObserver,
+    HISTORY_OBSERVER_INTERVAL_MS
+  )
+}
+
+function applyRecipeSnapshot (snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return
+  isApplyingHistorySnapshot = true
+  recipeData.title = toStringOrFallback(snapshot.title, '')
+  recipeData.description = toStringOrFallback(snapshot.description, '')
+  recipeData.items = Array.isArray(snapshot.items)
+    ? snapshot.items.map((item) => ({ ...item }))
+    : []
+  recipeData.settings = normalizeImportedSettings(snapshot.settings)
+  syncNextItemIdToRecipeItems()
+  syncUiFromRecipeData()
+  isApplyingHistorySnapshot = false
+  lastTrackedRecipeSnapshot = getCurrentRecipeSnapshotSerialized()
+}
+
+function handleUndoAction () {
+  if (!undoHistory.length) return false
+  const currentSnapshot = createRecipeSnapshot()
+  redoHistory.push(currentSnapshot)
+  if (redoHistory.length > HISTORY_LIMIT) redoHistory.shift()
+  const priorSnapshot = undoHistory.pop()
+  applyRecipeSnapshot(priorSnapshot)
+  persistWorkingDocumentToCache()
+  showDocumentTransferMessage('Undo applied.')
+  return true
+}
+
+function handleRedoAction () {
+  if (!redoHistory.length) return false
+  const currentSnapshot = createRecipeSnapshot()
+  undoHistory.push(currentSnapshot)
+  if (undoHistory.length > HISTORY_LIMIT) undoHistory.shift()
+  const nextSnapshot = redoHistory.pop()
+  applyRecipeSnapshot(nextSnapshot)
+  persistWorkingDocumentToCache()
+  showDocumentTransferMessage('Redo applied.')
+  return true
+}
+
+function isEditableKeyTarget (event) {
+  const target = event.target
+  if (!target || target === document.body) return false
+  const element =
+    target.nodeType === Node.TEXT_NODE ? target.parentElement : target
+  if (element?.nodeType !== Node.ELEMENT_NODE) return false
+  if (element.isContentEditable) return true
+  if (element.matches('input, textarea')) return true
+  return Boolean(element.closest('[contenteditable="true"]'))
+}
+
+function isMeaningfulKeystroke (event) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return false
+  if (event.key.length === 1) return true
+  return ['Backspace', 'Delete', 'Enter', 'Tab'].includes(event.key)
+}
+
+function getTemplateSlotStorageKey (slot) {
+  return `${TEMPLATE_SLOT_STORAGE_PREFIX}${slot}`
+}
+
+function getTemplateSlotCookieKey (slot) {
+  return `${TEMPLATE_SLOT_COOKIE_PREFIX}${slot}`
+}
+
+function safeLocalStorageGet (key) {
+  try {
+    return globalThis.localStorage?.getItem(key) || ''
+  } catch {
+    return ''
+  }
+}
+
+function safeLocalStorageSet (key, value) {
+  try {
+    globalThis.localStorage?.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function safeLocalStorageRemove (key) {
+  try {
+    globalThis.localStorage?.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function setCookieValue (name, value) {
+  document.cookie = `${name}=${value}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax`
+}
+
+function removeCookieValue (name) {
+  document.cookie = `${name}=; path=/; max-age=0; samesite=lax`
+}
+
+function getCookieValue (name) {
+  const cookieParts = document.cookie ? document.cookie.split('; ') : []
+  const encodedPrefix = `${name}=`
+  for (const part of cookieParts) {
+    if (part.startsWith(encodedPrefix)) {
+      return part.slice(encodedPrefix.length)
+    }
+  }
+  return ''
+}
+
+function saveJsonCookie (name, payloadObject, maxChars) {
+  const payloadText = JSON.stringify(payloadObject)
+  const encoded = encodeURIComponent(payloadText)
+  if (encoded.length <= maxChars) {
+    setCookieValue(name, encoded)
+    return true
+  }
+  const fallback = encodeURIComponent(
+    JSON.stringify({
+      truncated: true,
+      savedAt: new Date().toISOString()
+    })
+  )
+  setCookieValue(name, fallback)
+  return false
+}
+
+function clearWorkingDocumentCache () {
+  safeLocalStorageRemove(WORKING_DOCUMENT_STORAGE_KEY)
+  removeCookieValue(WORKING_DOCUMENT_COOKIE_KEY)
 }
 
 function normalizeImportedSettings (rawSettings) {
@@ -160,6 +436,351 @@ function normalizeImportedRecipeData (rawRecipeData) {
   }
 }
 
+function parseImportedRecipeDataText (rawText) {
+  const parsedPayload = JSON.parse(rawText)
+  const payloadRecipeData =
+    parsedPayload &&
+    typeof parsedPayload === 'object' &&
+    parsedPayload.recipeData
+      ? parsedPayload.recipeData
+      : parsedPayload
+  return normalizeImportedRecipeData(payloadRecipeData)
+}
+
+function applyNormalizedRecipeData (normalizedRecipeData) {
+  recipeData.title = normalizedRecipeData.title
+  recipeData.description = normalizedRecipeData.description
+  recipeData.items = normalizedRecipeData.items
+  recipeData.settings = normalizedRecipeData.settings
+  syncNextItemIdToRecipeItems()
+  syncUiFromRecipeData()
+}
+
+function persistWorkingDocumentToCache () {
+  const payload = buildDocumentPayload()
+  const payloadText = JSON.stringify(payload)
+  safeLocalStorageSet(WORKING_DOCUMENT_STORAGE_KEY, payloadText)
+  saveJsonCookie(
+    WORKING_DOCUMENT_COOKIE_KEY,
+    {
+      type: 'working_document',
+      payload
+    },
+    WORKING_DOCUMENT_COOKIE_MAX_CHARS
+  )
+}
+
+function restoreWorkingDocumentFromCache () {
+  const cachedText = safeLocalStorageGet(WORKING_DOCUMENT_STORAGE_KEY)
+  if (cachedText) {
+    try {
+      const normalizedRecipeData = parseImportedRecipeDataText(cachedText)
+      if (normalizedRecipeData) {
+        applyNormalizedRecipeData(normalizedRecipeData)
+        showDocumentTransferMessage(
+          'Recovered document from local autosave cache.'
+        )
+        return true
+      }
+    } catch {
+      // Ignore invalid cached local-storage data.
+    }
+  }
+
+  const cookieValue = getCookieValue(WORKING_DOCUMENT_COOKIE_KEY)
+  if (!cookieValue) return false
+
+  try {
+    const parsedCookie = JSON.parse(decodeURIComponent(cookieValue))
+    if (!parsedCookie || typeof parsedCookie !== 'object') return false
+    const payloadText = JSON.stringify(
+      parsedCookie.payload ? parsedCookie.payload : parsedCookie
+    )
+    const normalizedRecipeData = parseImportedRecipeDataText(payloadText)
+    if (!normalizedRecipeData) return false
+    applyNormalizedRecipeData(normalizedRecipeData)
+    showDocumentTransferMessage('Recovered document from cookie backup.')
+    return true
+  } catch {
+    return false
+  }
+}
+
+function getTemplateSlotBuiltin (slot) {
+  return BUILTIN_TEMPLATE_SLOTS.find((entry) => entry.slot === slot) || null
+}
+
+function getTemplateSlotCached (slot) {
+  const cacheText = safeLocalStorageGet(getTemplateSlotStorageKey(slot))
+  if (!cacheText) return null
+  try {
+    const parsed = JSON.parse(cacheText)
+    if (!parsed || typeof parsed !== 'object') return null
+    if (typeof parsed.payloadText !== 'string') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveTemplateSlotToCache (slot, payloadText, sourceName = '') {
+  const slotEntry = {
+    slot,
+    sourceName,
+    savedAt: new Date().toISOString(),
+    payloadText
+  }
+  const slotEntryText = JSON.stringify(slotEntry)
+  const savedLocally = safeLocalStorageSet(
+    getTemplateSlotStorageKey(slot),
+    slotEntryText
+  )
+  const savedInCookie = saveJsonCookie(
+    getTemplateSlotCookieKey(slot),
+    {
+      slot,
+      sourceName,
+      payloadText
+    },
+    TEMPLATE_SLOT_COOKIE_MAX_CHARS
+  )
+  return {
+    savedLocally,
+    savedInCookie
+  }
+}
+
+async function readTemplatePayloadForSlot (slot) {
+  const cachedSlot = getTemplateSlotCached(slot)
+  if (cachedSlot) {
+    return {
+      name: cachedSlot.sourceName || `Custom Slot ${slot}`,
+      payloadText: cachedSlot.payloadText,
+      sourceType: 'cached'
+    }
+  }
+
+  const cookieBackupValue = getCookieValue(getTemplateSlotCookieKey(slot))
+  if (cookieBackupValue) {
+    try {
+      const parsedCookieBackup = JSON.parse(
+        decodeURIComponent(cookieBackupValue)
+      )
+      if (typeof parsedCookieBackup.payloadText === 'string') {
+        return {
+          name: parsedCookieBackup.sourceName || `Custom Slot ${slot}`,
+          payloadText: parsedCookieBackup.payloadText,
+          sourceType: 'cookie'
+        }
+      }
+    } catch {
+      // Ignore invalid cookie backup payloads for this slot.
+    }
+  }
+
+  const builtinTemplate = getTemplateSlotBuiltin(slot)
+  if (!builtinTemplate) return null
+
+  const response = await fetch(builtinTemplate.path)
+  if (!response.ok) {
+    throw new Error(`Template file not found: ${builtinTemplate.path}`)
+  }
+  const payloadText = await response.text()
+  return {
+    name: builtinTemplate.name,
+    payloadText,
+    sourceType: 'builtin'
+  }
+}
+
+function createTemplateSlotCard ({
+  slot,
+  title,
+  subtitle,
+  categoryLabel,
+  buttonLabel,
+  buttonClassName,
+  isEmpty
+}) {
+  const card = document.createElement('div')
+  card.className = 'template-slot-card'
+  card.dataset.slot = String(slot)
+
+  const head = document.createElement('div')
+  head.className = 'template-slot-head'
+
+  const slotIndex = document.createElement('span')
+  slotIndex.className = 'template-slot-index'
+  slotIndex.textContent = `Slot ${slot}`
+
+  const badge = document.createElement('span')
+  badge.className = 'template-slot-badge'
+  badge.textContent = categoryLabel
+
+  head.appendChild(slotIndex)
+  head.appendChild(badge)
+
+  const titleEl = document.createElement('h3')
+  titleEl.className = 'template-slot-title'
+  titleEl.textContent = title
+
+  const subtitleEl = document.createElement('p')
+  subtitleEl.className = 'template-slot-subtitle'
+  subtitleEl.textContent = subtitle
+
+  const action = document.createElement('button')
+  action.type = 'button'
+  action.className = `template-slot-action ${buttonClassName}`
+  action.textContent = buttonLabel
+
+  card.appendChild(head)
+  card.appendChild(titleEl)
+  card.appendChild(subtitleEl)
+  card.appendChild(action)
+
+  if (isEmpty) {
+    card.classList.add('template-slot-empty')
+    action.textContent = '+'
+    action.setAttribute('aria-label', `Upload template for slot ${slot}`)
+    action.title = `Upload .cookie to slot ${slot}`
+  }
+  return card
+}
+
+function renderTemplateGallerySlots () {
+  if (!dom.templateGalleryGrid) return
+  dom.templateGalleryGrid.innerHTML = ''
+
+  for (let slot = 1; slot <= TEMPLATE_SLOT_COUNT; slot += 1) {
+    const cached = getTemplateSlotCached(slot)
+    const builtin = getTemplateSlotBuiltin(slot)
+    if (cached) {
+      dom.templateGalleryGrid.appendChild(
+        createTemplateSlotCard({
+          slot,
+          title: cached.sourceName || `Custom Template ${slot}`,
+          subtitle: 'Saved locally in this browser cache.',
+          categoryLabel: 'Custom',
+          buttonLabel: 'Load',
+          buttonClassName: 'template-slot-action-load',
+          isEmpty: false
+        })
+      )
+      continue
+    }
+
+    if (builtin) {
+      dom.templateGalleryGrid.appendChild(
+        createTemplateSlotCard({
+          slot,
+          title: builtin.name,
+          subtitle: builtin.subtitle,
+          categoryLabel: 'Default',
+          buttonLabel: 'Load',
+          buttonClassName: 'template-slot-action-load',
+          isEmpty: false
+        })
+      )
+      continue
+    }
+
+    dom.templateGalleryGrid.appendChild(
+      createTemplateSlotCard({
+        slot,
+        title: 'Empty Slot',
+        subtitle: 'Upload a .cookie file to save a local template.',
+        categoryLabel: 'Open',
+        buttonLabel: '+',
+        buttonClassName: 'template-slot-action-add',
+        isEmpty: true
+      })
+    )
+  }
+}
+
+function importDocumentPayloadText (
+  rawText,
+  sourceLabel = 'CookieCut document'
+) {
+  const normalizedRecipeData = parseImportedRecipeDataText(rawText)
+  if (!normalizedRecipeData) {
+    throw new Error('Invalid CookieCut document format.')
+  }
+  applyNormalizedRecipeData(normalizedRecipeData)
+  persistWorkingDocumentToCache()
+  resetHistoryTracking()
+  showDocumentTransferMessage(`Imported ${sourceLabel}`)
+}
+
+async function handleTemplateSlotUpload (slot, file) {
+  const rawText = await readTextFile(file)
+  const normalizedRecipeData = parseImportedRecipeDataText(rawText)
+  if (!normalizedRecipeData) {
+    throw new Error('That file is not a valid CookieCut template.')
+  }
+  const payloadText = JSON.stringify(
+    {
+      app: 'CookieCut',
+      format: 'cookie_document',
+      version: COOKIE_DOCUMENT_VERSION,
+      exportedAt: new Date().toISOString(),
+      recipeData: normalizedRecipeData
+    },
+    null,
+    2
+  )
+  const saveResult = saveTemplateSlotToCache(slot, payloadText, file.name)
+  renderTemplateGallerySlots()
+  if (!saveResult.savedLocally) {
+    showTemplateGalleryMessage(
+      `Saved slot ${slot} cookie backup, but local cache write failed.`,
+      true
+    )
+    return
+  }
+  if (!saveResult.savedInCookie) {
+    showTemplateGalleryMessage(
+      `Saved slot ${slot} locally. Cookie backup truncated due to size.`,
+      true
+    )
+    return
+  }
+  showTemplateGalleryMessage(`Saved "${file.name}" to slot ${slot}.`)
+}
+
+async function loadTemplateFromSlot (slot) {
+  const templatePayload = await readTemplatePayloadForSlot(slot)
+  if (!templatePayload) {
+    showTemplateGalleryMessage(`Slot ${slot} is empty. Use + to upload.`)
+    return
+  }
+  importDocumentPayloadText(templatePayload.payloadText, templatePayload.name)
+  showEditor()
+}
+
+function requestTemplateFileForSlot (slot) {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.cookie,application/json'
+  input.className = 'hidden'
+  input.addEventListener('change', async (event) => {
+    const selectedFile = event.target.files?.[0]
+    input.remove()
+    if (!selectedFile) return
+    try {
+      await handleTemplateSlotUpload(slot, selectedFile)
+    } catch (error) {
+      console.error('Failed to cache template slot file:', error)
+      showTemplateGalleryMessage(
+        'Could not save that file to the slot. Please choose a valid .cookie document.',
+        true
+      )
+    }
+  })
+  document.body.appendChild(input)
+  input.click()
+}
+
 function isSafeExportFileNameChar (char) {
   const code = char.codePointAt(0)
   if (!Number.isFinite(code)) return false
@@ -198,8 +819,8 @@ function getExportFileNameBase (preferredNameInput = '') {
   return safeName || 'cookiecut_document'
 }
 
-function buildDocumentPayload () {
-  return {
+function buildDocumentPayload (options = {}) {
+  const payload = {
     app: 'CookieCut',
     format: 'cookie_document',
     version: COOKIE_DOCUMENT_VERSION,
@@ -211,10 +832,14 @@ function buildDocumentPayload () {
       settings: { ...recipeData.settings }
     }
   }
+  if (options.marketplaceTemplate) {
+    payload.marketplaceTemplate = options.marketplaceTemplate
+  }
+  return payload
 }
 
-function exportDocumentFile (preferredFileName = '') {
-  const payloadText = JSON.stringify(buildDocumentPayload(), null, 2)
+function exportDocumentFile (preferredFileName = '', options = {}) {
+  const payloadText = JSON.stringify(buildDocumentPayload(options), null, 2)
   const blob = new Blob([payloadText], { type: 'application/json' })
   const objectUrl = URL.createObjectURL(blob)
   const linkEl = document.createElement('a')
@@ -262,26 +887,7 @@ function syncUiFromRecipeData () {
 
 async function importDocumentFile (file) {
   const rawText = await readTextFile(file)
-  const parsedPayload = JSON.parse(rawText)
-  const payloadRecipeData =
-    parsedPayload &&
-    typeof parsedPayload === 'object' &&
-    parsedPayload.recipeData
-      ? parsedPayload.recipeData
-      : parsedPayload
-
-  const normalizedRecipeData = normalizeImportedRecipeData(payloadRecipeData)
-  if (!normalizedRecipeData) {
-    throw new Error('Invalid CookieCut document format.')
-  }
-
-  recipeData.title = normalizedRecipeData.title
-  recipeData.description = normalizedRecipeData.description
-  recipeData.items = normalizedRecipeData.items
-  recipeData.settings = normalizedRecipeData.settings
-  syncNextItemIdToRecipeItems()
-  syncUiFromRecipeData()
-  showDocumentTransferMessage(`Imported ${file.name}`)
+  importDocumentPayloadText(rawText, file.name)
 }
 
 export function addItem (type, subtype = null) {
@@ -460,7 +1066,23 @@ function updateAppLayoutForPreviewMode () {
   )
 }
 
+function showTemplateGallery () {
+  renderTemplateGallerySlots()
+  if (dom.builderPanel) dom.builderPanel.classList.add('hidden')
+  if (dom.recipePanel) dom.recipePanel.classList.add('hidden')
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.remove('hidden')
+  }
+  if (dom.inlinePreview) dom.inlinePreview.classList.add('hidden')
+  if (dom.floatingAddBtn) dom.floatingAddBtn.classList.add('hidden')
+  updateAppLayoutForPreviewMode()
+  window.scrollTo(0, 0)
+}
+
 function showPreview () {
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.add('hidden')
+  }
   renderPreview()
   dom.builderPanel.classList.add('hidden')
   dom.recipePanel.classList.remove('hidden')
@@ -469,8 +1091,16 @@ function showPreview () {
 }
 
 function showEditor () {
+  if (dom.templateGalleryPanel) {
+    dom.templateGalleryPanel.classList.add('hidden')
+  }
   dom.builderPanel.classList.remove('hidden')
   dom.recipePanel.classList.add('hidden')
+  if (isInlineMode()) {
+    renderInlinePreview()
+    if (dom.inlinePreview) dom.inlinePreview.classList.remove('hidden')
+    if (dom.floatingAddBtn) dom.floatingAddBtn.classList.remove('hidden')
+  }
   updateAppLayoutForPreviewMode()
   window.scrollTo(0, 0)
 }
@@ -497,21 +1127,86 @@ function executePrint (fileName) {
   setTimeout(cleanup, 1500)
 }
 
+function setMarketplaceOptionsVisibility (visible) {
+  if (dom.printMarketplaceOptions) {
+    dom.printMarketplaceOptions.classList.toggle('hidden', !visible)
+  }
+}
+
+function resetMarketplaceOptionsInputs () {
+  if (dom.printTemplateCheckbox) dom.printTemplateCheckbox.checked = false
+  if (dom.printMarketplaceTitleInput) dom.printMarketplaceTitleInput.value = ''
+  if (dom.printMarketplaceSummaryInput) {
+    dom.printMarketplaceSummaryInput.value = ''
+  }
+  setMarketplaceOptionsVisibility(false)
+}
+
+function buildMarketplaceTemplateMetadataFromModal () {
+  if (!dom.printTemplateCheckbox || !dom.printTemplateCheckbox.checked) {
+    return null
+  }
+  const templateTitle =
+    toStringOrFallback(dom.printMarketplaceTitleInput?.value, '').trim() ||
+    toStringOrFallback(recipeData.title, '').trim()
+  const summary = toStringOrFallback(
+    dom.printMarketplaceSummaryInput?.value,
+    ''
+  ).trim()
+
+  return {
+    isTemplate: true,
+    title: templateTitle,
+    summary
+  }
+}
+
+function openClearDocumentModal () {
+  if (!dom.clearDocModal) return
+  dom.clearDocModal.classList.remove('hidden')
+}
+
+function closeClearDocumentModal () {
+  if (!dom.clearDocModal) return
+  dom.clearDocModal.classList.add('hidden')
+}
+
+function clearCurrentDocumentData () {
+  recipeData.title = ''
+  recipeData.description = ''
+  recipeData.items = []
+  recipeData.settings = { ...DEFAULT_RECIPE_SETTINGS }
+  closeClearDocumentModal()
+  syncUiFromRecipeData()
+  resetHistoryTracking()
+  autosaveKeystrokeCounter = 0
+  clearWorkingDocumentCache()
+  persistWorkingDocumentToCache()
+  showDocumentTransferMessage('Cleared the current working document.')
+}
+
 function updatePrintModalContentForAction (action) {
+  const isExport = action === PRINT_MODAL_ACTION_EXPORT
   if (dom.printModalTitle) {
-    dom.printModalTitle.textContent =
-      action === PRINT_MODAL_ACTION_EXPORT
-        ? 'Export .cookie'
-        : 'Print / Download'
+    dom.printModalTitle.textContent = isExport
+      ? 'Export .cookie'
+      : 'Print / Download'
   }
   if (dom.printFileNameHelp) {
-    dom.printFileNameHelp.textContent =
-      action === PRINT_MODAL_ACTION_EXPORT
-        ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
-        : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
+    dom.printFileNameHelp.textContent = isExport
+      ? 'Sets the filename for your .cookie export. Defaults to the recipe title if left blank.'
+      : 'Sets the suggested filename when saving as PDF. Defaults to the recipe title if left blank.'
+  }
+  if (dom.printTemplateCheckbox) {
+    const templateToggleRow = dom.printTemplateCheckbox.closest(
+      '#print-template-toggle-wrap'
+    )
+    if (templateToggleRow) {
+      templateToggleRow.classList.toggle('hidden', !isExport)
+    }
+    if (!isExport) resetMarketplaceOptionsInputs()
   }
   if (dom.confirmPrintBtn) {
-    const isExport = action === PRINT_MODAL_ACTION_EXPORT
     dom.confirmPrintBtn.textContent = isExport
       ? 'Export .cookie'
       : 'Print Recipe'
@@ -530,6 +1225,9 @@ function openPrintModal (action = PRINT_MODAL_ACTION_PRINT) {
   updatePrintModalContentForAction(printModalAction)
   if (dom.printFileNameInput) {
     dom.printFileNameInput.value = recipeData.settings.fileName || ''
+  }
+  if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+    resetMarketplaceOptionsInputs()
   }
   dom.printModal.classList.remove('hidden')
 }
@@ -773,6 +1471,61 @@ function handlePreviewModeChange (e) {
   }
 }
 
+function handleHistoryKeyboardShortcut (event) {
+  const hasPrimaryModifier = event.ctrlKey || event.metaKey
+  if (!hasPrimaryModifier || event.altKey) return false
+  const key = event.key.toLowerCase()
+  if (key === 'z') {
+    if (event.shiftKey) {
+      if (handleRedoAction()) event.preventDefault()
+      return true
+    }
+    if (handleUndoAction()) event.preventDefault()
+    return true
+  }
+  if (key === 'y') {
+    if (handleRedoAction()) event.preventDefault()
+    return true
+  }
+  return false
+}
+
+function handleGlobalKeydown (event) {
+  if (handleHistoryKeyboardShortcut(event)) return
+  if (!isEditableKeyTarget(event)) return
+  if (!isMeaningfulKeystroke(event)) return
+
+  autosaveKeystrokeCounter += 1
+  if (autosaveKeystrokeCounter < KEYSTROKES_PER_AUTOSAVE) return
+  autosaveKeystrokeCounter = 0
+  persistWorkingDocumentToCache()
+}
+
+async function handleTemplateGalleryGridClick (event) {
+  const clickTarget =
+    event.target instanceof Element
+      ? event.target
+      : event.target?.parentElement
+  if (!clickTarget) return
+  const card = clickTarget.closest('.template-slot-card')
+  if (!card) return
+  const slot = Number.parseInt(card.dataset.slot || '', 10)
+  if (!Number.isFinite(slot) || slot < 1 || slot > TEMPLATE_SLOT_COUNT) return
+  if (card.classList.contains('template-slot-empty')) {
+    requestTemplateFileForSlot(slot)
+    return
+  }
+  try {
+    await loadTemplateFromSlot(slot)
+  } catch (error) {
+    console.error('Failed loading template slot:', error)
+    showTemplateGalleryMessage(
+      'Failed to load that template slot. Please try another slot.',
+      true
+    )
+  }
+}
+
 // --- INIT ---
 
 export function init () {
@@ -788,10 +1541,16 @@ export function init () {
   dom.addTextBtn.addEventListener('click', openTextModal)
   dom.addImageBtn.addEventListener('click', () => addItem('image'))
   dom.addToastBtn.addEventListener('click', openToastModal)
+  if (dom.templateBrowserBtn) {
+    dom.templateBrowserBtn.addEventListener('click', showTemplateGallery)
+  }
   if (dom.exportDocBtn) {
     dom.exportDocBtn.addEventListener('click', () => {
       handleExportRequest()
     })
+  }
+  if (dom.clearDocBtn) {
+    dom.clearDocBtn.addEventListener('click', openClearDocumentModal)
   }
   if (dom.importDocBtn && dom.importDocInput) {
     dom.importDocBtn.addEventListener('click', () => {
@@ -875,11 +1634,25 @@ export function init () {
     recipeData.settings.fileName = fileName
     closePrintModal()
     if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
-      exportDocumentFile(fileName)
+      exportDocumentFile(fileName, {
+        marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
+      })
       return
     }
     executePrint(fileName)
   })
+  if (dom.printTemplateCheckbox) {
+    dom.printTemplateCheckbox.addEventListener('change', (event) => {
+      setMarketplaceOptionsVisibility(Boolean(event.target.checked))
+      if (
+        event.target.checked &&
+        dom.printMarketplaceTitleInput &&
+        !dom.printMarketplaceTitleInput.value
+      ) {
+        dom.printMarketplaceTitleInput.value = recipeData.title || ''
+      }
+    })
+  }
   if (dom.printFileNameInput) {
     dom.printFileNameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -888,6 +1661,23 @@ export function init () {
       }
       if (e.key === 'Escape') closePrintModal()
     })
+  }
+
+  // Clear Document Modal Listeners
+  if (dom.closeClearDocModalBtn) {
+    dom.closeClearDocModalBtn.addEventListener(
+      'click',
+      closeClearDocumentModal
+    )
+  }
+  if (dom.clearDocModalOverlay) {
+    dom.clearDocModalOverlay.addEventListener('click', closeClearDocumentModal)
+  }
+  if (dom.cancelClearDocBtn) {
+    dom.cancelClearDocBtn.addEventListener('click', closeClearDocumentModal)
+  }
+  if (dom.confirmClearDocBtn) {
+    dom.confirmClearDocBtn.addEventListener('click', clearCurrentDocumentData)
   }
 
   // Editor Mode select
@@ -901,6 +1691,14 @@ export function init () {
     dom.previewModeSelect.addEventListener('change', handlePreviewModeChange)
     dom.previewModeSelect.value =
       recipeData.settings.previewMode || 'continuous'
+  }
+  if (dom.templateGalleryBackBtn) {
+    dom.templateGalleryBackBtn.addEventListener('click', showEditor)
+  }
+  if (dom.templateGalleryGrid) {
+    dom.templateGalleryGrid.addEventListener('click', (event) => {
+      handleTemplateGalleryGridClick(event)
+    })
   }
 
   updateAppLayoutForPreviewMode()
@@ -968,6 +1766,7 @@ export function init () {
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
   dom.printBtn.addEventListener('click', () => handlePrint())
+  document.addEventListener('keydown', handleGlobalKeydown)
 
   let previewResizeTimer = null
   window.addEventListener('resize', () => {
@@ -994,4 +1793,8 @@ export function init () {
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   // Initialize editor mode (inline is experimental and OFF by default)
   setEditorMode(recipeData.settings.editorMode)
+  renderTemplateGallerySlots()
+  restoreWorkingDocumentFromCache()
+  resetHistoryTracking()
+  startHistoryObserver()
 }

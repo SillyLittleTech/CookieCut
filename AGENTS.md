@@ -27,6 +27,11 @@ Then open `http://localhost:8000` in Chrome.
 - State is in-memory only (`recipeData` in `js/state.js`); nothing persists across page reloads.
 - CI: `.github/workflows/preview.yml` deploys PR preview channels to Firebase Hosting (project `slf-cookiecutter`). No build step runs in CI — raw files are deployed directly.
 
+### UI conventions
+
+- Top toolbar controls (for example marketplace/template browser, save/export, load/import, clear/reset) should be icon-only buttons without text labels in the button body.
+- Lower-level action buttons inside the editor workflow (for example Text, Toast, Image, and other content actions) can keep text labels.
+
 ### Post-commit PR checks
 
 - After each commit/push, check for new feedback from DeepSource and SonarCloud.
