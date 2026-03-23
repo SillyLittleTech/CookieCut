@@ -1215,6 +1215,7 @@ export function renderInlinePreview () {
       ev.stopPropagation()
       if (await openInlineDeleteConfirm('Hide the title from preview?')) {
         recipeData.settings.hideTitle = true
+        if (dom.hideTitleCheckbox) dom.hideTitleCheckbox.checked = true
         import('./classic.js').then(({ renderBuilderInputs }) => {
           renderBuilderInputs()
           renderInlinePreview()
@@ -1247,6 +1248,7 @@ export function renderInlinePreview () {
       ev.stopPropagation()
       if (await openInlineDeleteConfirm('Hide the description from preview?')) {
         recipeData.settings.hideDescription = true
+        if (dom.hideDescCheckbox) dom.hideDescCheckbox.checked = true
         import('./classic.js').then(({ renderBuilderInputs }) => {
           renderBuilderInputs()
           renderInlinePreview()
