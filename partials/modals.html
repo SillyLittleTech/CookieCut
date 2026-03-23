@@ -462,3 +462,47 @@
   </div>
 </div>
 <!-- === End Clear Document Modal === -->
+
+<!-- === Close Tab Confirmation Modal === -->
+<div
+  id="close-tab-modal"
+  class="hidden no-print fixed inset-0 z-50 flex items-center justify-center p-4"
+>
+  <div
+    id="close-tab-modal-overlay"
+    class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+  ></div>
+  <div
+    class="relative bg-white w-full max-w-md p-6 rounded-lg shadow-xl font-sans animate-fade-in-down"
+  >
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-2xl font-bold font-display text-gray-900">Close Tab</h3>
+      <button
+        id="close-tab-modal-dismiss-btn"
+        class="item-btn delete-btn"
+        title="Cancel"
+      >
+        &times;
+      </button>
+    </div>
+    <p class="text-sm text-gray-700">
+      This tab contains content. Closing it will permanently remove all title,
+      description, and content items. This action cannot be undone.
+    </p>
+    <div class="mt-6 flex gap-3">
+      <button
+        id="cancel-close-tab-btn"
+        class="w-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-all duration-200"
+      >
+        Cancel
+      </button>
+      <button
+        id="confirm-close-tab-btn"
+        class="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+      >
+        Close Tab
+      </button>
+    </div>
+  </div>
+</div>
+<!-- === End Close Tab Confirmation Modal === -->

@@ -19,6 +19,17 @@ import {
   refreshInlinePreviewMetrics
 } from './builders/inline.js'
 import { initSelectionToolbar } from './toolbar.js'
+import {
+  tabsState,
+  saveCurrentTabSnapshot,
+  createTab,
+  switchToTab,
+  closeTab,
+  renameTab,
+  initTabsState,
+  persistTabsToCache,
+  restoreTabsFromCache
+} from './tabs.js'
 
 // --- ACTIONS ---
 let nextItemId = Date.now()
@@ -100,6 +111,7 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
   }
 ])
 let printModalAction = PRINT_MODAL_ACTION_PRINT
+let pendingCloseTabId = null
 let templateGalleryMessageTimer = null
 let autosaveKeystrokeCounter = 0
 let undoHistory = []
@@ -457,6 +469,7 @@ function applyNormalizedRecipeData (normalizedRecipeData) {
 }
 
 function persistWorkingDocumentToCache () {
+  persistTabsToCache()
   const payload = buildDocumentPayload()
   const payloadText = JSON.stringify(payload)
   safeLocalStorageSet(WORKING_DOCUMENT_STORAGE_KEY, payloadText)
@@ -471,12 +484,34 @@ function persistWorkingDocumentToCache () {
 }
 
 function restoreWorkingDocumentFromCache () {
+  // Try tabs state first (highest priority — restores multi-document session)
+  const tabsRecipeData = restoreTabsFromCache()
+  if (tabsRecipeData) {
+    try {
+      const normalized = normalizeImportedRecipeData(tabsRecipeData)
+      if (normalized) {
+        applyNormalizedRecipeData(normalized)
+        renderTabBar()
+        showDocumentTransferMessage('Recovered session from local autosave.')
+        return true
+      }
+    } catch {
+      // Fall through to single-document fallbacks.
+    }
+    // Reset invalid tabs state before falling through.
+    tabsState.tabs = []
+    tabsState.activeTabId = null
+  }
+
+  // Fall back to old single-document working document key.
   const cachedText = safeLocalStorageGet(WORKING_DOCUMENT_STORAGE_KEY)
   if (cachedText) {
     try {
       const normalizedRecipeData = parseImportedRecipeDataText(cachedText)
       if (normalizedRecipeData) {
+        initTabsState(normalizedRecipeData)
         applyNormalizedRecipeData(normalizedRecipeData)
+        renderTabBar()
         showDocumentTransferMessage(
           'Recovered document from local autosave cache.'
         )
@@ -488,22 +523,188 @@ function restoreWorkingDocumentFromCache () {
   }
 
   const cookieValue = getCookieValue(WORKING_DOCUMENT_COOKIE_KEY)
-  if (!cookieValue) return false
+  if (!cookieValue) {
+    initTabsState()
+    renderTabBar()
+    return false
+  }
 
   try {
     const parsedCookie = JSON.parse(decodeURIComponent(cookieValue))
-    if (!parsedCookie || typeof parsedCookie !== 'object') return false
+    if (!parsedCookie || typeof parsedCookie !== 'object') {
+      initTabsState()
+      renderTabBar()
+      return false
+    }
     const payloadText = JSON.stringify(
       parsedCookie.payload ? parsedCookie.payload : parsedCookie
     )
     const normalizedRecipeData = parseImportedRecipeDataText(payloadText)
-    if (!normalizedRecipeData) return false
+    if (!normalizedRecipeData) {
+      initTabsState()
+      renderTabBar()
+      return false
+    }
+    initTabsState(normalizedRecipeData)
     applyNormalizedRecipeData(normalizedRecipeData)
+    renderTabBar()
     showDocumentTransferMessage('Recovered document from cookie backup.')
     return true
   } catch {
+    initTabsState()
+    renderTabBar()
     return false
   }
+}
+
+// --- TAB BAR UI ---
+
+function renderTabBar () {
+  const tabBar = dom.tabBar
+  if (!tabBar) return
+  tabBar.innerHTML = ''
+
+  tabsState.tabs.forEach((tab) => {
+    const isActive = tab.id === tabsState.activeTabId
+
+    const tabEl = document.createElement('div')
+    tabEl.className = isActive ? 'tab-item tab-item--active' : 'tab-item'
+    tabEl.dataset.tabId = tab.id
+    tabEl.setAttribute('role', 'tab')
+    tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    tabEl.setAttribute('tabindex', isActive ? '0' : '-1')
+    tabEl.title = tab.label
+
+    const labelEl = document.createElement('span')
+    labelEl.className = 'tab-label'
+    labelEl.textContent = tab.label
+    labelEl.title = 'Double-click to rename'
+    labelEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation()
+      startTabRename(tab.id, labelEl)
+    })
+
+    const closeBtn = document.createElement('button')
+    closeBtn.className = 'tab-close-btn'
+    closeBtn.setAttribute('aria-label', `Close ${tab.label}`)
+    closeBtn.innerHTML =
+      '<span class="material-icons" style="font-size:14px;line-height:1;">close</span>'
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      handleCloseTab(tab.id)
+    })
+
+    tabEl.appendChild(labelEl)
+    tabEl.appendChild(closeBtn)
+    tabEl.addEventListener('click', () => handleSwitchTab(tab.id))
+    tabEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        handleSwitchTab(tab.id)
+      } else if (e.key === 'ArrowRight') {
+        const next = tabEl.nextElementSibling
+        if (next?.dataset.tabId) {
+          next.focus()
+        }
+      } else if (e.key === 'ArrowLeft') {
+        const prev = tabEl.previousElementSibling
+        if (prev?.dataset.tabId) {
+          prev.focus()
+        }
+      }
+    })
+    tabBar.appendChild(tabEl)
+  })
+
+  const newTabBtn = document.createElement('button')
+  newTabBtn.className = 'tab-new-btn'
+  newTabBtn.title = 'New document'
+  newTabBtn.setAttribute('aria-label', 'New document')
+  newTabBtn.innerHTML =
+    '<span class="material-icons" style="font-size:16px;line-height:1;">add</span>'
+  newTabBtn.addEventListener('click', handleNewTab)
+  tabBar.appendChild(newTabBtn)
+}
+
+function startTabRename (tabId, labelEl) {
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.value = labelEl.textContent
+  input.className = 'tab-rename-input'
+  labelEl.replaceWith(input)
+  input.focus()
+  input.select()
+
+  let committed = false
+  const commit = () => {
+    if (committed) return
+    committed = true
+    const newLabel = input.value.trim()
+    if (newLabel) renameTab(tabId, newLabel)
+    renderTabBar()
+    persistTabsToCache()
+  }
+
+  input.addEventListener('blur', commit)
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      input.blur()
+    } else if (e.key === 'Escape') {
+      committed = true
+      renderTabBar()
+    }
+  })
+}
+
+function handleSwitchTab (id) {
+  const newRecipeData = switchToTab(id)
+  if (!newRecipeData) return
+  applyNormalizedRecipeData(
+    normalizeImportedRecipeData(newRecipeData) ?? newRecipeData
+  )
+  resetHistoryTracking()
+  renderTabBar()
+  persistTabsToCache()
+}
+
+function handleNewTab () {
+  saveCurrentTabSnapshot()
+  const newTab = createTab()
+  tabsState.activeTabId = newTab.id
+  applyNormalizedRecipeData(newTab.savedRecipeData)
+  resetHistoryTracking()
+  renderTabBar()
+  persistTabsToCache()
+}
+
+function handleCloseTab (id) {
+  saveCurrentTabSnapshot()
+  const targetTab = tabsState.tabs.find((tab) => tab.id === id)
+  if (targetTab && tabHasContent(targetTab.savedRecipeData)) {
+    openCloseTabModal(id)
+    return
+  }
+  closeTabById(id)
+}
+
+function closeTabById (id) {
+  const result = closeTab(id)
+  if (result) {
+    applyNormalizedRecipeData(
+      normalizeImportedRecipeData(result.recipeData) ?? result.recipeData
+    )
+    resetHistoryTracking()
+  }
+  renderTabBar()
+  persistTabsToCache()
+}
+
+function tabHasContent (tabRecipeData) {
+  if (!tabRecipeData || typeof tabRecipeData !== 'object') return false
+  if (toStringOrFallback(tabRecipeData.title, '').trim()) return true
+  if (toStringOrFallback(tabRecipeData.description, '').trim()) return true
+  return Array.isArray(tabRecipeData.items) && tabRecipeData.items.length > 0
 }
 
 function getTemplateSlotBuiltin (slot) {
@@ -1171,6 +1372,31 @@ function closeClearDocumentModal () {
   dom.clearDocModal.classList.add('hidden')
 }
 
+function openCloseTabModal (id) {
+  if (!dom.closeTabModal) {
+    closeTabById(id)
+    return
+  }
+  pendingCloseTabId = id
+  dom.closeTabModal.classList.remove('hidden')
+}
+
+function closeCloseTabModal () {
+  if (!dom.closeTabModal) return
+  pendingCloseTabId = null
+  dom.closeTabModal.classList.add('hidden')
+}
+
+function confirmCloseTabFromModal () {
+  if (!pendingCloseTabId) {
+    closeCloseTabModal()
+    return
+  }
+  const tabIdToClose = pendingCloseTabId
+  closeCloseTabModal()
+  closeTabById(tabIdToClose)
+}
+
 function clearCurrentDocumentData () {
   recipeData.title = ''
   recipeData.description = ''
@@ -1526,18 +1752,18 @@ async function handleTemplateGalleryGridClick (event) {
   }
 }
 
-// --- INIT ---
-
-export function init () {
+function initializePreviewModeSetting () {
   if (!recipeData.settings.previewMode) {
     recipeData.settings.previewMode = 'continuous'
   }
+}
 
-  // Main info
+function bindMainInfoListeners () {
   dom.titleInput.addEventListener('input', handleUpdateMain)
   dom.descInput.addEventListener('input', handleUpdateMain)
+}
 
-  // "Add" buttons
+function bindTopToolbarListeners () {
   dom.addTextBtn.addEventListener('click', openTextModal)
   dom.addImageBtn.addEventListener('click', () => addItem('image'))
   dom.addToastBtn.addEventListener('click', openToastModal)
@@ -1545,9 +1771,7 @@ export function init () {
     dom.templateBrowserBtn.addEventListener('click', showTemplateGallery)
   }
   if (dom.exportDocBtn) {
-    dom.exportDocBtn.addEventListener('click', () => {
-      handleExportRequest()
-    })
+    dom.exportDocBtn.addEventListener('click', handleExportRequest)
   }
   if (dom.clearDocBtn) {
     dom.clearDocBtn.addEventListener('click', openClearDocumentModal)
@@ -1556,23 +1780,26 @@ export function init () {
     dom.importDocBtn.addEventListener('click', () => {
       dom.importDocInput.click()
     })
-    dom.importDocInput.addEventListener('change', async (event) => {
-      const selectedFile = event.target.files?.[0]
-      event.target.value = ''
-      if (!selectedFile) return
-      try {
-        await importDocumentFile(selectedFile)
-      } catch (error) {
-        console.error('Failed to import CookieCut document:', error)
-        showDocumentTransferMessage(
-          'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
-          true
-        )
-      }
-    })
+    dom.importDocInput.addEventListener('change', handleImportDocumentChange)
   }
+}
 
-  // Toast Modal Listeners
+async function handleImportDocumentChange (event) {
+  const selectedFile = event.target.files?.[0]
+  event.target.value = ''
+  if (!selectedFile) return
+  try {
+    await importDocumentFile(selectedFile)
+  } catch (error) {
+    console.error('Failed to import CookieCut document:', error)
+    showDocumentTransferMessage(
+      'Could not import that file. Please choose a valid .cookie document exported from CookieCut.',
+      true
+    )
+  }
+}
+
+function bindToastModalListeners () {
   dom.closeModalBtn.addEventListener('click', closeToastModal)
   dom.toastModalOverlay.addEventListener('click', closeToastModal)
   dom.toastTypeTipBtn.addEventListener('click', () =>
@@ -1584,8 +1811,9 @@ export function init () {
   dom.toastTypeNoteBtn.addEventListener('click', () =>
     handleToastSelection('note')
   )
+}
 
-  // Text Modal Listeners
+function bindTextModalListeners () {
   dom.closeTextModalBtn.addEventListener('click', closeTextModal)
   dom.textModalOverlay.addEventListener('click', closeTextModal)
   dom.textTypeHeadingBtn.addEventListener('click', () =>
@@ -1603,17 +1831,19 @@ export function init () {
   dom.textTypeLinkBtn.addEventListener('click', () =>
     handleTextSelection('link')
   )
+}
 
-  // Icon Key Modal Listeners
+function bindIconModalListeners () {
   dom.iconKeyBtn.addEventListener('click', openIconKeyModal)
   dom.closeIconKeyModalBtn.addEventListener('click', closeIconKeyModal)
   dom.iconKeyModalOverlay.addEventListener('click', closeIconKeyModal)
-  dom.iconSearchInput.addEventListener('input', (e) =>
-    renderIconList(e.target.value)
+  dom.iconSearchInput.addEventListener('input', (event) =>
+    renderIconList(event.target.value)
   )
   dom.iconListContainer.addEventListener('click', handleIconListClick)
+}
 
-  // Settings Modal Listeners
+function bindSettingsModalListeners () {
   dom.settingsBtn.addEventListener('click', openSettingsModal)
   dom.closeSettingsModalBtn.addEventListener('click', closeSettingsModal)
   dom.settingsModalOverlay.addEventListener('click', closeSettingsModal)
@@ -1624,23 +1854,26 @@ export function init () {
   if (dom.fontApplyTipsCheckbox) {
     dom.fontApplyTipsCheckbox.addEventListener('change', handleFontScopeChange)
   }
+}
 
-  // Print Modal Listeners
+function handlePrintConfirmClick () {
+  const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
+  recipeData.settings.fileName = fileName
+  closePrintModal()
+  if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
+    exportDocumentFile(fileName, {
+      marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
+    })
+    return
+  }
+  executePrint(fileName)
+}
+
+function bindPrintModalListeners () {
   dom.closePrintModalBtn.addEventListener('click', closePrintModal)
   dom.printModalOverlay.addEventListener('click', closePrintModal)
   dom.cancelPrintBtn.addEventListener('click', closePrintModal)
-  dom.confirmPrintBtn.addEventListener('click', () => {
-    const fileName = dom.printFileNameInput ? dom.printFileNameInput.value : ''
-    recipeData.settings.fileName = fileName
-    closePrintModal()
-    if (printModalAction === PRINT_MODAL_ACTION_EXPORT) {
-      exportDocumentFile(fileName, {
-        marketplaceTemplate: buildMarketplaceTemplateMetadataFromModal()
-      })
-      return
-    }
-    executePrint(fileName)
-  })
+  dom.confirmPrintBtn.addEventListener('click', handlePrintConfirmClick)
   if (dom.printTemplateCheckbox) {
     dom.printTemplateCheckbox.addEventListener('change', (event) => {
       setMarketplaceOptionsVisibility(Boolean(event.target.checked))
@@ -1654,16 +1887,17 @@ export function init () {
     })
   }
   if (dom.printFileNameInput) {
-    dom.printFileNameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
+    dom.printFileNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
         dom.confirmPrintBtn.click()
       }
-      if (e.key === 'Escape') closePrintModal()
+      if (event.key === 'Escape') closePrintModal()
     })
   }
+}
 
-  // Clear Document Modal Listeners
+function bindClearAndCloseTabModalListeners () {
   if (dom.closeClearDocModalBtn) {
     dom.closeClearDocModalBtn.addEventListener(
       'click',
@@ -1680,10 +1914,24 @@ export function init () {
     dom.confirmClearDocBtn.addEventListener('click', clearCurrentDocumentData)
   }
 
-  // Editor Mode select
+  if (dom.closeTabModalDismissBtn) {
+    dom.closeTabModalDismissBtn.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.closeTabModalOverlay) {
+    dom.closeTabModalOverlay.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.cancelCloseTabBtn) {
+    dom.cancelCloseTabBtn.addEventListener('click', closeCloseTabModal)
+  }
+  if (dom.confirmCloseTabBtn) {
+    dom.confirmCloseTabBtn.addEventListener('click', confirmCloseTabFromModal)
+  }
+}
+
+function bindEditorAndTemplateListeners () {
   if (dom.editorModeSelect) {
-    dom.editorModeSelect.addEventListener('change', (e) => {
-      setEditorMode(e.target.value)
+    dom.editorModeSelect.addEventListener('change', (event) => {
+      setEditorMode(event.target.value)
     })
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
@@ -1696,53 +1944,54 @@ export function init () {
     dom.templateGalleryBackBtn.addEventListener('click', showEditor)
   }
   if (dom.templateGalleryGrid) {
-    dom.templateGalleryGrid.addEventListener('click', (event) => {
-      handleTemplateGalleryGridClick(event)
-    })
+    dom.templateGalleryGrid.addEventListener(
+      'click',
+      handleTemplateGalleryGridClick
+    )
   }
+}
 
-  updateAppLayoutForPreviewMode()
+function bindFloatingAddButtonListeners () {
+  if (!dom.floatingAddBtn) return
+  dom.floatingAddBtn.addEventListener('click', (event) => {
+    event.stopPropagation()
+    let menu = document.getElementById('floating-add-menu')
+    if (menu) {
+      menu.remove()
+      return
+    }
+    menu = document.createElement('div')
+    menu.id = 'floating-add-menu'
+    menu.style.position = 'fixed'
+    menu.style.right = '96px'
+    menu.style.bottom = '24px'
+    menu.style.zIndex = 70
+    menu.style.background = 'white'
+    menu.style.padding = '8px'
+    menu.style.borderRadius = '8px'
+    menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
 
-  // Floating add button behavior
-  if (dom.floatingAddBtn) {
-    dom.floatingAddBtn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      let menu = document.getElementById('floating-add-menu')
-      if (menu) {
+    const makeBtn = (label, callback) => {
+      const buttonEl = document.createElement('button')
+      buttonEl.textContent = label
+      buttonEl.className = 'px-3 py-2 block w-full text-left'
+      buttonEl.addEventListener('click', () => {
+        callback()
         menu.remove()
-        return
-      }
-      menu = document.createElement('div')
-      menu.id = 'floating-add-menu'
-      menu.style.position = 'fixed'
-      menu.style.right = '96px'
-      menu.style.bottom = '24px'
-      menu.style.zIndex = 70
-      menu.style.background = 'white'
-      menu.style.padding = '8px'
-      menu.style.borderRadius = '8px'
-      menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+      })
+      return buttonEl
+    }
 
-      const makeBtn = (label, cb) => {
-        const buttonEl = document.createElement('button')
-        buttonEl.textContent = label
-        buttonEl.className = 'px-3 py-2 block w-full text-left'
-        buttonEl.addEventListener('click', () => {
-          cb()
-          menu.remove()
-        })
-        return buttonEl
-      }
+    menu.appendChild(makeBtn('Add Text', () => openTextModal()))
+    menu.appendChild(makeBtn('Add Image', () => addItem('image')))
+    menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
+    menu.appendChild(makeBtn('Print', () => handlePrint()))
 
-      menu.appendChild(makeBtn('Add Text', () => openTextModal()))
-      menu.appendChild(makeBtn('Add Image', () => addItem('image')))
-      menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
-      menu.appendChild(makeBtn('Print', () => handlePrint()))
-
-      document.body.appendChild(menu)
-      // click outside to close
-      setTimeout(() => {
-        document.addEventListener('click', function _close (ev) {
+    document.body.appendChild(menu)
+    setTimeout(() => {
+      document.addEventListener(
+        'click',
+        function handleFloatingAddOutsideClick (ev) {
           const menuEl = document.getElementById('floating-add-menu')
           if (
             menuEl &&
@@ -1751,23 +2000,24 @@ export function init () {
           ) {
             menuEl.remove()
           }
-          document.removeEventListener('click', _close)
-        })
-      }, 10)
-    })
-  }
+          document.removeEventListener('click', handleFloatingAddOutsideClick)
+        }
+      )
+    }, 10)
+  })
+}
 
-  // Dynamic item handlers
+function bindCoreEditorListeners () {
   dom.contentInputs.addEventListener('input', handleLiveInput)
   dom.contentInputs.addEventListener('click', handleContentInputClick)
   initSelectionToolbar()
-
-  // View Toggle Listeners
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
-  dom.printBtn.addEventListener('click', () => handlePrint())
+  dom.printBtn.addEventListener('click', handlePrint)
   document.addEventListener('keydown', handleGlobalKeydown)
+}
 
+function bindPreviewResizeListener () {
   let previewResizeTimer = null
   window.addEventListener('resize', () => {
     const inPagedClassicPreview =
@@ -1782,8 +2032,9 @@ export function init () {
       if (inPagedInlinePreview) refreshInlinePreviewMetrics()
     }, 120)
   })
+}
 
-  // Initial render
+function performInitialRender () {
   renderBuilderInputs()
   dom.titleInput.value = recipeData.title
   dom.descInput.value = recipeData.description
@@ -1791,10 +2042,29 @@ export function init () {
   dom.descPreview.innerHTML = renderRichText(recipeData.description)
   dom.globalFontStyleSelect.value = recipeData.settings.fontStyle
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
-  // Initialize editor mode (inline is experimental and OFF by default)
   setEditorMode(recipeData.settings.editorMode)
   renderTemplateGallerySlots()
   restoreWorkingDocumentFromCache()
   resetHistoryTracking()
   startHistoryObserver()
+}
+
+// --- INIT ---
+
+export function init () {
+  initializePreviewModeSetting()
+  bindMainInfoListeners()
+  bindTopToolbarListeners()
+  bindToastModalListeners()
+  bindTextModalListeners()
+  bindIconModalListeners()
+  bindSettingsModalListeners()
+  bindPrintModalListeners()
+  bindClearAndCloseTabModalListeners()
+  bindEditorAndTemplateListeners()
+  updateAppLayoutForPreviewMode()
+  bindFloatingAddButtonListeners()
+  bindCoreEditorListeners()
+  bindPreviewResizeListener()
+  performInitialRender()
 }

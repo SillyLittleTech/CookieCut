@@ -78,9 +78,17 @@ export const dom = {
   closeClearDocModalBtn: null,
   cancelClearDocBtn: null,
   confirmClearDocBtn: null,
+  // Close tab confirmation modal
+  closeTabModal: null,
+  closeTabModalOverlay: null,
+  closeTabModalDismissBtn: null,
+  cancelCloseTabBtn: null,
+  confirmCloseTabBtn: null,
   // Inline editor
   floatingAddBtn: null,
   inlinePreview: null,
+  // Document tabs
+  tabBar: null,
   // Preview mode / stats
   recipeFlow: null,
   previewStats: null,
@@ -192,9 +200,19 @@ export function initDom () {
   )
   dom.cancelClearDocBtn = document.getElementById('cancel-clear-doc-btn')
   dom.confirmClearDocBtn = document.getElementById('confirm-clear-doc-btn')
+  // Close tab confirmation modal
+  dom.closeTabModal = document.getElementById('close-tab-modal')
+  dom.closeTabModalOverlay = document.getElementById('close-tab-modal-overlay')
+  dom.closeTabModalDismissBtn = document.getElementById(
+    'close-tab-modal-dismiss-btn'
+  )
+  dom.cancelCloseTabBtn = document.getElementById('cancel-close-tab-btn')
+  dom.confirmCloseTabBtn = document.getElementById('confirm-close-tab-btn')
   // Inline editor
   dom.floatingAddBtn = document.getElementById('floating-add-btn')
   dom.inlinePreview = document.getElementById('inline-preview')
+  // Document tabs
+  dom.tabBar = document.getElementById('tabs-bar')
   // Preview mode / stats
   dom.recipeFlow = document.getElementById('recipe-flow')
   dom.previewStats = document.getElementById('preview-stats')
