@@ -968,7 +968,10 @@ function showTabContextMenu (tabId, x, y) {
     }
   }
   tabCtxMenuDismissHandler = dismiss
-  setTimeout(() => document.addEventListener('mousedown', tabCtxMenuDismissHandler), 0)
+  setTimeout(
+    () => document.addEventListener('mousedown', tabCtxMenuDismissHandler),
+    0
+  )
 }
 
 function closeGroupContextMenu () {
@@ -1073,7 +1076,10 @@ function showGroupContextMenu (groupId, x, y) {
     }
   }
   groupCtxMenuDismissHandler = dismiss
-  setTimeout(() => document.addEventListener('mousedown', groupCtxMenuDismissHandler), 0)
+  setTimeout(
+    () => document.addEventListener('mousedown', groupCtxMenuDismissHandler),
+    0
+  )
 }
 
 function handleSwitchTab (id) {
