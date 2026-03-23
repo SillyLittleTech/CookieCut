@@ -1139,7 +1139,6 @@ function resetMarketplaceOptionsInputs () {
   if (dom.printMarketplaceSummaryInput) {
     dom.printMarketplaceSummaryInput.value = ''
   }
-  if (dom.printMarketplaceTagsInput) dom.printMarketplaceTagsInput.value = ''
   setMarketplaceOptionsVisibility(false)
 }
 
@@ -1154,16 +1153,11 @@ function buildMarketplaceTemplateMetadataFromModal () {
     dom.printMarketplaceSummaryInput?.value,
     ''
   ).trim()
-  const tags = toStringOrFallback(dom.printMarketplaceTagsInput?.value, '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
 
   return {
     isTemplate: true,
     title: templateTitle,
-    summary,
-    tags
+    summary
   }
 }
 

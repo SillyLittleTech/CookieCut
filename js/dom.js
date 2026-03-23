@@ -70,7 +70,6 @@ export const dom = {
   printMarketplaceOptions: null,
   printMarketplaceTitleInput: null,
   printMarketplaceSummaryInput: null,
-  printMarketplaceTagsInput: null,
   cancelPrintBtn: null,
   confirmPrintBtn: null,
   // Clear document modal
@@ -182,9 +181,6 @@ export function initDom () {
   )
   dom.printMarketplaceSummaryInput = document.getElementById(
     'print-marketplace-summary-input'
-  )
-  dom.printMarketplaceTagsInput = document.getElementById(
-    'print-marketplace-tags-input'
   )
   dom.cancelPrintBtn = document.getElementById('cancel-print-btn')
   dom.confirmPrintBtn = document.getElementById('confirm-print-btn')
