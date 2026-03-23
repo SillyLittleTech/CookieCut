@@ -350,7 +350,9 @@ function normalizeImportedSettings (rawSettings) {
     fontApplyToTips: Boolean(source.fontApplyToTips),
     editorMode: source.editorMode === 'inline' ? 'inline' : 'classic',
     previewMode: source.previewMode === 'paged' ? 'paged' : 'continuous',
-    fileName: toStringOrFallback(source.fileName, '')
+    fileName: toStringOrFallback(source.fileName, ''),
+    hideTitle: Boolean(source.hideTitle),
+    hideDescription: Boolean(source.hideDescription)
   }
 }
 
@@ -1498,6 +1500,12 @@ function syncUiFromRecipeData () {
   if (dom.previewModeSelect) {
     dom.previewModeSelect.value = recipeData.settings.previewMode
   }
+  if (dom.hideTitleCheckbox) {
+    dom.hideTitleCheckbox.checked = Boolean(recipeData.settings.hideTitle)
+  }
+  if (dom.hideDescCheckbox) {
+    dom.hideDescCheckbox.checked = Boolean(recipeData.settings.hideDescription)
+  }
 
   dom.titlePreview.className = `font-style-${recipeData.settings.fontStyle}`
   setEditorMode(recipeData.settings.editorMode)
@@ -1610,7 +1618,9 @@ function toggleOldUIVisibility (hide) {
     dom.printBtn,
     dom.contentInputs,
     dom.titleInput,
-    dom.descInput
+    dom.descInput,
+    dom.hideTitleToggle,
+    dom.hideDescToggle
   ]
   // Also hide the labels for the title/description inputs
   const titleLabel = document.querySelector('label[for="recipe-title-input"]')
@@ -1901,6 +1911,24 @@ function handleUpdateMain (e) {
     e.target.value
 }
 
+function handleHideTitleChange () {
+  recipeData.settings.hideTitle = dom.hideTitleCheckbox
+    ? dom.hideTitleCheckbox.checked
+    : false
+  if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+}
+
+function handleHideDescChange () {
+  recipeData.settings.hideDescription = dom.hideDescCheckbox
+    ? dom.hideDescCheckbox.checked
+    : false
+  if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+}
+
 function handleLiveInput (e) {
   const itemEl = e.target.closest('[data-id]')
   if (!itemEl) return
@@ -2189,6 +2217,12 @@ function initializePreviewModeSetting () {
 function bindMainInfoListeners () {
   dom.titleInput.addEventListener('input', handleUpdateMain)
   dom.descInput.addEventListener('input', handleUpdateMain)
+  if (dom.hideTitleCheckbox) {
+    dom.hideTitleCheckbox.addEventListener('change', handleHideTitleChange)
+  }
+  if (dom.hideDescCheckbox) {
+    dom.hideDescCheckbox.addEventListener('change', handleHideDescChange)
+  }
 }
 
 function bindTopToolbarListeners () {
@@ -2429,6 +2463,81 @@ function bindFloatingAddButtonListeners () {
             menuEl.remove()
           }
           document.removeEventListener('click', handleFloatingAddOutsideClick)
+        }
+      )
+    }, 10)
+  })
+
+  dom.floatingAddBtn.addEventListener('contextmenu', (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const titleHidden = Boolean(recipeData.settings?.hideTitle)
+    const descHidden = Boolean(recipeData.settings?.hideDescription)
+    if (!titleHidden && !descHidden) return
+
+    let restoreMenu = document.getElementById('floating-restore-menu')
+    if (restoreMenu) {
+      restoreMenu.remove()
+      return
+    }
+    restoreMenu = document.createElement('div')
+    restoreMenu.id = 'floating-restore-menu'
+    restoreMenu.style.position = 'fixed'
+    restoreMenu.style.right = '96px'
+    restoreMenu.style.bottom = '24px'
+    restoreMenu.style.zIndex = 70
+    restoreMenu.style.background = 'white'
+    restoreMenu.style.padding = '8px'
+    restoreMenu.style.borderRadius = '8px'
+    restoreMenu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+
+    const makeRestoreBtn = (label, callback) => {
+      const buttonEl = document.createElement('button')
+      buttonEl.textContent = label
+      buttonEl.className = 'px-3 py-2 block w-full text-left'
+      buttonEl.addEventListener('click', () => {
+        callback()
+        restoreMenu.remove()
+      })
+      return buttonEl
+    }
+
+    if (titleHidden) {
+      restoreMenu.appendChild(
+        makeRestoreBtn('Show Title', () => {
+          recipeData.settings.hideTitle = false
+          import('./builders/inline.js').then(({ renderInlinePreview }) => {
+            renderInlinePreview()
+          })
+        })
+      )
+    }
+    if (descHidden) {
+      restoreMenu.appendChild(
+        makeRestoreBtn('Show Description', () => {
+          recipeData.settings.hideDescription = false
+          import('./builders/inline.js').then(({ renderInlinePreview }) => {
+            renderInlinePreview()
+          })
+        })
+      )
+    }
+
+    document.body.appendChild(restoreMenu)
+    setTimeout(() => {
+      document.addEventListener(
+        'click',
+        function handleRestoreMenuOutsideClick (ev) {
+          const menuEl = document.getElementById('floating-restore-menu')
+          if (
+            menuEl &&
+            !menuEl.contains(ev.target) &&
+            ev.target !== dom.floatingAddBtn
+          ) {
+            menuEl.remove()
+          }
+          document.removeEventListener('click', handleRestoreMenuOutsideClick)
         }
       )
     }, 10)

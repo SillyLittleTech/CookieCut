@@ -327,9 +327,11 @@ export function renderPreview () {
 
   dom.titlePreview.innerHTML = renderRichText(recipeData.title)
   dom.titlePreview.className = `font-style-${fontStyle}`
+  dom.titlePreview.classList.toggle('hidden', Boolean(recipeData.settings?.hideTitle))
 
   dom.descPreview.innerHTML = renderRichText(recipeData.description)
   dom.descPreview.className = descFontClass
+  dom.descPreview.classList.toggle('hidden', Boolean(recipeData.settings?.hideDescription))
   dom.contentPreview.innerHTML = ''
 
   const nodes = collectPreviewNodes(fontStyle)

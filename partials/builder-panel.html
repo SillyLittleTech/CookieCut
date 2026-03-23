@@ -67,11 +67,24 @@
   <!-- Basic Info -->
   <div class="space-y-4">
     <div>
-      <label
-        for="recipe-title-input"
-        class="block text-sm font-medium text-gray-700 mb-1"
-        >Recipe Title</label
-      >
+      <div class="flex items-center justify-between mb-1">
+        <label
+          for="recipe-title-input"
+          class="block text-sm font-medium text-gray-700"
+          >Recipe Title</label
+        >
+        <label
+          id="hide-title-toggle"
+          class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            id="hide-title-checkbox"
+            class="rounded border-gray-300"
+          />
+          Hide
+        </label>
+      </div>
       <input
         type="text"
         id="recipe-title-input"
@@ -80,11 +93,24 @@
       />
     </div>
     <div>
-      <label
-        for="recipe-desc-input"
-        class="block text-sm font-medium text-gray-700 mb-1"
-        >Description</label
-      >
+      <div class="flex items-center justify-between mb-1">
+        <label
+          for="recipe-desc-input"
+          class="block text-sm font-medium text-gray-700"
+          >Description</label
+        >
+        <label
+          id="hide-desc-toggle"
+          class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            id="hide-desc-checkbox"
+            class="rounded border-gray-300"
+          />
+          Hide
+        </label>
+      </div>
       <textarea
         id="recipe-desc-input"
         rows="3"
