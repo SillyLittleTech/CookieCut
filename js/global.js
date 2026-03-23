@@ -2469,13 +2469,12 @@ function bindFloatingAddButtonListeners () {
   })
 
   dom.floatingAddBtn.addEventListener('contextmenu', (event) => {
-    event.preventDefault()
-    event.stopPropagation()
-
     const titleHidden = Boolean(recipeData.settings?.hideTitle)
     const descHidden = Boolean(recipeData.settings?.hideDescription)
     if (!titleHidden && !descHidden) return
 
+    event.preventDefault()
+    event.stopPropagation()
     let restoreMenu = document.getElementById('floating-restore-menu')
     if (restoreMenu) {
       restoreMenu.remove()
