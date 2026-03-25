@@ -1550,6 +1550,12 @@ body {
   color: #111827;
 }
 
+html[data-theme='light'],
+body[data-theme='light'] {
+  background-color: #f9fafb !important;
+  color: #111827;
+}
+
 html.dark {
   background-color: #111827;
 }
@@ -1559,11 +1565,25 @@ html.dark {
   color: #f3f4f6;
 }
 
+html[data-theme='dark'],
+body[data-theme='dark'] {
+  background-color: #111827 !important;
+  color: #f3f4f6;
+}
+
 .template-gallery-shell {
   background-color: #ffffff;
 }
 
 .dark .template-gallery-shell {
+  background-color: #1f2937;
+}
+
+body[data-theme='light'] .template-gallery-shell {
+  background-color: #ffffff;
+}
+
+body[data-theme='dark'] .template-gallery-shell {
   background-color: #1f2937;
 }
 
