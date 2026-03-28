@@ -1224,6 +1224,14 @@
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
   min-height: 36px;
+  /* Full-bleed: extend to full viewport width */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  box-sizing: border-box;
 }
 
 .tab-item {
@@ -1531,4 +1539,399 @@
 }
 .swatch-p {
   background: #fbcfe8;
+}
+
+/* === Dark Mode Overrides === */
+
+/* Base: html + body background and text */
+html,
+body {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+html[data-theme="light"],
+body[data-theme="light"] {
+  background-color: #f9fafb !important;
+  color: #111827;
+}
+
+html.dark {
+  background-color: #111827;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html[data-theme="dark"],
+body[data-theme="dark"] {
+  background-color: #111827 !important;
+  color: #f3f4f6;
+}
+
+.template-gallery-shell {
+  background-color: #ffffff;
+}
+
+.dark .template-gallery-shell {
+  background-color: #1f2937;
+}
+
+body[data-theme="light"] .template-gallery-shell {
+  background-color: #ffffff;
+}
+
+body[data-theme="dark"] .template-gallery-shell {
+  background-color: #1f2937;
+}
+
+/* Builder panel — transparent (no box) in light and dark */
+.dark .builder-panel {
+  background: transparent;
+}
+
+/* Main form labels and helper text */
+.dark label,
+.dark .block.text-sm.font-medium,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-900 {
+  color: #d1d5db;
+}
+
+/* Title/desc inputs and general inputs in builder */
+.dark #recipe-title-input,
+.dark #recipe-desc-input {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+/* JS-generated content item cards */
+.dark #content-inputs > div {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark #content-inputs input,
+.dark #content-inputs textarea,
+.dark #content-inputs select {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.dark #content-inputs label,
+.dark #content-inputs .text-gray-700,
+.dark #content-inputs .text-gray-600,
+.dark #content-inputs .text-gray-500,
+.dark #content-inputs .text-gray-400 {
+  color: #9ca3af;
+}
+
+/* All modal inner boxes */
+.dark #toast-modal .relative,
+.dark #text-modal .relative,
+.dark #icon-key-modal .relative,
+.dark #settings-modal .relative,
+.dark #print-modal .relative,
+.dark #clear-doc-modal .relative,
+.dark #close-tab-modal .relative {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+/* Modal headings */
+.dark #toast-modal h3,
+.dark #text-modal h3,
+.dark #icon-key-modal h3,
+.dark #settings-modal h3,
+.dark #print-modal h3,
+.dark #clear-doc-modal h3,
+.dark #close-tab-modal h3 {
+  color: #f9fafb;
+}
+
+/* Modal body text */
+.dark #toast-modal p,
+.dark #text-modal p,
+.dark #icon-key-modal p,
+.dark #settings-modal p,
+.dark #settings-modal legend,
+.dark #print-modal p,
+.dark #clear-doc-modal p,
+.dark #close-tab-modal p {
+  color: #9ca3af;
+}
+
+/* Modal labels */
+.dark #toast-modal label,
+.dark #text-modal label,
+.dark #icon-key-modal label,
+.dark #settings-modal label,
+.dark #print-modal label,
+.dark #clear-doc-modal label,
+.dark #close-tab-modal label {
+  color: #d1d5db;
+}
+
+/* Modal inputs and selects */
+.dark #icon-search-input,
+.dark #global-font-style-select,
+.dark #editor-mode-select,
+.dark #preview-mode-select,
+.dark #print-file-name-input,
+.dark #print-marketplace-title-input,
+.dark #print-marketplace-summary-input {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+/* Modal cancel buttons */
+.dark #cancel-print-btn,
+.dark #cancel-clear-doc-btn,
+.dark #cancel-close-tab-btn {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+.dark #cancel-print-btn:hover,
+.dark #cancel-clear-doc-btn:hover,
+.dark #cancel-close-tab-btn:hover {
+  background: #4b5563;
+}
+
+/* Modal border separators */
+.dark .border-b.border-gray-200 {
+  border-color: #374151;
+}
+
+/* Text-type option buttons in modals */
+.dark #text-modal .bg-gray-50 {
+  background: #374151;
+  border-color: #6b7280;
+}
+
+.dark #text-modal .bg-gray-50:hover {
+  background: #4b5563;
+}
+
+.dark #text-modal .text-gray-700 {
+  color: #e5e7eb;
+}
+
+.dark #text-modal .text-gray-600 {
+  color: #9ca3af;
+}
+
+/* Icon key modal icon items */
+.dark .icon-key-item {
+  background: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
+
+.dark .icon-key-item:hover {
+  background: #374151;
+}
+
+/* Recipe preview panel */
+.dark .recipe-preview-content {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.dark .recipe-preview-content h1,
+.dark .recipe-preview-content h2,
+.dark .recipe-preview-content h3 {
+  color: #f9fafb;
+  border-color: #374151;
+}
+
+.dark .recipe-preview-content p,
+.dark .recipe-preview-content li {
+  color: #d1d5db;
+}
+
+/* Preview stats panel */
+.dark .preview-stats {
+  background: #1f2937;
+  color: #d1d5db;
+  border-color: #374151;
+}
+
+.dark .preview-stats-title {
+  color: #f3f4f6;
+  border-color: #374151;
+}
+
+.dark .preview-stats-row dt,
+.dark .preview-stats-row dd {
+  color: #9ca3af;
+}
+
+/* Template gallery panel */
+.dark #template-gallery-panel {
+  background: transparent;
+}
+
+.dark .template-slot-card {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .template-slot-card:hover {
+  border-color: #4b5563;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5);
+}
+
+.dark .template-slot-card h3,
+.dark .template-slot-card p {
+  color: #d1d5db;
+}
+
+.dark .template-slot-index {
+  color: #9ca3af;
+}
+
+.dark .template-slot-title {
+  color: #f3f4f6;
+}
+
+.dark .template-slot-subtitle {
+  color: #9ca3af;
+}
+
+.dark .template-slot-badge {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark .template-slot-empty {
+  border-color: #3b82f6;
+  background: linear-gradient(180deg, #1e3a8a22 0%, #1e40af22 100%);
+}
+
+.dark .template-slot-empty .template-slot-badge {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.dark .template-slot-action-add {
+  background: #1f2937;
+  color: #60a5fa;
+  border-color: #3b82f6;
+}
+
+.dark .template-slot-action-add:hover {
+  background: #1e3a8a;
+}
+
+/* Inline preview */
+.dark #inline-preview {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+/* Selection toolbar */
+.dark .selection-toolbar {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .selection-toolbar-btn {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.dark .selection-toolbar-btn:hover {
+  background: #4b5563;
+}
+
+/* Doc transfer status */
+.dark #doc-transfer-status {
+  color: #9ca3af;
+}
+
+/* Tab bar in dark mode */
+.dark .tabs-bar {
+  border-bottom-color: #374151;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.dark .tab-item {
+  color: #9ca3af;
+}
+
+.dark .tab-item:hover {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.dark .tab-item--active {
+  background: #111827;
+  color: #60a5fa;
+  border-color: #374151;
+  border-bottom-color: #111827;
+}
+
+.dark .tab-close-btn {
+  color: #6b7280;
+}
+
+.dark .tab-close-btn:hover {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.dark .tab-new-btn {
+  color: #6b7280;
+}
+
+.dark .tab-new-btn:hover {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark .tab-rename-input {
+  background: #1e3a8a;
+  color: #bfdbfe;
+  border-color: #3b82f6;
+}
+
+/* Tab context menu in dark mode */
+.dark .tab-ctx-menu {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .tab-ctx-item {
+  color: #e5e7eb;
+}
+
+.dark .tab-ctx-item:hover {
+  background: #374151;
+}
+
+.dark .tab-ctx-icon {
+  color: #9ca3af;
+}
+
+.dark .tab-ctx-divider {
+  background: #374151;
+}
+
+/* Print overrides — hide dark mode toggle */
+@media print {
+  #dark-mode-toggle {
+    display: none !important;
+  }
 }

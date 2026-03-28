@@ -1,56 +1,63 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CookieCut Builder</title>
 
     <!-- Configure Tailwind (must run before the CDN script loads) -->
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Lexend', 'Arial', 'sans-serif'],
-                        display: ['"Baloo 2"', 'cursive'],
-                        note: ['Kalam', 'cursive'],
-                        serif: ['Merriweather', 'serif']
-                    },
-                    animation: {
-                        'fade-in-down': 'fadeInDown 0.3s ease-out forwards',
-                        'fade-in': 'fadeIn 0.3s ease-out forwards',
-                    },
-                    keyframes: {
-                        fadeInDown: {
-                            '0%': { opacity: 0, transform: 'translateY(-10px)' },
-                            '100%': { opacity: 1, transform: 'translateY(0)' }
-                        },
-                        fadeIn: {
-                            '0%': { opacity: 0 },
-                            '100%': { opacity: 1 }
-                        }
-                    }
-                },
+      window.tailwind = window.tailwind || {};
+      window.tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Lexend", "Arial", "sans-serif"],
+              display: ['"Baloo 2"', "cursive"],
+              note: ["Kalam", "cursive"],
+              serif: ["Merriweather", "serif"],
             },
-        };
+            animation: {
+              "fade-in-down": "fadeInDown 0.3s ease-out forwards",
+              "fade-in": "fadeIn 0.3s ease-out forwards",
+            },
+            keyframes: {
+              fadeInDown: {
+                "0%": { opacity: 0, transform: "translateY(-10px)" },
+                "100%": { opacity: 1, transform: "translateY(0)" },
+              },
+              fadeIn: {
+                "0%": { opacity: 0 },
+                "100%": { opacity: 1 },
+              },
+            },
+          },
+        },
+      };
     </script>
 
     <!-- Tailwind CSS CDN (Play CDN supports dynamic class scanning) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Fonts: Baloo 2, Kalam, Lexend, Merriweather -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&family=Kalam:wght@400;700&family=Lexend:wght@400;700&family=Merriweather:wght@700&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
 
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-gray-50 font-sans">
-
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900 font-sans overflow-x-hidden">
     <!-- Main app layout container.
          Builder panel and preview panel partials are injected here by app.js. -->
     <div class="max-w-3xl mx-auto p-6" id="app-container"></div>
@@ -63,5 +70,5 @@
 
     <!-- Entry point: loads partials, wires DOM, and initialises the app -->
     <script type="module" src="app.js"></script>
-</body>
+  </body>
 </html>

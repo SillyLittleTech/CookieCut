@@ -2244,6 +2244,29 @@ function bindTopToolbarListeners () {
     })
     dom.importDocInput.addEventListener('change', handleImportDocumentChange)
   }
+  if (dom.darkModeToggle) {
+    const applyThemeMode = (isDark) => {
+      document.documentElement.classList.toggle('dark', isDark)
+      document.body.classList.toggle('dark', isDark)
+      document.documentElement.setAttribute(
+        'data-theme',
+        isDark ? 'dark' : 'light'
+      )
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light')
+      if (dom.darkModeIcon) {
+        dom.darkModeIcon.textContent = isDark ? 'light_mode' : 'dark_mode'
+      }
+    }
+
+    const savedDark = localStorage.getItem('cookiecut-dark-mode') === 'true'
+    applyThemeMode(savedDark)
+
+    dom.darkModeToggle.addEventListener('click', () => {
+      const isDark = !document.documentElement.classList.contains('dark')
+      applyThemeMode(isDark)
+      localStorage.setItem('cookiecut-dark-mode', String(isDark))
+    })
+  }
 }
 
 async function handleImportDocumentChange (event) {
