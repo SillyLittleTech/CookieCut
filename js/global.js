@@ -2056,7 +2056,7 @@ function renderIconList (filter = '') {
 
   if (filteredIcons.length === 0) {
     dom.iconListContainer.innerHTML =
-      '<p class="text-gray-500 italic">No icons found.</p>'
+      '<p class="icon-key-empty-state italic">No icons found.</p>'
     return
   }
 
@@ -2064,11 +2064,11 @@ function renderIconList (filter = '') {
     const code = `:${icon}:`
     const el = document.createElement('div')
     el.className =
-      'flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors duration-100'
+      'icon-key-item flex items-center gap-3 p-2 rounded-lg transition-colors duration-100'
     el.innerHTML = `
-            <span class="material-icons text-gray-700">${icon}</span>
-            <code class="text-sm text-gray-900 font-mono">${code}</code>
-            <button class="copy-icon-btn ml-auto text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-2 rounded-md transition-all duration-150 active:scale-95" data-code="${code}">Copy</button>
+            <span class="material-icons icon-key-item-icon">${icon}</span>
+            <code class="text-sm font-mono icon-key-item-code">${code}</code>
+            <button class="copy-icon-btn icon-key-copy-btn ml-auto text-xs font-medium py-1 px-2 rounded-md transition-all duration-150 active:scale-95" data-code="${code}">Copy</button>
         `
     dom.iconListContainer.appendChild(el)
   })
@@ -2447,11 +2447,11 @@ function bindFloatingAddButtonListeners () {
     }
     menu = document.createElement('div')
     menu.id = 'floating-add-menu'
+    menu.className = 'inline-floating-menu'
     menu.style.position = 'fixed'
     menu.style.right = '96px'
     menu.style.bottom = '24px'
     menu.style.zIndex = 70
-    menu.style.background = 'white'
     menu.style.padding = '8px'
     menu.style.borderRadius = '8px'
     menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
@@ -2459,7 +2459,8 @@ function bindFloatingAddButtonListeners () {
     const makeBtn = (label, callback) => {
       const buttonEl = document.createElement('button')
       buttonEl.textContent = label
-      buttonEl.className = 'px-3 py-2 block w-full text-left'
+      buttonEl.className =
+        'inline-floating-menu-btn px-3 py-2 block w-full text-left'
       buttonEl.addEventListener('click', () => {
         callback()
         menu.remove()
@@ -2505,11 +2506,11 @@ function bindFloatingAddButtonListeners () {
     }
     restoreMenu = document.createElement('div')
     restoreMenu.id = 'floating-restore-menu'
+    restoreMenu.className = 'inline-floating-menu'
     restoreMenu.style.position = 'fixed'
     restoreMenu.style.right = '96px'
     restoreMenu.style.bottom = '24px'
     restoreMenu.style.zIndex = 70
-    restoreMenu.style.background = 'white'
     restoreMenu.style.padding = '8px'
     restoreMenu.style.borderRadius = '8px'
     restoreMenu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
@@ -2517,7 +2518,8 @@ function bindFloatingAddButtonListeners () {
     const makeRestoreBtn = (label, callback) => {
       const buttonEl = document.createElement('button')
       buttonEl.textContent = label
-      buttonEl.className = 'px-3 py-2 block w-full text-left'
+      buttonEl.className =
+        'inline-floating-menu-btn px-3 py-2 block w-full text-left'
       buttonEl.addEventListener('click', () => {
         callback()
         restoreMenu.remove()

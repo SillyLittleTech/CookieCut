@@ -574,17 +574,17 @@ function openInlineDeleteConfirm (message = 'Remove this item?') {
     overlay.style.padding = '16px'
 
     const dialog = document.createElement('div')
-    dialog.style.background = 'white'
+    dialog.className = 'inline-delete-confirm-dialog'
     dialog.style.width = 'min(360px, calc(100vw - 32px))'
     dialog.style.borderRadius = '10px'
     dialog.style.boxShadow = '0 14px 30px rgba(0,0,0,0.18)'
     dialog.style.padding = '14px'
 
     const title = document.createElement('p')
+    title.className = 'inline-delete-confirm-title'
     title.textContent = message
     title.style.marginBottom = '12px'
     title.style.fontSize = '14px'
-    title.style.color = '#111827'
 
     const actions = document.createElement('div')
     actions.style.display = 'flex'
@@ -593,12 +593,12 @@ function openInlineDeleteConfirm (message = 'Remove this item?') {
 
     const cancelBtn = document.createElement('button')
     cancelBtn.textContent = 'Cancel'
-    cancelBtn.className = 'px-3 py-1 bg-gray-100 rounded'
+    cancelBtn.className = 'inline-overlay-btn inline-overlay-btn-cancel'
     cancelBtn.addEventListener('click', () => closeInlineDeleteConfirm(false))
 
     const removeBtn = document.createElement('button')
     removeBtn.textContent = 'Remove'
-    removeBtn.className = 'px-3 py-1 bg-red-600 text-white rounded'
+    removeBtn.className = 'inline-overlay-btn inline-overlay-btn-danger'
     removeBtn.addEventListener('click', () => closeInlineDeleteConfirm(true))
 
     actions.appendChild(cancelBtn)
@@ -679,7 +679,6 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   resizer.style.transform = 'translateX(-50%)'
   resizer.style.bottom = '20px'
   resizer.style.zIndex = 60
-  resizer.style.background = 'white'
   resizer.style.padding = '8px 12px'
   resizer.style.borderRadius = '8px'
   resizer.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
@@ -697,6 +696,7 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   input.value = initialSize
   input.style.width = '300px'
   const label = document.createElement('span')
+  label.className = 'image-resizer-size-label'
   label.textContent = `${initialSize}px`
   label.style.marginLeft = '10px'
   item.size = initialSize
@@ -719,10 +719,12 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
 
   // URL and alt inputs
   const urlLabel = document.createElement('label')
+  urlLabel.className = 'image-resizer-label'
   urlLabel.textContent = 'Image URL'
   urlLabel.style.display = 'block'
   urlLabel.style.marginTop = '8px'
   const urlInput = document.createElement('input')
+  urlInput.className = 'image-resizer-input'
   urlInput.type = 'url'
   urlInput.value = item.src || ''
   urlInput.placeholder = 'https://...'
@@ -731,10 +733,12 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   urlInput.style.marginTop = '4px'
 
   const altLabel = document.createElement('label')
+  altLabel.className = 'image-resizer-label'
   altLabel.textContent = 'Alt text'
   altLabel.style.display = 'block'
   altLabel.style.marginTop = '6px'
   const altInput = document.createElement('input')
+  altInput.className = 'image-resizer-input'
   altInput.type = 'text'
   altInput.value = item.alt || ''
   altInput.style.width = '420px'
@@ -742,17 +746,17 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   altInput.style.marginTop = '4px'
 
   const flowLabel = document.createElement('label')
+  flowLabel.className = 'image-resizer-label'
   flowLabel.textContent = 'Inline text flow'
   flowLabel.style.display = 'block'
   flowLabel.style.marginTop = '8px'
 
   const flowSelect = document.createElement('select')
+  flowSelect.className = 'image-resizer-input image-resizer-select'
   flowSelect.style.width = '420px'
   flowSelect.style.display = 'block'
   flowSelect.style.marginTop = '4px'
-  flowSelect.style.border = '1px solid #d1d5db'
-  flowSelect.style.borderRadius = '6px'
-  flowSelect.style.padding = '6px 8px';
+  flowSelect.style.padding = '6px 8px'
   [
     { value: 'around', label: 'Around text' },
     { value: 'over', label: 'Over text' },
@@ -767,7 +771,7 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
 
   const applyBtn = document.createElement('button')
   applyBtn.textContent = 'Apply'
-  applyBtn.className = 'ml-3 px-3 py-1 bg-blue-600 text-white rounded'
+  applyBtn.className = 'inline-overlay-btn inline-overlay-btn-primary ml-3'
   applyBtn.addEventListener('click', () => {
     const previousFlow = getInlineImageFlowMode(item)
     const nextFlow = normalizeInlineImageFlowMode(flowSelect.value)
@@ -820,7 +824,7 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
 
   const closeBtn = document.createElement('button')
   closeBtn.textContent = 'Done'
-  closeBtn.className = 'ml-3 px-3 py-1 bg-gray-100 rounded'
+  closeBtn.className = 'inline-overlay-btn inline-overlay-btn-cancel ml-3'
   closeBtn.addEventListener('click', closeImageResizer)
 
   resizer.appendChild(input)
@@ -853,25 +857,26 @@ export function openLinkEditor (item) {
   editor.style.transform = 'translateX(-50%)'
   editor.style.bottom = '20px'
   editor.style.zIndex = 61
-  editor.style.background = 'white'
   editor.style.padding = '12px'
   editor.style.borderRadius = '8px'
   editor.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
   editor.style.width = 'min(560px, calc(100vw - 32px))'
 
   const title = document.createElement('p')
+  title.className = 'inline-link-editor-title'
   title.textContent = 'Edit link'
   title.style.fontWeight = '700'
   title.style.marginBottom = '8px'
   title.style.fontSize = '14px'
 
   const textLabel = document.createElement('label')
+  textLabel.className = 'inline-link-editor-label'
   textLabel.textContent = 'Link text'
   textLabel.style.display = 'block'
   textLabel.style.fontSize = '12px'
-  textLabel.style.color = '#374151'
 
   const textInput = document.createElement('input')
+  textInput.className = 'inline-link-editor-input'
   textInput.type = 'text'
   textInput.value = item.content || ''
   textInput.placeholder = 'Link text'
@@ -880,12 +885,13 @@ export function openLinkEditor (item) {
   textInput.style.marginBottom = '8px'
 
   const hrefLabel = document.createElement('label')
+  hrefLabel.className = 'inline-link-editor-label'
   hrefLabel.textContent = 'URL'
   hrefLabel.style.display = 'block'
   hrefLabel.style.fontSize = '12px'
-  hrefLabel.style.color = '#374151'
 
   const hrefInput = document.createElement('input')
+  hrefInput.className = 'inline-link-editor-input'
   const hrefInputId = `link-editor-href-${++linkEditorInputIdCounter}`
   hrefInput.type = 'url'
   hrefInput.id = hrefInputId
@@ -903,12 +909,12 @@ export function openLinkEditor (item) {
 
   const cancelBtn = document.createElement('button')
   cancelBtn.textContent = 'Cancel'
-  cancelBtn.className = 'px-3 py-1 bg-gray-100 rounded'
+  cancelBtn.className = 'inline-overlay-btn inline-overlay-btn-cancel'
   cancelBtn.addEventListener('click', closeLinkEditor)
 
   const saveBtn = document.createElement('button')
   saveBtn.textContent = 'Save'
-  saveBtn.className = 'px-3 py-1 bg-blue-600 text-white rounded'
+  saveBtn.className = 'inline-overlay-btn inline-overlay-btn-primary'
   saveBtn.addEventListener('click', () => {
     saveLinkAndRerender(item, textInput.value, hrefInput.value)
   })
