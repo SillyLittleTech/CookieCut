@@ -185,7 +185,9 @@ export function initDom () {
   dom.fontApplyTipsCheckbox = document.getElementById(
     'font-apply-tips-checkbox'
   )
-  dom.showHtmlToolsCheckbox = document.getElementById('show-html-tools-checkbox')
+  dom.showHtmlToolsCheckbox = document.getElementById(
+    'show-html-tools-checkbox'
+  )
   dom.editorModeSelect = document.getElementById('editor-mode-select')
   dom.previewModeSelect = document.getElementById('preview-mode-select')
   // Print Modal

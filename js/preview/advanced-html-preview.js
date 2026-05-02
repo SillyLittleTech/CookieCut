@@ -148,7 +148,9 @@ export async function openAdvancedHtmlPreview (
   // Write immediately (keeps Safari happy and avoids blank tabs on async work).
   try {
     win.document.open()
-    win.document.write('<!doctype html><title>Loading…</title><p style="font-family: ui-sans-serif, system-ui; padding: 16px;">Loading preview…</p>')
+    win.document.write(
+      '<!doctype html><title>Loading…</title><p style="font-family: ui-sans-serif, system-ui; padding: 16px;">Loading preview…</p>'
+    )
     win.document.close()
   } catch {
     // ignore
@@ -171,29 +173,30 @@ export async function openAdvancedHtmlPreview (
     wrapper.className =
       'recipe-preview-content container mx-auto bg-white p-6 md:p-12 rounded-lg shadow-lg'
 
-  const warning = doc.createElement('div')
-  warning.style.padding = '10px 12px'
-  warning.style.marginBottom = '16px'
-  warning.style.borderRadius = '8px'
-  warning.style.border = '1px solid #f59e0b'
-  warning.style.background = '#fffbeb'
-  warning.style.color = '#92400e'
-  warning.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif'
-  warning.style.fontSize = '13px'
-  warning.textContent =
-    'CookieCut Advanced HTML Preview: this page can run scripts embedded in the document. Only preview content you trust.'
-  wrapper.appendChild(warning)
+    const warning = doc.createElement('div')
+    warning.style.padding = '10px 12px'
+    warning.style.marginBottom = '16px'
+    warning.style.borderRadius = '8px'
+    warning.style.border = '1px solid #f59e0b'
+    warning.style.background = '#fffbeb'
+    warning.style.color = '#92400e'
+    warning.style.fontFamily =
+      'ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif'
+    warning.style.fontSize = '13px'
+    warning.textContent =
+      'CookieCut Advanced HTML Preview: this page can run scripts embedded in the document. Only preview content you trust.'
+    wrapper.appendChild(warning)
 
-  const titleEl = doc.createElement('h1')
-  titleEl.className = `font-style-${fontStyle}`
-  titleEl.innerHTML = renderRichText(data.title || '')
-  if (data?.settings?.hideTitle) titleEl.style.display = 'none'
-  wrapper.appendChild(titleEl)
+    const titleEl = doc.createElement('h1')
+    titleEl.className = `font-style-${fontStyle}`
+    titleEl.innerHTML = renderRichText(data.title || '')
+    if (data?.settings?.hideTitle) titleEl.style.display = 'none'
+    wrapper.appendChild(titleEl)
 
-  const descEl = doc.createElement('p')
-  descEl.innerHTML = renderRichText(data.description || '')
-  if (data?.settings?.hideDescription) descEl.style.display = 'none'
-  wrapper.appendChild(descEl)
+    const descEl = doc.createElement('p')
+    descEl.innerHTML = renderRichText(data.description || '')
+    if (data?.settings?.hideDescription) descEl.style.display = 'none'
+    wrapper.appendChild(descEl)
 
     const contentRoot = doc.createElement('div')
     const { nodes, scriptsToRun } = collectPreviewNodesAdvanced(
@@ -204,9 +207,9 @@ export async function openAdvancedHtmlPreview (
     nodes.forEach((node) => contentRoot.appendChild(node))
     wrapper.appendChild(contentRoot)
 
-  const scriptsHtml = scriptsToRun.length
-    ? `\n<!-- Codescript blocks -->\n${scriptsToRun.join('\n\n')}\n`
-    : ''
+    const scriptsHtml = scriptsToRun.length
+      ? `\n<!-- Codescript blocks -->\n${scriptsToRun.join('\n\n')}\n`
+      : ''
 
     const html = `<!doctype html>
 <html lang="en">
@@ -253,4 +256,3 @@ export async function openAdvancedHtmlPreview (
     }
   }
 }
-

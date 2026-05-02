@@ -2715,11 +2715,11 @@ body[data-theme="light"] .template-gallery-shell h2 {
 }
 
 /* Settings modal toggle styling (HTML tools) */
-#show-html-tools-checkbox:checked + span[data-role='toggle-track'] {
+#show-html-tools-checkbox:checked + span[data-role="toggle-track"] {
   background: #4f46e5;
 }
 #show-html-tools-checkbox:checked
-  + span[data-role='toggle-track']
-  + span[data-role='toggle-thumb'] {
+  + span[data-role="toggle-track"]
+  + span[data-role="toggle-thumb"] {
   transform: translateX(20px);
 }

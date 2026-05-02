@@ -73,9 +73,7 @@ export function renderBuilderInputs () {
 
   const getCodeViewBuilderInput = (item) => {
     const targetKey = isHtmlOnlyType(item.type) ? 'htmlOverride' : 'content'
-    const label = isHtmlOnlyType(item.type)
-      ? 'HTML override'
-      : 'HTML source'
+    const label = isHtmlOnlyType(item.type) ? 'HTML override' : 'HTML source'
     const placeholder = isHtmlOnlyType(item.type)
       ? '<div>Custom HTML for this element…</div>'
       : '<div>Custom HTML for this item…</div>'
@@ -88,9 +86,11 @@ export function renderBuilderInputs () {
             placeholder
           )}">${value}</textarea>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            ${isHtmlOnlyType(item.type)
-              ? 'Overrides the rendered HTML for this element.'
-              : 'Edits this item as HTML (enables the HTML toggle automatically when used).'}
+            ${
+              isHtmlOnlyType(item.type)
+                ? 'Overrides the rendered HTML for this element.'
+                : 'Edits this item as HTML (enables the HTML toggle automatically when used).'
+            }
           </p>
         </div>
       `
@@ -114,87 +114,89 @@ export function renderBuilderInputs () {
       const result = getCodeViewBuilderInput(item)
       itemLabel = result.label
       inputHtml = result.inputHtml
-    } else switch (item.type) {
-      case 'heading': {
-        const result = getHeadingBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
+    } else {
+      switch (item.type) {
+        case 'heading': {
+          const result = getHeadingBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'step': {
+          const result = getStepBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'bullet': {
+          const result = getBulletBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'text': {
+          const result = getTextBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'image': {
+          const result = getImageBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'bubble': {
+          const result = getBubbleBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'link': {
+          const result = getLinkBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'button': {
+          const result = getButtonBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'navmenu': {
+          const result = getNavmenuBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'dropdown': {
+          const result = getDropdownBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'frame': {
+          const result = getFrameBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'codescript': {
+          const result = getCodescriptBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        case 'spacer': {
+          const result = getSpacerBuilderInput(item)
+          itemLabel = result.label
+          inputHtml = result.inputHtml
+          break
+        }
+        default:
+          break
       }
-      case 'step': {
-        const result = getStepBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'bullet': {
-        const result = getBulletBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'text': {
-        const result = getTextBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'image': {
-        const result = getImageBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'bubble': {
-        const result = getBubbleBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'link': {
-        const result = getLinkBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'button': {
-        const result = getButtonBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'navmenu': {
-        const result = getNavmenuBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'dropdown': {
-        const result = getDropdownBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'frame': {
-        const result = getFrameBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'codescript': {
-        const result = getCodescriptBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      case 'spacer': {
-        const result = getSpacerBuilderInput(item)
-        itemLabel = result.label
-        inputHtml = result.inputHtml
-        break
-      }
-      default:
-        break
     }
 
     const isFirst = index === 0
@@ -204,7 +206,9 @@ export function renderBuilderInputs () {
     const htmlEnabled = Boolean(item.htmlEnabled)
     const htmlToggleEligible =
       htmlToolsEnabled &&
-      !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)
+      !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(
+        item.type
+      )
     const htmlToggleBtn = htmlToggleEligible
       ? `<button type="button" class="html-code-toggle-btn item-btn${htmlEnabled ? ' active' : ''}" title="Toggle HTML editing for this item">{}</button>`
       : ''

@@ -1598,7 +1598,9 @@ function syncUiFromRecipeData () {
     dom.editorModeSelect.value = recipeData.settings.editorMode
   }
   if (dom.showHtmlToolsCheckbox) {
-    dom.showHtmlToolsCheckbox.checked = Boolean(recipeData.settings.showHtmlTools)
+    dom.showHtmlToolsCheckbox.checked = Boolean(
+      recipeData.settings.showHtmlTools
+    )
   }
   if (dom.previewModeSelect) {
     dom.previewModeSelect.value = recipeData.settings.previewMode
@@ -1694,7 +1696,9 @@ export function addItem (type, subtype = null) {
       // Navigation should always be first in document order.
       recipeData.items.unshift(newItem)
       renderBuilderInputs()
-      const newEl = dom.contentInputs.querySelector(`[data-id="${newItem.id}"]`)
+      const newEl = dom.contentInputs.querySelector(
+        `[data-id="${newItem.id}"]`
+      )
       if (newEl) {
         const input = newEl.querySelector('input, textarea')
         if (input) input.focus()
@@ -2231,7 +2235,12 @@ function handleContentInputClick (e) {
       if (mode === 'code') item.codeView = true
       else if (mode === 'form') item.codeView = false
       else item.codeView = !item.codeView
-      if (item.codeView && !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)) {
+      if (
+        item.codeView &&
+        !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(
+          item.type
+        )
+      ) {
         item.htmlEnabled = true
       }
     }
@@ -2365,7 +2374,9 @@ function openSettingsModal () {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
   if (dom.showHtmlToolsCheckbox) {
-    dom.showHtmlToolsCheckbox.checked = Boolean(recipeData.settings.showHtmlTools)
+    dom.showHtmlToolsCheckbox.checked = Boolean(
+      recipeData.settings.showHtmlTools
+    )
   }
   if (dom.previewModeSelect) {
     dom.previewModeSelect.value =
@@ -2418,7 +2429,7 @@ function handleShowHtmlToolsChange () {
     if (htmlTextOptions) {
       htmlTextOptions.classList.toggle(
         'hidden',
-        !Boolean(recipeData.settings.showHtmlTools)
+        !recipeData.settings.showHtmlTools
       )
     }
   }
@@ -2669,7 +2680,10 @@ function bindSettingsModalListeners () {
     dom.fontApplyTipsCheckbox.addEventListener('change', handleFontScopeChange)
   }
   if (dom.showHtmlToolsCheckbox) {
-    dom.showHtmlToolsCheckbox.addEventListener('change', handleShowHtmlToolsChange)
+    dom.showHtmlToolsCheckbox.addEventListener(
+      'change',
+      handleShowHtmlToolsChange
+    )
   }
 }
 
@@ -2886,7 +2900,9 @@ function bindFloatingAddButtonListeners () {
       )
     }
     spacerSub.appendChild(
-      makeIconBtn('dashboard', 'Container', () => addItem('spacer', 'container'))
+      makeIconBtn('dashboard', 'Container', () =>
+        addItem('spacer', 'container')
+      )
     )
 
     spacerRow.appendChild(spacerToggle)
@@ -3021,7 +3037,9 @@ function bindCoreEditorListeners () {
   if (dom.htmlPreviewBtn) {
     dom.htmlPreviewBtn.addEventListener('click', () => {
       import('./preview/advanced-html-preview.js')
-        .then(({ openAdvancedHtmlPreview }) => openAdvancedHtmlPreview(recipeData))
+        .then(({ openAdvancedHtmlPreview }) =>
+          openAdvancedHtmlPreview(recipeData)
+        )
         .catch((err) => {
           console.error('Failed to open HTML preview:', err)
           showDocumentTransferMessage('Failed to open HTML preview.', true)

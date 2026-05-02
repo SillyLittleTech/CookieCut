@@ -71,7 +71,8 @@ function openInlineContextMenu ({ x, y, title = '', actions = [] }) {
   if (title) {
     const header = document.createElement('div')
     header.textContent = title
-    header.className = 'text-xs font-semibold text-gray-600 dark:text-gray-300 px-2 py-1'
+    header.className =
+      'text-xs font-semibold text-gray-600 dark:text-gray-300 px-2 py-1'
     menu.appendChild(header)
   }
 
@@ -357,7 +358,8 @@ function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
               520,
               Math.round(label.length * approxCharPx + basePaddingPx)
             )
-          ) * (clampedScale / 100)
+          ) *
+          (clampedScale / 100)
         sizeTargetEl.style.width = `${Math.round(baseWidth)}px`
         sizeTargetEl.style.flex = '0 0 auto'
       } else {
@@ -1168,7 +1170,10 @@ function openInlineHtmlSourceEditor (
         .split(',')
         .map((o) => o.trim())
         .filter(Boolean)
-        .map((o) => `<option>${o.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</option>`)
+        .map(
+          (o) =>
+            `<option>${o.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</option>`
+        )
         .join('\n')
       textarea.value = `<label>${(item.content || '')
         .replaceAll('&', '&amp;')
@@ -1302,8 +1307,8 @@ function openInlineHtmlElementEditor (item) {
     hrefInput.value = item.href || ''
     editor.appendChild(hrefInput)
     editor.appendChild(makeLabel('Style'))
-    const styleSelect = makeSelect()
-    ;[
+    const styleSelect = makeSelect();
+    [
       { value: 'primary', label: 'Primary' },
       { value: 'secondary', label: 'Secondary' },
       { value: 'danger', label: 'Danger' },
@@ -1434,14 +1439,21 @@ function reorderItems (dragId, targetId) {
 function canToggleHtmlForItem (item) {
   if (!item || typeof item !== 'object') return false
   if (!isHtmlToolsEnabled()) return false
-  if (['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)) {
+  if (
+    ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)
+  ) {
     return false
   }
   return typeof item.content === 'string'
 }
 
 function isInlineHtmlElement (item) {
-  return Boolean(item && ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type))
+  return Boolean(
+    item &&
+    ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(
+      item.type
+    )
+  )
 }
 
 function getInlineContentHtml (item) {
@@ -1574,7 +1586,11 @@ function buildInlineStandardElement ({
       break
     }
     case 'button': {
-      if (isHtmlToolsEnabled() && typeof item.htmlOverride === 'string' && item.htmlOverride.trim()) {
+      if (
+        isHtmlToolsEnabled() &&
+        typeof item.htmlOverride === 'string' &&
+        item.htmlOverride.trim()
+      ) {
         renderedElement = document.createElement('div')
         renderedElement.className = 'recipe-text-block'
         renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
@@ -1594,7 +1610,11 @@ function buildInlineStandardElement ({
       break
     }
     case 'navmenu': {
-      if (isHtmlToolsEnabled() && typeof item.htmlOverride === 'string' && item.htmlOverride.trim()) {
+      if (
+        isHtmlToolsEnabled() &&
+        typeof item.htmlOverride === 'string' &&
+        item.htmlOverride.trim()
+      ) {
         renderedElement = document.createElement('div')
         renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
       } else {
@@ -1603,7 +1623,11 @@ function buildInlineStandardElement ({
       break
     }
     case 'dropdown': {
-      if (isHtmlToolsEnabled() && typeof item.htmlOverride === 'string' && item.htmlOverride.trim()) {
+      if (
+        isHtmlToolsEnabled() &&
+        typeof item.htmlOverride === 'string' &&
+        item.htmlOverride.trim()
+      ) {
         renderedElement = document.createElement('div')
         renderedElement.className = 'recipe-text-block'
         renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
@@ -1614,7 +1638,11 @@ function buildInlineStandardElement ({
       break
     }
     case 'frame': {
-      if (isHtmlToolsEnabled() && typeof item.htmlOverride === 'string' && item.htmlOverride.trim()) {
+      if (
+        isHtmlToolsEnabled() &&
+        typeof item.htmlOverride === 'string' &&
+        item.htmlOverride.trim()
+      ) {
         renderedElement = document.createElement('div')
         renderedElement.className = 'recipe-text-block'
         renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
@@ -2147,23 +2175,28 @@ export function renderInlinePreview () {
       actions: [
         {
           label: 'Add Button',
-          onClick: () => import('../global.js').then(({ addItem }) => addItem('button'))
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('button'))
         },
         {
           label: 'Add Navigation',
-          onClick: () => import('../global.js').then(({ addItem }) => addItem('navmenu'))
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('navmenu'))
         },
         {
           label: 'Add Dropdown',
-          onClick: () => import('../global.js').then(({ addItem }) => addItem('dropdown'))
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('dropdown'))
         },
         {
           label: 'Add Frame',
-          onClick: () => import('../global.js').then(({ addItem }) => addItem('frame'))
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('frame'))
         },
         {
           label: 'Add Code script',
-          onClick: () => import('../global.js').then(({ addItem }) => addItem('codescript'))
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('codescript'))
         }
       ]
     })

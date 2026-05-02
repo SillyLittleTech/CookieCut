@@ -405,10 +405,33 @@ export function getDocumentTextStats (recipeData) {
 }
 
 const JS_PROTOCOL = String.fromCharCode(
-  106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 58
+  106,
+  97,
+  118,
+  97,
+  115,
+  99,
+  114,
+  105,
+  112,
+  116,
+  58
 )
 const DATA_TEXT_HTML_PREFIX = String.fromCharCode(
-  100, 97, 116, 97, 58, 116, 101, 120, 116, 47, 104, 116, 109, 108
+  100,
+  97,
+  116,
+  97,
+  58,
+  116,
+  101,
+  120,
+  116,
+  47,
+  104,
+  116,
+  109,
+  108
 )
 
 /**
@@ -421,7 +444,10 @@ function shouldStripUrlAttrValue (rawValue) {
   const trimmed = (rawValue || '').trim()
   if (!trimmed) return false
   const lower = trimmed.toLowerCase()
-  if (lower.startsWith(JS_PROTOCOL) || lower.startsWith(DATA_TEXT_HTML_PREFIX)) {
+  if (
+    lower.startsWith(JS_PROTOCOL) ||
+    lower.startsWith(DATA_TEXT_HTML_PREFIX)
+  ) {
     return true
   }
   try {
