@@ -1209,20 +1209,20 @@
   margin-bottom: 0;
 }
 
-/* Spacer item — visible dashed outline in the editor */
-.inline-spacer {
+/* Spacer variants (inline editor) */
+#inline-preview .inline-spacer--blank {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px dashed rgba(99, 102, 241, 0.3);
   border-radius: 6px;
-  min-height: 20px;
+  min-height: 4px;
   box-sizing: border-box;
   transition: border-color 0.15s ease;
   pointer-events: none;
 }
-.inline-spacer::after {
+#inline-preview .inline-spacer--blank::after {
   content: "spacer";
   font-size: 0.7rem;
   letter-spacing: 0.06em;
@@ -1230,11 +1230,100 @@
   color: rgba(99, 102, 241, 0.4);
   pointer-events: none;
 }
-.inline-item:hover .inline-spacer {
+#inline-preview .inline-item:hover .inline-spacer--blank {
   border-color: rgba(99, 102, 241, 0.6);
 }
-.inline-item:hover .inline-spacer::after {
+#inline-preview .inline-item:hover .inline-spacer--blank::after {
   color: rgba(99, 102, 241, 0.75);
+}
+
+#inline-preview .inline-spacer--line {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+#inline-preview .inline-spacer-hr {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 2px solid rgba(99, 102, 241, 0.45);
+}
+
+#inline-preview .inline-spacer--page {
+  width: 100%;
+  min-height: 1px;
+  break-before: column;
+  page-break-before: always;
+  pointer-events: none;
+}
+
+#inline-preview .inline-container-surface {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px dashed rgba(148, 163, 184, 0.55);
+  box-sizing: border-box;
+  background: rgba(248, 250, 252, 0.65);
+}
+#inline-preview .inline-container-surface--flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 0.65rem;
+}
+#inline-preview .inline-container-surface--grid {
+  display: grid;
+  grid-template-columns: repeat(var(--inline-container-cols, 2), minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: start;
+}
+#inline-preview .inline-container-surface.drop-target {
+  outline: 2px solid rgba(79, 70, 229, 0.35);
+  background: rgba(238, 242, 255, 0.85);
+}
+
+/* Classic recipe preview: spacer variants */
+.recipe-spacer-page-break {
+  break-before: column;
+  page-break-before: always;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.recipe-spacer-container {
+  width: 100%;
+  margin: 0.75rem 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.recipe-spacer-line-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.recipe-spacer-hr {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 2px solid #cbd5e1;
+}
+
+.recipe-spacer-blank {
+  display: block;
+  width: 100%;
 }
 
 /* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only
@@ -1304,10 +1393,10 @@
     outline: none !important;
     padding: 0 !important;
   }
-  .inline-spacer {
+  #inline-preview .inline-spacer--blank {
     border: none !important;
   }
-  .inline-spacer::after {
+  #inline-preview .inline-spacer--blank::after {
     display: none !important;
   }
   #floating-add-btn,
@@ -2060,20 +2149,38 @@ body[data-theme="light"] .preview-stats {
   color: #e5e7eb;
 }
 
-.dark .inline-spacer {
+.dark #inline-preview .inline-spacer--blank {
   border-color: rgba(129, 140, 248, 0.3);
 }
 
-.dark .inline-spacer::after {
+.dark #inline-preview .inline-spacer--blank::after {
   color: rgba(129, 140, 248, 0.4);
 }
 
-.dark .inline-item:hover .inline-spacer {
+.dark #inline-preview .inline-item:hover .inline-spacer--blank {
   border-color: rgba(129, 140, 248, 0.6);
 }
 
-.dark .inline-item:hover .inline-spacer::after {
+.dark #inline-preview .inline-item:hover .inline-spacer--blank::after {
   color: rgba(129, 140, 248, 0.75);
+}
+
+.dark #inline-preview .inline-spacer-hr {
+  border-top-color: rgba(129, 140, 248, 0.55);
+}
+
+.dark #inline-preview .inline-container-surface {
+  border-color: rgba(100, 116, 139, 0.55);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.dark .recipe-spacer-container {
+  border-color: #374151;
+  background: #111827;
+}
+
+.dark .recipe-spacer-hr {
+  border-top-color: #4b5563;
 }
 
 .dark #inline-preview.inline-paged-preview-active .inline-preview-canvas {

@@ -151,29 +151,32 @@ export function renderBuilderInputs () {
   }
 }
 
+function hasValidParentItem (item) {
+  if (item.parentId == null || item.parentId === '') return false
+  return recipeData.items.some(
+    (p) => String(p.id) === String(item.parentId)
+  )
+}
+
+function getChildItemsInDocumentOrder (parentId) {
+  return recipeData.items
+    .map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => String(it.parentId) === String(parentId))
+    .sort((a, b) => a.idx - b.idx)
+    .map(({ it }) => it)
+}
+
 /**
- * Re-draws the entire recipe preview based on recipeData.
+ * Build preview DOM nodes for a linear sequence of items (used for root and
+ * inside spacer containers). Mutates list-grouping state via closure.
  */
-function collectPreviewNodes (fontStyle) {
+function collectPreviewNodesFromItems (items, fontStyle) {
   const nodes = []
   let currentList = null
   let currentListType = null
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
 
-  // Ensure the description preview reflects the current font style setting.
-  if (dom?.descPreview) {
-    // Remove any existing font-style-* classes from the description.
-    Array.from(dom.descPreview.classList).forEach((cls) => {
-      if (cls.startsWith('font-style-')) {
-        dom.descPreview.classList.remove(cls)
-      }
-    })
-    // Apply the current font style if the setting is enabled.
-    if (applyToText && fontStyle) {
-      dom.descPreview.classList.add(`font-style-${fontStyle}`)
-    }
-  }
   const flushCurrentList = () => {
     if (!currentList) return
     nodes.push(currentList)
@@ -181,7 +184,7 @@ function collectPreviewNodes (fontStyle) {
     currentListType = null
   }
 
-  recipeData.items.forEach((item) => {
+  items.forEach((item) => {
     const isListItem = item.type === 'step' || item.type === 'bullet'
 
     if ((!isListItem || currentListType !== item.type) && currentList) {
@@ -253,6 +256,13 @@ function collectPreviewNodes (fontStyle) {
       }
       case 'spacer': {
         const el = renderSpacerPreviewElement(item)
+        const variant = item.variant || 'blank'
+        if (variant === 'container') {
+          const kids = getChildItemsInDocumentOrder(item.id)
+          collectPreviewNodesFromItems(kids, fontStyle).forEach((childNode) => {
+            el.appendChild(childNode)
+          })
+        }
         nodes.push(el)
         break
       }
@@ -266,6 +276,27 @@ function collectPreviewNodes (fontStyle) {
   }
 
   return nodes
+}
+
+/**
+ * Re-draws the entire recipe preview based on recipeData.
+ */
+function collectPreviewNodes (fontStyle) {
+  // Ensure the description preview reflects the current font style setting.
+  const applyToText = Boolean(recipeData.settings.fontApplyToText)
+  if (dom?.descPreview) {
+    Array.from(dom.descPreview.classList).forEach((cls) => {
+      if (cls.startsWith('font-style-')) {
+        dom.descPreview.classList.remove(cls)
+      }
+    })
+    if (applyToText && fontStyle) {
+      dom.descPreview.classList.add(`font-style-${fontStyle}`)
+    }
+  }
+
+  const topLevel = recipeData.items.filter((it) => !hasValidParentItem(it))
+  return collectPreviewNodesFromItems(topLevel, fontStyle)
 }
 
 function getPagedPageCount () {

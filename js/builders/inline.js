@@ -958,6 +958,7 @@ function reorderItems (dragId, targetId) {
   )
   if (dragIndex === -1) return
   const [dragItem] = recipeData.items.splice(dragIndex, 1)
+  delete dragItem.parentId
   // find current index of target (after removal)
   const newTargetIndex = recipeData.items.findIndex(
     (i) => String(i.id) === String(targetId)
@@ -967,6 +968,55 @@ function reorderItems (dragId, targetId) {
   } else {
     recipeData.items.splice(newTargetIndex, 0, dragItem)
   }
+}
+
+function hasValidParentInRecipe (item) {
+  if (item.parentId == null || item.parentId === '') return false
+  return recipeData.items.some(
+    (p) => String(p.id) === String(item.parentId)
+  )
+}
+
+function getChildItemsInDocumentOrder (parentId) {
+  return recipeData.items
+    .map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => String(it.parentId) === String(parentId))
+    .sort((a, b) => a.idx - b.idx)
+    .map(({ it }) => it)
+}
+
+function assignItemToContainer (dragId, containerId) {
+  if (String(dragId) === String(containerId)) return
+  const dragItem = recipeData.items.find((i) => String(i.id) === String(dragId))
+  const containerItem = recipeData.items.find(
+    (i) => String(i.id) === String(containerId)
+  )
+  if (!dragItem || !containerItem) return
+  if (
+    containerItem.type !== 'spacer' ||
+    (containerItem.variant || 'blank') !== 'container'
+  ) {
+    return
+  }
+  if (dragItem.type === 'spacer' && (dragItem.variant || 'blank') === 'container') {
+    return
+  }
+  const dragIndex = recipeData.items.findIndex(
+    (i) => String(i.id) === String(dragId)
+  )
+  if (dragIndex === -1) return
+  const [moved] = recipeData.items.splice(dragIndex, 1)
+  moved.parentId = containerId
+  const containerIdx = recipeData.items.findIndex(
+    (i) => String(i.id) === String(containerId)
+  )
+  let insertAt = containerIdx + 1
+  for (let i = containerIdx + 1; i < recipeData.items.length; i += 1) {
+    if (String(recipeData.items[i].parentId) === String(containerId)) {
+      insertAt = i + 1
+    }
+  }
+  recipeData.items.splice(insertAt, 0, moved)
 }
 
 function buildInlineStandardElement ({
@@ -1268,11 +1318,6 @@ export function renderInlinePreview () {
     contentRoot.appendChild(descriptionParagraph)
   }
 
-  // Content (wrap in draggable inline-item wrappers; support dblclick removal and drag/drop reordering)
-  let currentList = null
-  let currentListType = null
-  let stepCounter = 0
-
   const rerenderAllEditors = () => {
     import('./classic.js').then(({ renderBuilderInputs }) => {
       renderBuilderInputs()
@@ -1284,8 +1329,12 @@ export function renderInlinePreview () {
     node.addEventListener('dblclick', async (ev) => {
       ev.stopPropagation()
       if (await openInlineDeleteConfirm('Remove this item?')) {
+        const sid = String(itemId)
+        recipeData.items.forEach((entry) => {
+          if (String(entry.parentId) === sid) delete entry.parentId
+        })
         recipeData.items = recipeData.items.filter(
-          (i) => String(i.id) !== String(itemId)
+          (i) => String(i.id) !== sid
         )
         rerenderAllEditors()
       }
@@ -1301,9 +1350,13 @@ export function renderInlinePreview () {
     })
     node.addEventListener('dragend', () => {
       node.classList.remove('dragging')
-      contentRoot
-        .querySelectorAll('.inline-item.drop-target')
-        .forEach((n) => n.classList.remove('drop-target'))
+      if (dom.inlinePreview) {
+        dom.inlinePreview
+          .querySelectorAll(
+            '.inline-item.drop-target, .inline-container-surface.drop-target'
+          )
+          .forEach((n) => n.classList.remove('drop-target'))
+      }
     })
     node.addEventListener('dragover', (ev) => {
       ev.preventDefault()
@@ -1323,160 +1376,209 @@ export function renderInlinePreview () {
     })
   }
 
-  const ensureListContainer = (type) => {
-    if (currentList && currentListType === type) return currentList
+  const renderItemsInto = (rootEl, items) => {
+    let currentList = null
+    let currentListType = null
+    let stepCounter = 0
 
-    currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
-    currentList.className =
-      type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
-    currentList.classList.add('inline-layout-item')
-    currentListType = type
-    contentRoot.appendChild(currentList)
-    return currentList
-  }
+    const ensureListContainer = (type) => {
+      if (currentList && currentListType === type) return currentList
 
-  recipeData.items.forEach((item) => {
-    const contentWithIcons = renderRichText(item.content || '')
+      currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
+      currentList.className =
+        type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
+      currentList.classList.add('inline-layout-item')
+      currentListType = type
+      rootEl.appendChild(currentList)
+      return currentList
+    }
 
-    if (item.type === 'spacer') {
+    items.forEach((item) => {
+      const contentWithIcons = renderRichText(item.content || '')
+
+      if (item.type === 'spacer') {
+        currentList = null
+        currentListType = null
+        stepCounter = 0
+
+        const variant = item.variant || 'blank'
+        const spacerEl = renderInlineSpacerElement(item)
+        const wrapper = document.createElement('div')
+        wrapper.className = 'inline-item inline-full-span'
+        wrapper.dataset.id = item.id
+        wrapper.draggable = true
+        wrapper.appendChild(spacerEl)
+
+        if (variant === 'container') {
+          wrapper.classList.add('inline-item--container-host')
+          const surface = document.createElement('div')
+          surface.className = 'inline-container-surface'
+          const layout =
+            item.containerLayout === 'grid' ? 'grid' : 'flow'
+          surface.classList.add(
+            layout === 'grid'
+              ? 'inline-container-surface--grid'
+              : 'inline-container-surface--flow'
+          )
+          const cols = Math.min(
+            4,
+            Math.max(1, Math.round(Number(item.containerColumns)) || 2)
+          )
+          surface.style.setProperty('--inline-container-cols', String(cols))
+          surface.addEventListener('dblclick', (ev) => {
+            ev.stopPropagation()
+          })
+          surface.addEventListener('dragover', (ev) => {
+            ev.preventDefault()
+            ev.stopPropagation()
+            surface.classList.add('drop-target')
+          })
+          surface.addEventListener('dragleave', () => {
+            surface.classList.remove('drop-target')
+          })
+          surface.addEventListener('drop', (ev) => {
+            ev.preventDefault()
+            ev.stopPropagation()
+            surface.classList.remove('drop-target')
+            const dragId = ev.dataTransfer.getData('text/plain')
+            if (dragId) assignItemToContainer(dragId, item.id)
+            rerenderAllEditors()
+          })
+          renderItemsInto(surface, getChildItemsInDocumentOrder(item.id))
+          wrapper.appendChild(surface)
+        }
+
+        rootEl.appendChild(wrapper)
+        attachInlineItemInteractions(wrapper, item.id)
+        return
+      }
+
+      if (item.type === 'step' || item.type === 'bullet') {
+        const isStep = item.type === 'step'
+        if (isStep) {
+          if (currentListType !== 'step') stepCounter = 0
+          stepCounter += 1
+        }
+
+        const list = ensureListContainer(isStep ? 'step' : 'bullet')
+        const li = document.createElement('li')
+        li.className = 'inline-item inline-list-item'
+        li.dataset.id = item.id
+        li.draggable = true
+
+        const { badge, contentSpan } = isStep
+          ? renderInlineStepElement(
+            item,
+            fontStyle,
+            contentWithIcons,
+            stepCounter
+          )
+          : renderInlineBulletElement(item, fontStyle, contentWithIcons)
+        li.appendChild(badge)
+        if (applyToText) {
+          contentSpan.classList.add(`font-style-${fontStyle}`)
+        }
+        const contentWrap = document.createElement('div')
+        contentWrap.className = 'inline-list-content-wrap'
+        const contentFrame = document.createElement('div')
+        contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
+        contentFrame.appendChild(contentSpan)
+        contentWrap.appendChild(contentFrame)
+        contentWrap.appendChild(createScaleHandle(item, contentSpan))
+        syncInlineBoxSizing(item, contentWrap, contentFrame)
+        attachInlineBorderHandles(item, contentFrame, contentWrap)
+        li.appendChild(contentWrap)
+        list.appendChild(li)
+        attachInlineItemInteractions(li, item.id)
+        return
+      }
+
       currentList = null
       currentListType = null
       stepCounter = 0
 
-      const spacerEl = renderInlineSpacerElement(item)
-      const wrapper = document.createElement('div')
-      wrapper.className = 'inline-item inline-full-span'
-      wrapper.dataset.id = item.id
-      wrapper.draggable = true
-      wrapper.appendChild(spacerEl)
-      contentRoot.appendChild(wrapper)
-      attachInlineItemInteractions(wrapper, item.id)
-      return
-    }
-
-    if (item.type === 'step' || item.type === 'bullet') {
-      const isStep = item.type === 'step'
-      if (isStep) {
-        if (currentListType !== 'step') stepCounter = 0
-        stepCounter += 1
-      }
-
-      const list = ensureListContainer(isStep ? 'step' : 'bullet')
-      const li = document.createElement('li')
-      li.className = 'inline-item inline-list-item'
-      li.dataset.id = item.id
-      li.draggable = true
-
-      const { badge, contentSpan } = isStep
-        ? renderInlineStepElement(
+      {
+        const renderedElement = buildInlineStandardElement({
           item,
           fontStyle,
           contentWithIcons,
-          stepCounter
-        )
-        : renderInlineBulletElement(item, fontStyle, contentWithIcons)
-      li.appendChild(badge)
-      if (applyToText) {
-        contentSpan.classList.add(`font-style-${fontStyle}`)
-      }
-      const contentWrap = document.createElement('div')
-      contentWrap.className = 'inline-list-content-wrap'
-      const contentFrame = document.createElement('div')
-      contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
-      contentFrame.appendChild(contentSpan)
-      contentWrap.appendChild(contentFrame)
-      contentWrap.appendChild(createScaleHandle(item, contentSpan))
-      syncInlineBoxSizing(item, contentWrap, contentFrame)
-      attachInlineBorderHandles(item, contentFrame, contentWrap)
-      li.appendChild(contentWrap)
-      list.appendChild(li)
-      attachInlineItemInteractions(li, item.id)
-      return
-    }
-
-    currentList = null
-    currentListType = null
-    stepCounter = 0
-
-    {
-      const renderedElement = buildInlineStandardElement({
-        item,
-        fontStyle,
-        contentWithIcons,
-        applyToText,
-        applyToTips
-      })
-
-      if (!renderedElement) return
-
-      const wrapper = document.createElement('div')
-      wrapper.className = 'inline-item inline-layout-item'
-      wrapper.dataset.id = item.id
-      wrapper.draggable = true
-      const frame = document.createElement('div')
-      frame.className = 'inline-item-frame'
-      frame.appendChild(renderedElement)
-      wrapper.appendChild(frame)
-
-      // Add border-handle resizing for modular items (including images).
-      if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
-        if (item.type === 'image') {
-          const normalizedImageWidth = normalizeInlineBoxMeasurement(
-            item.inlineWidth || item.size,
-            INLINE_BOX_MIN_WIDTH,
-            INLINE_BOX_MAX_WIDTH
-          )
-          if (normalizedImageWidth) {
-            item.inlineWidth = normalizedImageWidth
-            item.size = normalizedImageWidth
-          }
-        }
-        frame.classList.add('inline-item-frame-resizable')
-        syncInlineBoxSizing(item, wrapper, frame)
-        attachInlineBorderHandles(item, frame, wrapper)
-      }
-
-      // Add text scale handle for text-containing elements.
-      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
-        wrapper.appendChild(createScaleHandle(item, renderedElement))
-      }
-
-      // mark new text with outline to make it visible
-      if (
-        (item.type === 'text' || item.type === 'heading') &&
-        (!item.content || item.content.trim() === '')
-      ) {
-        renderedElement.classList.add('new-text-outline')
-        const onFirstInput = () => {
-          renderedElement.classList.remove('new-text-outline')
-          renderedElement.removeEventListener('input', onFirstInput)
-        }
-        renderedElement.addEventListener('input', onFirstInput)
-        setTimeout(() => renderedElement.focus(), 20)
-      }
-      contentRoot.appendChild(wrapper)
-
-      if (item.type === 'image') {
-        applyFloatingImagePlacement(wrapper, item)
-        if (wrapper.dataset.freeMove === 'true') {
-          attachFloatingImageMoveInteraction(wrapper, frame, item)
-        }
-        renderedElement.addEventListener('click', (e) => {
-          e.stopPropagation()
-          if (wrapper.dataset.suppressImageClick === 'true') {
-            delete wrapper.dataset.suppressImageClick
-            return
-          }
-          openImageResizer(renderedElement, item, wrapper)
+          applyToText,
+          applyToTips
         })
-      }
 
-      attachInlineItemInteractions(wrapper, item.id)
-    }
-  })
+        if (!renderedElement) return
+
+        const wrapper = document.createElement('div')
+        wrapper.className = 'inline-item inline-layout-item'
+        wrapper.dataset.id = item.id
+        wrapper.draggable = true
+        const frame = document.createElement('div')
+        frame.className = 'inline-item-frame'
+        frame.appendChild(renderedElement)
+        wrapper.appendChild(frame)
+
+        if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
+          if (item.type === 'image') {
+            const normalizedImageWidth = normalizeInlineBoxMeasurement(
+              item.inlineWidth || item.size,
+              INLINE_BOX_MIN_WIDTH,
+              INLINE_BOX_MAX_WIDTH
+            )
+            if (normalizedImageWidth) {
+              item.inlineWidth = normalizedImageWidth
+              item.size = normalizedImageWidth
+            }
+          }
+          frame.classList.add('inline-item-frame-resizable')
+          syncInlineBoxSizing(item, wrapper, frame)
+          attachInlineBorderHandles(item, frame, wrapper)
+        }
+
+        if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
+          wrapper.appendChild(createScaleHandle(item, renderedElement))
+        }
+
+        if (
+          (item.type === 'text' || item.type === 'heading') &&
+          (!item.content || item.content.trim() === '')
+        ) {
+          renderedElement.classList.add('new-text-outline')
+          const onFirstInput = () => {
+            renderedElement.classList.remove('new-text-outline')
+            renderedElement.removeEventListener('input', onFirstInput)
+          }
+          renderedElement.addEventListener('input', onFirstInput)
+          setTimeout(() => renderedElement.focus(), 20)
+        }
+        rootEl.appendChild(wrapper)
+
+        if (item.type === 'image') {
+          applyFloatingImagePlacement(wrapper, item)
+          if (wrapper.dataset.freeMove === 'true') {
+            attachFloatingImageMoveInteraction(wrapper, frame, item)
+          }
+          renderedElement.addEventListener('click', (e) => {
+            e.stopPropagation()
+            if (wrapper.dataset.suppressImageClick === 'true') {
+              delete wrapper.dataset.suppressImageClick
+              return
+            }
+            openImageResizer(renderedElement, item, wrapper)
+          })
+        }
+
+        attachInlineItemInteractions(wrapper, item.id)
+      }
+    })
+  }
+
+  const topLevelItems = recipeData.items.filter(
+    (it) => !hasValidParentInRecipe(it)
+  )
+  renderItemsInto(contentRoot, topLevelItems)
 
   // Attach input listeners for editable regions
-  contentRoot.querySelectorAll('[contenteditable=true]').forEach((node) => {
+  dom.inlinePreview.querySelectorAll('[contenteditable=true]').forEach((node) => {
     node.addEventListener('input', handleInlineInput)
     node.addEventListener('blur', handleInlineBlur)
   })
@@ -1497,6 +1599,7 @@ export function renderInlinePreview () {
     )
     if (idx === -1) return
     const [draggedItem] = recipeData.items.splice(idx, 1)
+    delete draggedItem.parentId
     recipeData.items.push(draggedItem)
     import('./classic.js').then(({ renderBuilderInputs }) => {
       renderBuilderInputs()

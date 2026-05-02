@@ -58,6 +58,8 @@ const VALID_ITEM_TYPES = new Set([
 ])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
+const VALID_SPACER_VARIANTS = new Set(['blank', 'line', 'page', 'container'])
+const VALID_CONTAINER_LAYOUTS = new Set(['flow', 'grid'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 const PRINT_MODAL_ACTION_PRINT = 'print'
 const PRINT_MODAL_ACTION_EXPORT = 'export'
@@ -382,14 +384,36 @@ function normalizeImportedItem (rawItem, fallbackId) {
     )
       ? rawItem.inlineImageFlow
       : 'around'
+    const imgParent = rawItem.parentId
+    if (imgParent != null && imgParent !== '') {
+      normalized.parentId = imgParent
+    } else {
+      delete normalized.parentId
+    }
     return normalized
   }
 
   if (type === 'spacer') {
+    let variant = toStringOrFallback(rawItem.variant, 'blank')
+    if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
+    normalized.variant = variant
     normalized.size = Math.max(
-      20,
+      0,
       Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
     )
+    let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
+    if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
+    normalized.containerLayout = layout
+    const cols = Math.round(
+      toFiniteNumberOrFallback(rawItem.containerColumns, 2)
+    )
+    normalized.containerColumns = Math.min(4, Math.max(1, cols))
+    const spParent = rawItem.parentId
+    if (spParent != null && spParent !== '') {
+      normalized.parentId = spParent
+    } else {
+      delete normalized.parentId
+    }
     return normalized
   }
 
@@ -402,6 +426,12 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
   if (type === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
+  }
+  const rawParent = rawItem.parentId
+  if (rawParent != null && rawParent !== '') {
+    normalized.parentId = rawParent
+  } else {
+    delete normalized.parentId
   }
   normalized.scale = toItemScale(rawItem.scale)
   return normalized
@@ -1571,10 +1601,18 @@ export function addItem (type, subtype = null) {
       newItem.href = ''
       newItem.scale = 100
       break
-    case 'spacer':
+    case 'spacer': {
       newItem.type = 'spacer'
+      const v =
+        typeof subtype === 'string' && VALID_SPACER_VARIANTS.has(subtype)
+          ? subtype
+          : 'blank'
+      newItem.variant = v
       newItem.size = 80
+      newItem.containerLayout = 'flow'
+      newItem.containerColumns = 2
       break
+    }
     default:
       break
   }
@@ -1953,7 +1991,14 @@ function handleLiveInput (e) {
 
   if (!item || !key) return
 
-  item[key] = value
+  if (key === 'containerColumns') {
+    const n = Math.round(Number.parseInt(String(value), 10))
+    item.containerColumns = Number.isFinite(n)
+      ? Math.min(4, Math.max(1, n))
+      : 2
+  } else {
+    item[key] = value
+  }
 
   // If it's the size slider, also update the live pixel display
   if (key === 'size') {
@@ -1994,7 +2039,16 @@ function handleLiveInput (e) {
     renderInlinePreview()
   }
 
-  if (isInlineMode() && item.type === 'spacer' && key === 'size') {
+  if (
+    isInlineMode() &&
+    item.type === 'spacer' &&
+    [
+      'size',
+      'variant',
+      'containerLayout',
+      'containerColumns'
+    ].includes(key)
+  ) {
     renderInlinePreview()
   }
 }
@@ -2012,9 +2066,11 @@ function handleContentInputClick (e) {
   let actionTaken = false
 
   if (deleteBtn) {
-    recipeData.items = recipeData.items.filter(
-      (i) => String(i.id) !== String(id)
-    )
+    const sid = String(id)
+    recipeData.items.forEach((entry) => {
+      if (String(entry.parentId) === sid) delete entry.parentId
+    })
+    recipeData.items = recipeData.items.filter((i) => String(i.id) !== sid)
     actionTaken = true
   } else if (moveUpBtn) {
     moveItem(id, 'up')
@@ -2485,10 +2541,38 @@ function bindFloatingAddButtonListeners () {
       return buttonEl
     }
 
+    const makeIconBtn = (iconName, label, callback) => {
+      const buttonEl = document.createElement('button')
+      buttonEl.type = 'button'
+      buttonEl.className =
+        'inline-floating-menu-btn px-3 py-2 flex w-full items-center gap-2 text-left'
+      buttonEl.innerHTML = `<span class="material-icons" style="font-size:20px;line-height:1;">${iconName}</span><span>${label}</span>`
+      buttonEl.addEventListener('click', () => {
+        callback()
+        menu.remove()
+      })
+      return buttonEl
+    }
+
     menu.appendChild(makeBtn('Add Text', () => openTextModal()))
     menu.appendChild(makeBtn('Add Image', () => addItem('image')))
     menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
-    menu.appendChild(makeBtn('Add Spacer', () => addItem('spacer')))
+    menu.appendChild(
+      makeIconBtn('height', 'Spacer (blank)', () => addItem('spacer', 'blank'))
+    )
+    menu.appendChild(
+      makeIconBtn('line_weight', 'Spacer (line)', () => addItem('spacer', 'line'))
+    )
+    if (recipeData.settings?.previewMode === 'paged') {
+      menu.appendChild(
+        makeIconBtn('layers', 'Spacer (page)', () => addItem('spacer', 'page'))
+      )
+    }
+    menu.appendChild(
+      makeIconBtn('grid_on', 'Spacer (container)', () =>
+        addItem('spacer', 'container')
+      )
+    )
     menu.appendChild(makeBtn('Print', () => handlePrint()))
 
     document.body.appendChild(menu)
