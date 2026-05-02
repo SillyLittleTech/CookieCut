@@ -757,8 +757,8 @@ export function openImageResizer (imgEl, item, wrapperEl = null) {
   flowSelect.style.width = '420px'
   flowSelect.style.display = 'block'
   flowSelect.style.marginTop = '4px'
-  flowSelect.style.padding = '6px 8px'
-  ;[
+  flowSelect.style.padding = '6px 8px';
+  [
     { value: 'around', label: 'Around text' },
     { value: 'over', label: 'Over text' },
     { value: 'under', label: 'Under text' }
