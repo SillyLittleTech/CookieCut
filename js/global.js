@@ -2557,9 +2557,7 @@ function bindFloatingAddButtonListeners () {
     menu.appendChild(
       makeIconBtn('text_fields', 'Add Text', () => openTextModal())
     )
-    menu.appendChild(
-      makeIconBtn('image', 'Add Image', () => addItem('image'))
-    )
+    menu.appendChild(makeIconBtn('image', 'Add Image', () => addItem('image')))
     menu.appendChild(
       makeIconBtn('notifications', 'Add Toast', () => openToastModal())
     )

@@ -305,8 +305,7 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
 
   const updateSizing = (width, minHeight) => {
     const spacerResize =
-      item.type === 'spacer' &&
-      (item.variant || 'blank') !== 'container'
+      item.type === 'spacer' && (item.variant || 'blank') !== 'container'
 
     if (spacerResize) {
       if (minHeight != null) {
@@ -361,8 +360,7 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
     let minHeightArg = null
 
     const spacerNoHorizontal =
-      item.type === 'spacer' &&
-      (item.variant || 'blank') !== 'container'
+      item.type === 'spacer' && (item.variant || 'blank') !== 'container'
 
     if (!spacerNoHorizontal) {
       if (direction.includes('east')) {
@@ -402,10 +400,7 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
       }
     }
     restoreDragHost()
-    if (
-      item.type === 'spacer' &&
-      (item.variant || 'blank') !== 'container'
-    ) {
+    if (item.type === 'spacer' && (item.variant || 'blank') !== 'container') {
       import('./classic.js').then(({ renderBuilderInputs }) => {
         renderBuilderInputs()
       })
@@ -1376,7 +1371,10 @@ export function renderInlinePreview () {
   inlineIsPagedMode = isPagedMode
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
-  dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPagedMode)
+  dom.inlinePreview.classList.toggle(
+    'inline-paged-preview-active',
+    isPagedMode
+  )
   dom.inlinePreview.classList.toggle('inline-content-surface', !isPagedMode)
 
   const { contentRoot, dropSurface } = isPagedMode
@@ -1424,9 +1422,8 @@ export function renderInlinePreview () {
 
   const rerenderAllEditors = createInlineRerenderAllEditors()
 
-  const attachInlineItemInteractions = createInlineItemInteractionsBinder(
-    rerenderAllEditors
-  )
+  const attachInlineItemInteractions =
+    createInlineItemInteractionsBinder(rerenderAllEditors)
 
   const renderItemsInto = (rootEl, items) => {
     let currentList = null
@@ -1497,10 +1494,7 @@ export function renderInlinePreview () {
         } else {
           item.inlineMinHeight = Math.max(
             INLINE_BOX_MIN_HEIGHT,
-            Math.min(
-              INLINE_BOX_MAX_HEIGHT,
-              normalizeSpacer(item.size)
-            )
+            Math.min(INLINE_BOX_MAX_HEIGHT, normalizeSpacer(item.size))
           )
           const frame = document.createElement('div')
           frame.className =
