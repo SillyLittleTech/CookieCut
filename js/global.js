@@ -2042,12 +2042,7 @@ function handleLiveInput (e) {
   if (
     isInlineMode() &&
     item.type === 'spacer' &&
-    [
-      'size',
-      'variant',
-      'containerLayout',
-      'containerColumns'
-    ].includes(key)
+    ['size', 'variant', 'containerLayout', 'containerColumns'].includes(key)
   ) {
     renderInlinePreview()
   }
@@ -2561,7 +2556,9 @@ function bindFloatingAddButtonListeners () {
       makeIconBtn('height', 'Spacer (blank)', () => addItem('spacer', 'blank'))
     )
     menu.appendChild(
-      makeIconBtn('line_weight', 'Spacer (line)', () => addItem('spacer', 'line'))
+      makeIconBtn('line_weight', 'Spacer (line)', () =>
+        addItem('spacer', 'line')
+      )
     )
     if (recipeData.settings?.previewMode === 'paged') {
       menu.appendChild(

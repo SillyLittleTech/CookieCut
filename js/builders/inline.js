@@ -972,9 +972,7 @@ function reorderItems (dragId, targetId) {
 
 function hasValidParentInRecipe (item) {
   if (item.parentId == null || item.parentId === '') return false
-  return recipeData.items.some(
-    (p) => String(p.id) === String(item.parentId)
-  )
+  return recipeData.items.some((p) => String(p.id) === String(item.parentId))
 }
 
 function getChildItemsInDocumentOrder (parentId) {
@@ -987,7 +985,9 @@ function getChildItemsInDocumentOrder (parentId) {
 
 function assignItemToContainer (dragId, containerId) {
   if (String(dragId) === String(containerId)) return
-  const dragItem = recipeData.items.find((i) => String(i.id) === String(dragId))
+  const dragItem = recipeData.items.find(
+    (i) => String(i.id) === String(dragId)
+  )
   const containerItem = recipeData.items.find(
     (i) => String(i.id) === String(containerId)
   )
@@ -998,7 +998,10 @@ function assignItemToContainer (dragId, containerId) {
   ) {
     return
   }
-  if (dragItem.type === 'spacer' && (dragItem.variant || 'blank') === 'container') {
+  if (
+    dragItem.type === 'spacer' &&
+    (dragItem.variant || 'blank') === 'container'
+  ) {
     return
   }
   const dragIndex = recipeData.items.findIndex(
@@ -1333,9 +1336,7 @@ export function renderInlinePreview () {
         recipeData.items.forEach((entry) => {
           if (String(entry.parentId) === sid) delete entry.parentId
         })
-        recipeData.items = recipeData.items.filter(
-          (i) => String(i.id) !== sid
-        )
+        recipeData.items = recipeData.items.filter((i) => String(i.id) !== sid)
         rerenderAllEditors()
       }
     })
@@ -1413,8 +1414,7 @@ export function renderInlinePreview () {
           wrapper.classList.add('inline-item--container-host')
           const surface = document.createElement('div')
           surface.className = 'inline-container-surface'
-          const layout =
-            item.containerLayout === 'grid' ? 'grid' : 'flow'
+          const layout = item.containerLayout === 'grid' ? 'grid' : 'flow'
           surface.classList.add(
             layout === 'grid'
               ? 'inline-container-surface--grid'
@@ -1481,7 +1481,8 @@ export function renderInlinePreview () {
         const contentWrap = document.createElement('div')
         contentWrap.className = 'inline-list-content-wrap'
         const contentFrame = document.createElement('div')
-        contentFrame.className = 'inline-item-frame inline-item-frame-resizable'
+        contentFrame.className =
+          'inline-item-frame inline-item-frame-resizable'
         contentFrame.appendChild(contentSpan)
         contentWrap.appendChild(contentFrame)
         contentWrap.appendChild(createScaleHandle(item, contentSpan))
@@ -1517,7 +1518,9 @@ export function renderInlinePreview () {
         frame.appendChild(renderedElement)
         wrapper.appendChild(frame)
 
-        if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
+        if (
+          ['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)
+        ) {
           if (item.type === 'image') {
             const normalizedImageWidth = normalizeInlineBoxMeasurement(
               item.inlineWidth || item.size,
@@ -1578,10 +1581,12 @@ export function renderInlinePreview () {
   renderItemsInto(contentRoot, topLevelItems)
 
   // Attach input listeners for editable regions
-  dom.inlinePreview.querySelectorAll('[contenteditable=true]').forEach((node) => {
-    node.addEventListener('input', handleInlineInput)
-    node.addEventListener('blur', handleInlineBlur)
-  })
+  dom.inlinePreview
+    .querySelectorAll('[contenteditable=true]')
+    .forEach((node) => {
+      node.addEventListener('input', handleInlineInput)
+      node.addEventListener('blur', handleInlineBlur)
+    })
 
   dom.inlinePreview.ondragover = null
   dom.inlinePreview.ondrop = null

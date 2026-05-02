@@ -153,9 +153,7 @@ export function renderBuilderInputs () {
 
 function hasValidParentItem (item) {
   if (item.parentId == null || item.parentId === '') return false
-  return recipeData.items.some(
-    (p) => String(p.id) === String(item.parentId)
-  )
+  return recipeData.items.some((p) => String(p.id) === String(item.parentId))
 }
 
 function getChildItemsInDocumentOrder (parentId) {
