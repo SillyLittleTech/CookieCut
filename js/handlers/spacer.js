@@ -10,7 +10,10 @@ const DEFAULT_SPACER_SIZE = 80
 function normalizeSpacer (value) {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return DEFAULT_SPACER_SIZE
-  return Math.max(MIN_SPACER_SIZE, Math.min(MAX_SPACER_SIZE, Math.round(parsed)))
+  return Math.max(
+    MIN_SPACER_SIZE,
+    Math.min(MAX_SPACER_SIZE, Math.round(parsed))
+  )
 }
 
 /**
@@ -60,4 +63,9 @@ export function renderInlineElement (item) {
   return el
 }
 
-export { normalizeSpacer, DEFAULT_SPACER_SIZE, MIN_SPACER_SIZE, MAX_SPACER_SIZE }
+export {
+  normalizeSpacer,
+  DEFAULT_SPACER_SIZE,
+  MIN_SPACER_SIZE,
+  MAX_SPACER_SIZE
+}
