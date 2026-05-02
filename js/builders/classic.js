@@ -175,7 +175,9 @@ function appendClassicPreviewNodeForItem ({
 }) {
   switch (item.type) {
     case 'heading': {
-      nodes.push(renderHeadingPreviewElement(item, fontStyle, contentWithIcons))
+      nodes.push(
+        renderHeadingPreviewElement(item, fontStyle, contentWithIcons)
+      )
       break
     }
     case 'step': {

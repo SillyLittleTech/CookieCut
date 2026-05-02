@@ -390,7 +390,9 @@ function normalizeImportedImageItem (rawItem, normalized) {
   normalized.alt = toStringOrFallback(rawItem.alt, '')
   normalized.size = size
   normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
-  normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(rawItem.inlineImageFlow)
+  normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
+    rawItem.inlineImageFlow
+  )
     ? rawItem.inlineImageFlow
     : 'around'
   applyImportedParentId(normalized, rawItem.parentId)
@@ -408,7 +410,9 @@ function normalizeImportedSpacerItem (rawItem, normalized) {
   let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
   if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
   normalized.containerLayout = layout
-  const cols = Math.round(toFiniteNumberOrFallback(rawItem.containerColumns, 2))
+  const cols = Math.round(
+    toFiniteNumberOrFallback(rawItem.containerColumns, 2)
+  )
   normalized.containerColumns = Math.min(4, Math.max(1, cols))
   applyImportedParentId(normalized, rawItem.parentId)
   return normalized

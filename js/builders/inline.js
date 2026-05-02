@@ -1363,7 +1363,9 @@ function resetInlineListState (state) {
 }
 
 function ensureInlineListContainer (rootEl, state, type) {
-  if (state.currentList && state.currentListType === type) return state.currentList
+  if (state.currentList && state.currentListType === type) {
+    return state.currentList
+  }
 
   state.currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
   state.currentList.className =
@@ -1455,14 +1457,23 @@ function renderInlineListItem ({
     state.stepCounter += 1
   }
 
-  const list = ensureInlineListContainer(rootEl, state, isStep ? 'step' : 'bullet')
+  const list = ensureInlineListContainer(
+    rootEl,
+    state,
+    isStep ? 'step' : 'bullet'
+  )
   const li = document.createElement('li')
   li.className = 'inline-item inline-list-item'
   li.dataset.id = item.id
   li.draggable = true
 
   const { badge, contentSpan } = isStep
-    ? renderInlineStepElement(item, fontStyle, contentWithIcons, state.stepCounter)
+    ? renderInlineStepElement(
+      item,
+      fontStyle,
+      contentWithIcons,
+      state.stepCounter
+    )
     : renderInlineBulletElement(item, fontStyle, contentWithIcons)
 
   li.appendChild(badge)
