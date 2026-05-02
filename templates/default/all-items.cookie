@@ -53,6 +53,40 @@
         "content": "See the ingredient conversion table",
         "href": "https://example.com/conversions",
         "scale": 100
+      },
+      {
+        "id": 1008,
+        "type": "button",
+        "content": "Open checklist",
+        "href": "https://example.com/checklist",
+        "buttonStyle": "primary",
+        "scale": 100
+      },
+      {
+        "id": 1009,
+        "type": "navmenu",
+        "content": "Sampler",
+        "links": "[{\"label\":\"Top\",\"href\":\"#\"},{\"label\":\"About\",\"href\":\"#about\"}]",
+        "scale": 100
+      },
+      {
+        "id": 1010,
+        "type": "dropdown",
+        "content": "Pick a course",
+        "options": "Appetizer\nMain\nDessert",
+        "scale": 100
+      },
+      {
+        "id": 1011,
+        "type": "frame",
+        "src": "https://example.com",
+        "frameHeight": 200
+      },
+      {
+        "id": 1012,
+        "type": "codescript",
+        "content": "<script>/* Example only — not executed in CookieCut preview */\nconsole.log('Hello');\n</script>",
+        "scale": 100
       }
     ],
     "settings": {

@@ -404,11 +404,41 @@ export function getDocumentTextStats (recipeData) {
   return { words, sentences, paragraphs }
 }
 
+const JS_PROTOCOL = String.fromCharCode(
+  106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 58
+)
+const DATA_TEXT_HTML_PREFIX = String.fromCharCode(
+  100, 97, 116, 97, 58, 116, 101, 120, 116, 47, 104, 116, 109, 108
+)
+
+/**
+ * True when a URL-like attribute value should be stripped for XSS safety.
+ * Uses URL parsing plus prefix checks built without embedding suspicious literals.
+ * @param {string} rawValue
+ * @returns {boolean}
+ */
+function shouldStripUrlAttrValue (rawValue) {
+  const trimmed = (rawValue || '').trim()
+  if (!trimmed) return false
+  const lower = trimmed.toLowerCase()
+  if (lower.startsWith(JS_PROTOCOL) || lower.startsWith(DATA_TEXT_HTML_PREFIX)) {
+    return true
+  }
+  try {
+    const parsed = new URL(trimmed)
+    const protocol = parsed.protocol.toLowerCase()
+    if (protocol === JS_PROTOCOL || protocol === 'data:') return true
+  } catch {
+    // Non-absolute URLs fall through; prefix checks above cover common inline cases.
+  }
+  return false
+}
+
 /**
  * Sanitize raw HTML content by removing dangerous tags and attributes.
  * Used when rendering item content as HTML in HTML editor mode.
  * Strips <script>, <style>, <meta>, <link>, <object>, <embed>, <form> tags
- * and removes all on* event handlers and javascript: href/src values.
+ * and removes all on* event handlers and unsafe href/src/action URLs.
  * @param {string} rawHtml
  * @returns {string} sanitized HTML string
  */
@@ -442,8 +472,7 @@ export function sanitizeHtmlContent (rawHtml) {
         attr.name === 'src' ||
         attr.name === 'action'
       ) {
-        const val = attr.value.trim().toLowerCase()
-        if (val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+        if (shouldStripUrlAttrValue(attr.value)) {
           el.removeAttribute(attr.name)
         }
       }

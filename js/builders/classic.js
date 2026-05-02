@@ -3,7 +3,8 @@ import { dom } from '../dom.js'
 import {
   renderRichText,
   getDocumentTextStats,
-  sanitizeHtmlContent
+  sanitizeHtmlContent,
+  escapeHTML
 } from '../helpers.js'
 import {
   getBuilderInput as getHeadingBuilderInput,
@@ -49,6 +50,10 @@ import {
   getBuilderInput as getFrameBuilderInput,
   renderPreviewElement as renderFramePreviewElement
 } from '../handlers/frame.js'
+import {
+  getBuilderInput as getCodescriptBuilderInput,
+  renderPreviewElement as renderCodescriptPreviewElement
+} from '../handlers/codescript.js'
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 let inlineRenderRequestId = 0
@@ -59,6 +64,35 @@ let inlineRenderRequestId = 0
 export function renderBuilderInputs () {
   dom.contentInputs.innerHTML = ''
 
+  const isHtmlOnlyType = (type) =>
+    ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(type)
+
+  const getCodeViewBuilderInput = (item) => {
+    const targetKey = isHtmlOnlyType(item.type) ? 'htmlOverride' : 'content'
+    const label = isHtmlOnlyType(item.type)
+      ? 'HTML override'
+      : 'HTML source'
+    const placeholder = isHtmlOnlyType(item.type)
+      ? '<div>Custom HTML for this element…</div>'
+      : '<div>Custom HTML for this item…</div>'
+    const value = escapeHTML(item[targetKey] || '')
+    return {
+      label: `${label}`,
+      inputHtml: `
+        <div class="space-y-2">
+          <textarea data-key="${targetKey}" rows="8" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md font-mono text-xs dark:bg-gray-700 dark:text-gray-100" placeholder="${escapeHTML(
+            placeholder
+          )}">${value}</textarea>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            ${isHtmlOnlyType(item.type)
+              ? 'Overrides the rendered HTML for this element.'
+              : 'Edits this item as HTML (enables the HTML toggle automatically when used).'}
+          </p>
+        </div>
+      `
+    }
+  }
+
   recipeData.items.forEach((item, index) => {
     const el = document.createElement('div')
     el.setAttribute('data-id', item.id)
@@ -68,7 +102,15 @@ export function renderBuilderInputs () {
     let inputHtml = ''
     let itemLabel = ''
 
-    switch (item.type) {
+    const inCodeView = Boolean(
+      recipeData.settings?.showHtmlTools && item && item.codeView
+    )
+
+    if (inCodeView) {
+      const result = getCodeViewBuilderInput(item)
+      itemLabel = result.label
+      inputHtml = result.inputHtml
+    } else switch (item.type) {
       case 'heading': {
         const result = getHeadingBuilderInput(item)
         itemLabel = result.label
@@ -135,18 +177,36 @@ export function renderBuilderInputs () {
         inputHtml = result.inputHtml
         break
       }
+      case 'codescript': {
+        const result = getCodescriptBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
       default:
         break
     }
 
     const isFirst = index === 0
     const isLast = index === recipeData.items.length - 1
-    const isHtmlMode =
-      recipeData.settings && recipeData.settings.editorMode === 'html'
+    const htmlToolsEnabled = Boolean(recipeData.settings?.showHtmlTools)
     // HTML-enabled items render their content as sanitized HTML in the preview
     const htmlEnabled = Boolean(item.htmlEnabled)
-    const htmlToggleBtn = isHtmlMode
+    const htmlToggleEligible =
+      htmlToolsEnabled &&
+      !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)
+    const htmlToggleBtn = htmlToggleEligible
       ? `<button type="button" class="html-code-toggle-btn item-btn${htmlEnabled ? ' active' : ''}" title="Toggle HTML editing for this item">{}</button>`
+      : ''
+    const codeViewToggleBtn = htmlToolsEnabled
+      ? `<div class="code-view-toggle-group" role="group" aria-label="Code view toggle">
+          <button type="button" class="code-view-toggle-btn${item.codeView ? ' active' : ''}" data-mode="code" title="Code view">
+            <span class="material-icons">code</span>
+          </button>
+          <button type="button" class="code-view-toggle-btn${!item.codeView ? ' active' : ''}" data-mode="form" title="Form view">
+            <span class="material-icons">edit</span>
+          </button>
+        </div>`
       : ''
 
     el.innerHTML = `
@@ -154,6 +214,7 @@ export function renderBuilderInputs () {
                 <label class="font-bold text-gray-700">${itemLabel}</label>
                 <div class="flex items-center space-x-2">
                     ${htmlToggleBtn}
+                    ${codeViewToggleBtn}
                     <button type="button" class="item-btn move-up-btn ${isFirst ? 'hidden-arrow' : ''}" title="Move up">▲</button>
                     <button type="button" class="item-btn move-down-btn ${isLast ? 'hidden-arrow' : ''}" title="Move down">▼</button>
                     <button type="button" class="item-btn delete-btn no-print" title="Delete item">&times;</button>
@@ -230,11 +291,10 @@ function collectPreviewNodes (fontStyle) {
       flushCurrentList()
     }
 
-    const isHtmlMode =
-      recipeData.settings && recipeData.settings.editorMode === 'html'
-    // When HTML mode and item has htmlEnabled, render content as raw HTML
+    const htmlToolsEnabled = Boolean(recipeData.settings?.showHtmlTools)
+    // When HTML tools are enabled and item has htmlEnabled, render as sanitized HTML
     const contentWithIcons =
-      isHtmlMode && item.htmlEnabled
+      htmlToolsEnabled && item.htmlEnabled
         ? sanitizeHtmlContent(item.content || '')
         : renderRichText(item.content || '')
 
@@ -300,22 +360,54 @@ function collectPreviewNodes (fontStyle) {
         break
       }
       case 'button': {
+        if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
+          const el = document.createElement('div')
+          el.className = 'recipe-text-block'
+          el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
+          nodes.push(el)
+          break
+        }
         const el = renderButtonPreviewElement(item)
         nodes.push(el)
         break
       }
       case 'navmenu': {
+        if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
+          const el = document.createElement('div')
+          el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
+          nodes.push(el)
+          break
+        }
         const el = renderNavmenuPreviewElement(item)
         nodes.push(el)
         break
       }
       case 'dropdown': {
+        if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
+          const el = document.createElement('div')
+          el.className = 'recipe-text-block'
+          el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
+          nodes.push(el)
+          break
+        }
         const el = renderDropdownPreviewElement(item)
         nodes.push(el)
         break
       }
       case 'frame': {
+        if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
+          const el = document.createElement('div')
+          el.className = 'recipe-text-block'
+          el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
+          nodes.push(el)
+          break
+        }
         const el = renderFramePreviewElement(item)
+        nodes.push(el)
+        break
+      }
+      case 'codescript': {
+        const el = renderCodescriptPreviewElement(item)
         nodes.push(el)
         break
       }

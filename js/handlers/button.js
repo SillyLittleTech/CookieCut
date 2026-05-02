@@ -1,4 +1,4 @@
-import { escapeHTML } from '../helpers.js'
+import { escapeHTML, renderRichText } from '../helpers.js'
 import { createScaleInputHtml, applyItemScale } from './scale.js'
 
 const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:']
@@ -89,7 +89,7 @@ function createButtonElement (item) {
     btn.rel = 'noopener noreferrer'
   }
   btn.className = getButtonClasses(item.buttonStyle)
-  btn.textContent = item.content || 'Button'
+  btn.innerHTML = renderRichText(item.content || 'Button')
 
   applyItemScale(wrapper, item, 'preview')
   wrapper.appendChild(btn)

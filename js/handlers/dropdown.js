@@ -1,4 +1,4 @@
-import { escapeHTML } from '../helpers.js'
+import { escapeHTML, renderRichText } from '../helpers.js'
 import { applyItemScale } from './scale.js'
 
 /**
@@ -32,7 +32,7 @@ function createDropdownElement (item) {
   if (item.content) {
     const label = document.createElement('label')
     label.className = 'html-dropdown-label'
-    label.textContent = item.content
+    label.innerHTML = renderRichText(item.content)
     wrapper.appendChild(label)
   }
 

@@ -1002,6 +1002,16 @@
 #inline-preview .recipe-text-block {
   margin: 0.75rem 0;
 }
+#inline-preview .html-navmenu {
+  margin: 0.75rem 0;
+}
+#inline-preview .html-dropdown-wrapper,
+#inline-preview .html-frame-wrapper,
+#inline-preview .html-codescript-wrapper {
+  margin: 0.75rem 0;
+  width: 100%;
+  box-sizing: border-box;
+}
 #inline-preview .inline-edit-link {
   cursor: pointer;
 }
@@ -2224,6 +2234,45 @@ body[data-theme="light"] .template-gallery-shell h2 {
   color: #fff;
 }
 
+/* Segmented code/form toggle (classic builder) */
+.code-view-toggle-group {
+  display: inline-flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+}
+.code-view-toggle-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+.code-view-toggle-btn .material-icons {
+  font-size: 18px;
+  line-height: 18px;
+}
+.code-view-toggle-btn.active {
+  background: rgba(99, 102, 241, 0.22);
+  color: #e5e7eb;
+}
+.dark .code-view-toggle-group {
+  border-color: rgba(100, 116, 139, 0.55);
+  background: rgba(15, 23, 42, 0.35);
+}
+.dark .code-view-toggle-btn {
+  color: #64748b;
+}
+.dark .code-view-toggle-btn.active {
+  background: rgba(99, 102, 241, 0.28);
+  color: #e5e7eb;
+}
+
 /* --- HTML Buttons --- */
 .html-btn {
   display: inline-flex;
@@ -2376,4 +2425,48 @@ body[data-theme="light"] .template-gallery-shell h2 {
 .dark .html-frame-wrapper {
   border-color: #374151;
   background: #111827;
+}
+
+/* --- Code script (escaped source, never executed) --- */
+.html-codescript-wrapper {
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+}
+.html-codescript-note {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem;
+}
+.html-codescript-pre {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dark .html-codescript-wrapper {
+  border-color: #374151;
+  background: #111827;
+}
+.dark .html-codescript-note {
+  color: #9ca3af;
+}
+.dark .html-codescript-pre {
+  color: #e5e7eb;
+}
+
+/* Settings modal toggle styling (HTML tools) */
+#show-html-tools-checkbox:checked + span[data-role='toggle-track'] {
+  background: #4f46e5;
+}
+#show-html-tools-checkbox:checked
+  + span[data-role='toggle-track']
+  + span[data-role='toggle-thumb'] {
+  transform: translateX(20px);
 }
