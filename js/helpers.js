@@ -404,6 +404,54 @@ export function getDocumentTextStats (recipeData) {
   return { words, sentences, paragraphs }
 }
 
+/**
+ * Sanitize raw HTML content by removing dangerous tags and attributes.
+ * Used when rendering item content as HTML in HTML editor mode.
+ * Strips <script>, <style>, <meta>, <link>, <object>, <embed>, <form> tags
+ * and removes all on* event handlers and javascript: href/src values.
+ * @param {string} rawHtml
+ * @returns {string} sanitized HTML string
+ */
+export function sanitizeHtmlContent (rawHtml) {
+  if (!rawHtml || typeof rawHtml !== 'string') return ''
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(rawHtml, 'text/html')
+
+  const FORBIDDEN_TAGS = [
+    'script',
+    'style',
+    'meta',
+    'link',
+    'object',
+    'embed',
+    'form',
+    'base'
+  ]
+  FORBIDDEN_TAGS.forEach((tag) => {
+    doc.querySelectorAll(tag).forEach((el) => el.remove())
+  })
+
+  doc.body.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.startsWith('on')) {
+        el.removeAttribute(attr.name)
+        return
+      }
+      if (attr.name === 'href' || attr.name === 'src' || attr.name === 'action') {
+        const val = attr.value.trim().toLowerCase()
+        if (val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+          el.removeAttribute(attr.name)
+        }
+      }
+      if (attr.name === 'srcdoc') {
+        el.removeAttribute(attr.name)
+      }
+    })
+  })
+
+  return doc.body.innerHTML
+}
+
 export function copyToClipboard (text) {
   if (globalThis.navigator?.clipboard && globalThis.isSecureContext) {
     globalThis.navigator.clipboard

@@ -53,8 +53,13 @@ const VALID_ITEM_TYPES = new Set([
   'text',
   'image',
   'bubble',
-  'link'
+  'link',
+  'button',
+  'navmenu',
+  'dropdown',
+  'frame'
 ])
+const VALID_HTML_ITEM_TYPES = new Set(['button', 'navmenu', 'dropdown', 'frame'])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
@@ -348,7 +353,9 @@ function normalizeImportedSettings (rawSettings) {
         : 'display',
     fontApplyToText: Boolean(source.fontApplyToText),
     fontApplyToTips: Boolean(source.fontApplyToTips),
-    editorMode: source.editorMode === 'inline' ? 'inline' : 'classic',
+    editorMode: ['inline', 'html'].includes(source.editorMode)
+      ? source.editorMode
+      : 'classic',
     previewMode: source.previewMode === 'paged' ? 'paged' : 'continuous',
     fileName: toStringOrFallback(source.fileName, ''),
     hideTitle: Boolean(source.hideTitle),
@@ -393,6 +400,24 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
   if (type === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
+  }
+  if (type === 'button') {
+    normalized.href = toStringOrFallback(rawItem.href, '')
+    const VALID_BUTTON_STYLES = new Set(['primary', 'secondary', 'danger', 'ghost'])
+    normalized.buttonStyle = VALID_BUTTON_STYLES.has(rawItem.buttonStyle)
+      ? rawItem.buttonStyle
+      : 'primary'
+  }
+  if (type === 'navmenu') {
+    normalized.links = toStringOrFallback(rawItem.links, '[]')
+  }
+  if (type === 'dropdown') {
+    normalized.options = toStringOrFallback(rawItem.options, '')
+  }
+  if (type === 'frame') {
+    normalized.src = toStringOrFallback(rawItem.src, '')
+    normalized.frameHeight = toFiniteNumberOrFallback(rawItem.frameHeight, 400)
+    return normalized
   }
   normalized.scale = toItemScale(rawItem.scale)
   return normalized
@@ -1512,6 +1537,10 @@ function syncUiFromRecipeData () {
 
   if (isInlineMode()) {
     renderInlinePreview()
+  } else if (isHtmlMode()) {
+    if (!dom.recipePanel.classList.contains('hidden')) {
+      renderPreview()
+    }
   } else if (!dom.recipePanel.classList.contains('hidden')) {
     renderPreview()
   }
@@ -1562,6 +1591,37 @@ export function addItem (type, subtype = null) {
       newItem.href = ''
       newItem.scale = 100
       break
+    case 'button':
+      newItem.type = 'button'
+      newItem.content = ''
+      newItem.href = ''
+      newItem.buttonStyle = 'primary'
+      newItem.scale = 100
+      break
+    case 'navmenu':
+      if (recipeData.items.some((i) => i.type === 'navmenu')) {
+        showDocumentTransferMessage(
+          'Only one Navigation element is allowed per document.',
+          true
+        )
+        return
+      }
+      newItem.type = 'navmenu'
+      newItem.content = ''
+      newItem.links = '[]'
+      newItem.scale = 100
+      break
+    case 'dropdown':
+      newItem.type = 'dropdown'
+      newItem.content = ''
+      newItem.options = ''
+      newItem.scale = 100
+      break
+    case 'frame':
+      newItem.type = 'frame'
+      newItem.src = ''
+      newItem.frameHeight = 400
+      break
     default:
       break
   }
@@ -1594,6 +1654,25 @@ function moveItem (id, direction) {
 
 function isInlineMode () {
   return recipeData.settings && recipeData.settings.editorMode === 'inline'
+}
+
+function isHtmlMode () {
+  return recipeData.settings && recipeData.settings.editorMode === 'html'
+}
+
+function updatePreviewModeSelectForHtmlMode (htmlModeActive) {
+  if (!dom.previewModeSelect) return
+  const pagedOption = dom.previewModeSelect.querySelector('option[value="paged"]')
+  if (!pagedOption) return
+  if (htmlModeActive) {
+    pagedOption.disabled = true
+    if (recipeData.settings.previewMode === 'paged') {
+      recipeData.settings.previewMode = 'continuous'
+      dom.previewModeSelect.value = 'continuous'
+    }
+  } else {
+    pagedOption.disabled = false
+  }
 }
 
 function closeFloatingAddMenu () {
@@ -1676,14 +1755,32 @@ export function disableInlineEditor () {
   toggleOldUIVisibility(false)
 }
 
+export function enableHtmlEditor () {
+  // HTML mode uses the classic builder UI but with HTML rendering
+  updatePreviewModeSelectForHtmlMode(true)
+  renderBuilderInputs()
+}
+
+export function disableHtmlEditor () {
+  updatePreviewModeSelectForHtmlMode(false)
+}
+
 function setEditorMode (mode) {
-  const normalizedMode = mode === 'inline' ? 'inline' : 'classic'
+  const normalizedMode = ['inline', 'html'].includes(mode) ? mode : 'classic'
   recipeData.settings.editorMode = normalizedMode
   if (dom.editorModeSelect && dom.editorModeSelect.value !== normalizedMode) {
     dom.editorModeSelect.value = normalizedMode
   }
-  if (normalizedMode === 'inline') enableInlineEditor()
-  else disableInlineEditor()
+  if (normalizedMode === 'inline') {
+    disableHtmlEditor()
+    enableInlineEditor()
+  } else if (normalizedMode === 'html') {
+    disableInlineEditor()
+    enableHtmlEditor()
+  } else {
+    disableInlineEditor()
+    disableHtmlEditor()
+  }
 }
 
 // --- VIEW TOGGLE ---
@@ -1991,10 +2088,16 @@ function handleContentInputClick (e) {
   const deleteBtn = e.target.closest('.delete-btn')
   const moveUpBtn = e.target.closest('.move-up-btn')
   const moveDownBtn = e.target.closest('.move-down-btn')
+  const htmlCodeToggleBtn = e.target.closest('.html-code-toggle-btn')
 
   let actionTaken = false
 
-  if (deleteBtn) {
+  if (htmlCodeToggleBtn) {
+    // Toggle the HTML code editor appearance for this item (visual only)
+    const isActive = htmlCodeToggleBtn.classList.toggle('active')
+    itemEl.classList.toggle('html-edit-active', isActive)
+    return
+  } else if (deleteBtn) {
     recipeData.items = recipeData.items.filter(
       (i) => String(i.id) !== String(id)
     )
@@ -2027,6 +2130,15 @@ function handleToastSelection (subtype) {
 }
 
 function openTextModal () {
+  const htmlMode = isHtmlMode()
+  const classicLinkOption = document.getElementById('classic-link-option')
+  const htmlTextOptions = document.getElementById('html-text-options')
+  if (classicLinkOption) {
+    classicLinkOption.classList.toggle('hidden', htmlMode)
+  }
+  if (htmlTextOptions) {
+    htmlTextOptions.classList.toggle('hidden', !htmlMode)
+  }
   dom.textModal.classList.remove('hidden')
 }
 function closeTextModal () {
@@ -2316,6 +2428,31 @@ function bindTextModalListeners () {
   dom.textTypeLinkBtn.addEventListener('click', () =>
     handleTextSelection('link')
   )
+  // HTML mode item buttons
+  const textTypeButtonBtn = document.getElementById('text-type-button')
+  if (textTypeButtonBtn) {
+    textTypeButtonBtn.addEventListener('click', () =>
+      handleTextSelection('button')
+    )
+  }
+  const textTypeNavmenuBtn = document.getElementById('text-type-navmenu')
+  if (textTypeNavmenuBtn) {
+    textTypeNavmenuBtn.addEventListener('click', () =>
+      handleTextSelection('navmenu')
+    )
+  }
+  const textTypeDropdownBtn = document.getElementById('text-type-dropdown')
+  if (textTypeDropdownBtn) {
+    textTypeDropdownBtn.addEventListener('click', () =>
+      handleTextSelection('dropdown')
+    )
+  }
+  const textTypeFrameBtn = document.getElementById('text-type-frame')
+  if (textTypeFrameBtn) {
+    textTypeFrameBtn.addEventListener('click', () =>
+      handleTextSelection('frame')
+    )
+  }
 }
 
 function bindIconModalListeners () {
