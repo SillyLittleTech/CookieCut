@@ -376,6 +376,44 @@ function normalizeImportedSettings (rawSettings) {
   }
 }
 
+function applyImportedParentId (normalized, rawParentId) {
+  if (rawParentId != null && rawParentId !== '') {
+    normalized.parentId = rawParentId
+  } else {
+    delete normalized.parentId
+  }
+}
+
+function normalizeImportedImageItem (rawItem, normalized) {
+  const size = toFiniteNumberOrFallback(rawItem.size, 350)
+  normalized.src = toStringOrFallback(rawItem.src, '')
+  normalized.alt = toStringOrFallback(rawItem.alt, '')
+  normalized.size = size
+  normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
+  normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(rawItem.inlineImageFlow)
+    ? rawItem.inlineImageFlow
+    : 'around'
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
+}
+
+function normalizeImportedSpacerItem (rawItem, normalized) {
+  let variant = toStringOrFallback(rawItem.variant, 'blank')
+  if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
+  normalized.variant = variant
+  normalized.size = Math.max(
+    0,
+    Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
+  )
+  let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
+  if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
+  normalized.containerLayout = layout
+  const cols = Math.round(toFiniteNumberOrFallback(rawItem.containerColumns, 2))
+  normalized.containerColumns = Math.min(4, Math.max(1, cols))
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
+}
+
 function normalizeImportedItem (rawItem, fallbackId) {
   if (!rawItem || typeof rawItem !== 'object') return null
   const type = toStringOrFallback(rawItem.type, '')
@@ -388,50 +426,11 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
 
   if (type === 'image') {
-    const size = toFiniteNumberOrFallback(rawItem.size, 350)
-    normalized.src = toStringOrFallback(rawItem.src, '')
-    normalized.alt = toStringOrFallback(rawItem.alt, '')
-    normalized.size = size
-    normalized.inlineWidth = toFiniteNumberOrFallback(
-      rawItem.inlineWidth,
-      size
-    )
-    normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
-      rawItem.inlineImageFlow
-    )
-      ? rawItem.inlineImageFlow
-      : 'around'
-    const imgParent = rawItem.parentId
-    if (imgParent != null && imgParent !== '') {
-      normalized.parentId = imgParent
-    } else {
-      delete normalized.parentId
-    }
-    return normalized
+    return normalizeImportedImageItem(rawItem, normalized)
   }
 
   if (type === 'spacer') {
-    let variant = toStringOrFallback(rawItem.variant, 'blank')
-    if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
-    normalized.variant = variant
-    normalized.size = Math.max(
-      0,
-      Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
-    )
-    let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
-    if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
-    normalized.containerLayout = layout
-    const cols = Math.round(
-      toFiniteNumberOrFallback(rawItem.containerColumns, 2)
-    )
-    normalized.containerColumns = Math.min(4, Math.max(1, cols))
-    const spParent = rawItem.parentId
-    if (spParent != null && spParent !== '') {
-      normalized.parentId = spParent
-    } else {
-      delete normalized.parentId
-    }
-    return normalized
+    return normalizeImportedSpacerItem(rawItem, normalized)
   }
 
   normalized.content = toStringOrFallback(rawItem.content, '')
@@ -444,12 +443,7 @@ function normalizeImportedItem (rawItem, fallbackId) {
   if (type === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
   }
-  const rawParent = rawItem.parentId
-  if (rawParent != null && rawParent !== '') {
-    normalized.parentId = rawParent
-  } else {
-    delete normalized.parentId
-  }
+  applyImportedParentId(normalized, rawItem.parentId)
   normalized.scale = toItemScale(rawItem.scale)
   return normalized
 }

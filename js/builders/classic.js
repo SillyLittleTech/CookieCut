@@ -164,114 +164,119 @@ function getChildItemsInDocumentOrder (parentId) {
     .map(({ it }) => it)
 }
 
+function appendClassicPreviewNodeForItem ({
+  item,
+  fontStyle,
+  contentWithIcons,
+  applyToText,
+  applyToTips,
+  nodes,
+  listState
+}) {
+  switch (item.type) {
+    case 'heading': {
+      nodes.push(renderHeadingPreviewElement(item, fontStyle, contentWithIcons))
+      break
+    }
+    case 'step': {
+      if (!listState.currentList) {
+        listState.currentList = document.createElement('ol')
+        listState.currentListType = 'step'
+      }
+      const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
+      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+      listState.currentList.appendChild(el)
+      break
+    }
+    case 'bullet': {
+      if (!listState.currentList) {
+        listState.currentList = document.createElement('ul')
+        listState.currentListType = 'bullet'
+      }
+      const el = renderBulletPreviewElement(item, fontStyle, contentWithIcons)
+      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+      listState.currentList.appendChild(el)
+      break
+    }
+    case 'text': {
+      const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
+      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+      nodes.push(el)
+      break
+    }
+    case 'image': {
+      nodes.push(renderImagePreviewElement(item, fontStyle, contentWithIcons))
+      break
+    }
+    case 'bubble': {
+      const el = renderBubblePreviewElement(item, fontStyle, contentWithIcons)
+      if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
+      nodes.push(el)
+      break
+    }
+    case 'link': {
+      const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
+      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+      nodes.push(el)
+      break
+    }
+    case 'spacer': {
+      const el = renderSpacerPreviewElement(item)
+      const variant = item.variant || 'blank'
+      if (variant === 'container') {
+        const kids = getChildItemsInDocumentOrder(item.id)
+        collectPreviewNodesFromItems(kids, fontStyle).forEach((childNode) => {
+          el.appendChild(childNode)
+        })
+      }
+      nodes.push(el)
+      break
+    }
+    default:
+      break
+  }
+}
+
 /**
  * Build preview DOM nodes for a linear sequence of items (used for root and
  * inside spacer containers). Mutates list-grouping state via closure.
  */
 function collectPreviewNodesFromItems (items, fontStyle) {
   const nodes = []
-  let currentList = null
-  let currentListType = null
+  const listState = { currentList: null, currentListType: null }
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
 
   const flushCurrentList = () => {
-    if (!currentList) return
-    nodes.push(currentList)
-    currentList = null
-    currentListType = null
+    if (!listState.currentList) return
+    nodes.push(listState.currentList)
+    listState.currentList = null
+    listState.currentListType = null
   }
 
   items.forEach((item) => {
     const isListItem = item.type === 'step' || item.type === 'bullet'
 
-    if ((!isListItem || currentListType !== item.type) && currentList) {
+    if (
+      (!isListItem || listState.currentListType !== item.type) &&
+      listState.currentList
+    ) {
       flushCurrentList()
     }
 
     const contentWithIcons = renderRichText(item.content || '')
-
-    switch (item.type) {
-      case 'heading': {
-        const el = renderHeadingPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
-        nodes.push(el)
-        break
-      }
-      case 'step': {
-        if (!currentList) {
-          currentList = document.createElement('ol')
-          currentListType = 'step'
-        }
-        const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
-        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-        currentList.appendChild(el)
-        break
-      }
-      case 'bullet': {
-        if (!currentList) {
-          currentList = document.createElement('ul')
-          currentListType = 'bullet'
-        }
-        const el = renderBulletPreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
-        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-        currentList.appendChild(el)
-        break
-      }
-      case 'text': {
-        const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
-        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-        nodes.push(el)
-        break
-      }
-      case 'image': {
-        const el = renderImagePreviewElement(item, fontStyle, contentWithIcons)
-        nodes.push(el)
-        break
-      }
-      case 'bubble': {
-        const el = renderBubblePreviewElement(
-          item,
-          fontStyle,
-          contentWithIcons
-        )
-        if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
-        nodes.push(el)
-        break
-      }
-      case 'link': {
-        const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
-        if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-        nodes.push(el)
-        break
-      }
-      case 'spacer': {
-        const el = renderSpacerPreviewElement(item)
-        const variant = item.variant || 'blank'
-        if (variant === 'container') {
-          const kids = getChildItemsInDocumentOrder(item.id)
-          collectPreviewNodesFromItems(kids, fontStyle).forEach((childNode) => {
-            el.appendChild(childNode)
-          })
-        }
-        nodes.push(el)
-        break
-      }
-      default:
-        break
-    }
+    appendClassicPreviewNodeForItem({
+      item,
+      fontStyle,
+      contentWithIcons,
+      applyToText,
+      applyToTips,
+      nodes,
+      listState
+    })
   })
 
-  if (currentList) {
-    flushCurrentList()
-  }
+  flushCurrentList()
 
   return nodes
 }

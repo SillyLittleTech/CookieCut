@@ -73,22 +73,26 @@ export function getBuilderInput (item) {
             </div>`
       : ''
 
+  const flowSelectedAttr = layout === 'flow' ? ' selected' : ''
+  const gridSelectedAttr = layout === 'grid' ? ' selected' : ''
+  const columnsSelectOptions = [1, 2, 3, 4]
+    .map((n) => {
+      const selectedAttr = n === columns ? ' selected' : ''
+      return `<option value="${n}"${selectedAttr}>${n}</option>`
+    })
+    .join('')
+
   const containerBlock =
     variant === 'container'
       ? `
             <label class="block text-sm font-medium text-gray-700 mt-2">Inner layout</label>
             <select data-key="containerLayout" class="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm">
-              <option value="flow"${layout === 'flow' ? ' selected' : ''}>Flow (flex wrap)</option>
-              <option value="grid"${layout === 'grid' ? ' selected' : ''}>Grid</option>
+              <option value="flow"${flowSelectedAttr}>Flow (flex wrap)</option>
+              <option value="grid"${gridSelectedAttr}>Grid</option>
             </select>
             <label class="block text-sm font-medium text-gray-700 mt-2">Columns</label>
             <select data-key="containerColumns" class="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm">
-              ${[1, 2, 3, 4]
-                .map(
-                  (n) =>
-                    `<option value="${n}"${n === columns ? ' selected' : ''}>${n}</option>`
-                )
-                .join('')}
+              ${columnsSelectOptions}
             </select>`
       : ''
 
