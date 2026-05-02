@@ -22,13 +22,13 @@ function normalizeSpacer (value) {
 }
 
 function normalizeVariant (value) {
-  const v = typeof value === 'string' ? value : 'blank'
-  return VALID_VARIANTS.has(v) ? v : 'blank'
+  const variantValue = typeof value === 'string' ? value : 'blank'
+  return VALID_VARIANTS.has(variantValue) ? variantValue : 'blank'
 }
 
 function normalizeContainerLayout (value) {
-  const v = typeof value === 'string' ? value : 'flow'
-  return VALID_LAYOUTS.has(v) ? v : 'flow'
+  const layoutValue = typeof value === 'string' ? value : 'flow'
+  return VALID_LAYOUTS.has(layoutValue) ? layoutValue : 'flow'
 }
 
 function normalizeContainerColumns (value) {
@@ -162,6 +162,7 @@ export function renderInlineElement (item) {
     const el = document.createElement('div')
     el.className = 'inline-spacer inline-spacer--page'
     el.dataset.id = item.id
+    el.style.minHeight = `${Math.max(12, size)}px`
     return el
   }
 

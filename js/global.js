@@ -90,6 +90,22 @@ let redoHistory = []
 let lastTrackedRecipeSnapshot = ''
 let isApplyingHistorySnapshot = false
 let historyObserverTimerId = null
+let persistWorkingDocumentDebounceTimer = null
+const PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS = 400
+
+function schedulePersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = setTimeout(() => {
+    persistWorkingDocumentDebounceTimer = null
+    persistWorkingDocumentToCache()
+  }, PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS)
+}
+
+function flushPersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = null
+  persistWorkingDocumentToCache()
+}
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
@@ -185,6 +201,7 @@ function observeRecipeMutations () {
   }
   redoHistory = []
   lastTrackedRecipeSnapshot = currentSnapshotSerialized
+  schedulePersistWorkingDocument()
 }
 
 function startHistoryObserver () {
@@ -1603,11 +1620,11 @@ export function addItem (type, subtype = null) {
       break
     case 'spacer': {
       newItem.type = 'spacer'
-      const v =
+      const variant =
         typeof subtype === 'string' && VALID_SPACER_VARIANTS.has(subtype)
           ? subtype
           : 'blank'
-      newItem.variant = v
+      newItem.variant = variant
       newItem.size = 80
       newItem.containerLayout = 'flow'
       newItem.containerColumns = 2
@@ -2524,24 +2541,12 @@ function bindFloatingAddButtonListeners () {
     menu.style.borderRadius = '8px'
     menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
 
-    const makeBtn = (label, callback) => {
-      const buttonEl = document.createElement('button')
-      buttonEl.textContent = label
-      buttonEl.className =
-        'inline-floating-menu-btn px-3 py-2 block w-full text-left'
-      buttonEl.addEventListener('click', () => {
-        callback()
-        menu.remove()
-      })
-      return buttonEl
-    }
-
     const makeIconBtn = (iconName, label, callback) => {
       const buttonEl = document.createElement('button')
       buttonEl.type = 'button'
       buttonEl.className =
         'inline-floating-menu-btn px-3 py-2 flex w-full items-center gap-2 text-left'
-      buttonEl.innerHTML = `<span class="material-icons" style="font-size:20px;line-height:1;">${iconName}</span><span>${label}</span>`
+      buttonEl.innerHTML = `<span class="material-icons inline-floating-menu-icon" aria-hidden="true">${iconName}</span><span class="inline-floating-menu-label">${label}</span>`
       buttonEl.addEventListener('click', () => {
         callback()
         menu.remove()
@@ -2549,28 +2554,62 @@ function bindFloatingAddButtonListeners () {
       return buttonEl
     }
 
-    menu.appendChild(makeBtn('Add Text', () => openTextModal()))
-    menu.appendChild(makeBtn('Add Image', () => addItem('image')))
-    menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
     menu.appendChild(
-      makeIconBtn('height', 'Spacer (blank)', () => addItem('spacer', 'blank'))
+      makeIconBtn('text_fields', 'Add Text', () => openTextModal())
     )
     menu.appendChild(
-      makeIconBtn('line_weight', 'Spacer (line)', () =>
-        addItem('spacer', 'line')
+      makeIconBtn('image', 'Add Image', () => addItem('image'))
+    )
+    menu.appendChild(
+      makeIconBtn('notifications', 'Add Toast', () => openToastModal())
+    )
+
+    const spacerRow = document.createElement('div')
+    spacerRow.className =
+      'inline-floating-menu-row inline-floating-menu-row--submenu-host'
+    const spacerToggle = document.createElement('button')
+    spacerToggle.type = 'button'
+    spacerToggle.className =
+      'inline-floating-menu-btn inline-floating-menu-row-toggle px-3 py-2 flex w-full items-center gap-2 text-left'
+    spacerToggle.setAttribute('aria-expanded', 'false')
+    spacerToggle.innerHTML =
+      '<span class="material-icons inline-floating-menu-icon" aria-hidden="true">height</span>' +
+      '<span class="inline-floating-menu-label flex-1">Add Spacer</span>' +
+      '<span class="material-icons inline-floating-submenu-chevron" aria-hidden="true">chevron_right</span>'
+    const spacerSub = document.createElement('div')
+    spacerSub.className = 'inline-floating-submenu'
+    spacerSub.setAttribute('role', 'menu')
+
+    spacerToggle.addEventListener('click', (ev) => {
+      ev.preventDefault()
+      ev.stopPropagation()
+      const open = !spacerRow.classList.contains(
+        'inline-floating-menu-row--open'
       )
+      spacerRow.classList.toggle('inline-floating-menu-row--open', open)
+      spacerToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+    })
+
+    spacerSub.appendChild(
+      makeIconBtn('height', 'Blank', () => addItem('spacer', 'blank'))
+    )
+    spacerSub.appendChild(
+      makeIconBtn('line_weight', 'Line', () => addItem('spacer', 'line'))
     )
     if (recipeData.settings?.previewMode === 'paged') {
-      menu.appendChild(
-        makeIconBtn('layers', 'Spacer (page)', () => addItem('spacer', 'page'))
+      spacerSub.appendChild(
+        makeIconBtn('layers', 'Page', () => addItem('spacer', 'page'))
       )
     }
-    menu.appendChild(
-      makeIconBtn('grid_on', 'Spacer (container)', () =>
-        addItem('spacer', 'container')
-      )
+    spacerSub.appendChild(
+      makeIconBtn('grid_on', 'Container', () => addItem('spacer', 'container'))
     )
-    menu.appendChild(makeBtn('Print', () => handlePrint()))
+
+    spacerRow.appendChild(spacerToggle)
+    spacerRow.appendChild(spacerSub)
+    menu.appendChild(spacerRow)
+
+    menu.appendChild(makeIconBtn('print', 'Print', () => handlePrint()))
 
     document.body.appendChild(menu)
     setTimeout(() => {
@@ -2718,6 +2757,8 @@ function performInitialRender () {
 // --- INIT ---
 
 export function init () {
+  window.addEventListener('pagehide', flushPersistWorkingDocument)
+  window.addEventListener('beforeunload', flushPersistWorkingDocument)
   initializePreviewModeSetting()
   bindMainInfoListeners()
   bindTopToolbarListeners()

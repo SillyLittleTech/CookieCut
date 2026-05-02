@@ -18,7 +18,10 @@ import { renderInlineElement as renderInlineTextElement } from '../handlers/text
 import { renderInlineElement as renderInlineImageElement } from '../handlers/image.js'
 import { renderInlineElement as renderInlineBubbleElement } from '../handlers/bubble.js'
 import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js'
-import { renderInlineElement as renderInlineSpacerElement } from '../handlers/spacer.js'
+import {
+  renderInlineElement as renderInlineSpacerElement,
+  normalizeSpacer
+} from '../handlers/spacer.js'
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -301,8 +304,22 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
   }
 
   const updateSizing = (width, minHeight) => {
-    if (width != null) item.inlineWidth = width
-    if (minHeight != null) item.inlineMinHeight = minHeight
+    const spacerResize =
+      item.type === 'spacer' &&
+      (item.variant || 'blank') !== 'container'
+
+    if (spacerResize) {
+      if (minHeight != null) {
+        item.size = Math.max(0, Math.min(600, Math.round(minHeight)))
+        item.inlineMinHeight = Math.max(
+          INLINE_BOX_MIN_HEIGHT,
+          Math.min(INLINE_BOX_MAX_HEIGHT, normalizeSpacer(item.size))
+        )
+      }
+    } else {
+      if (width != null) item.inlineWidth = width
+      if (minHeight != null) item.inlineMinHeight = minHeight
+    }
     syncInlineBoxSizing(item, sizeTargetEl, frameEl)
     refreshInlinePreviewMetrics()
   }
@@ -343,18 +360,24 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
     let widthArg = null
     let minHeightArg = null
 
-    if (direction.includes('east')) {
-      const nextWidth = widthAtStart + deltaX
-      widthArg = Math.min(
-        INLINE_BOX_MAX_WIDTH,
-        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
-      )
-    } else if (direction.includes('west')) {
-      const nextWidth = widthAtStart - deltaX
-      widthArg = Math.min(
-        INLINE_BOX_MAX_WIDTH,
-        Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
-      )
+    const spacerNoHorizontal =
+      item.type === 'spacer' &&
+      (item.variant || 'blank') !== 'container'
+
+    if (!spacerNoHorizontal) {
+      if (direction.includes('east')) {
+        const nextWidth = widthAtStart + deltaX
+        widthArg = Math.min(
+          INLINE_BOX_MAX_WIDTH,
+          Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+        )
+      } else if (direction.includes('west')) {
+        const nextWidth = widthAtStart - deltaX
+        widthArg = Math.min(
+          INLINE_BOX_MAX_WIDTH,
+          Math.max(INLINE_BOX_MIN_WIDTH, nextWidth)
+        )
+      }
     }
 
     if (direction.includes('south')) {
@@ -379,6 +402,14 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
       }
     }
     restoreDragHost()
+    if (
+      item.type === 'spacer' &&
+      (item.variant || 'blank') !== 'container'
+    ) {
+      import('./classic.js').then(({ renderBuilderInputs }) => {
+        renderBuilderInputs()
+      })
+    }
   }
 
   handle.addEventListener('pointerup', stopResizing)
@@ -1174,6 +1205,162 @@ export function handleInlineBlur (e) {
 
 // --- Inline Preview Renderer ---
 
+function createInlineRerenderAllEditors () {
+  return () => {
+    import('./classic.js').then(({ renderBuilderInputs }) => {
+      renderBuilderInputs()
+      renderInlinePreview()
+    })
+  }
+}
+
+function buildInlineMainEditableNode ({
+  tag,
+  key,
+  html,
+  className,
+  emptyValue,
+  emptyAutofocus = false,
+  confirmPrompt,
+  onHide
+}) {
+  const node = document.createElement(tag)
+  node.className = className
+  node.classList.add('inline-full-span')
+  node.contentEditable = true
+  node.dataset.key = key
+  node.innerHTML = html
+
+  if (!emptyValue || emptyValue.trim() === '') {
+    node.classList.add('new-text-outline')
+    const removeOutline = () => {
+      node.classList.remove('new-text-outline')
+      node.removeEventListener('input', removeOutline)
+    }
+    node.addEventListener('input', removeOutline)
+    if (emptyAutofocus) setTimeout(() => node.focus(), 20)
+  }
+
+  node.addEventListener('dblclick', async (event) => {
+    event.stopPropagation()
+    if (!(await openInlineDeleteConfirm(confirmPrompt))) return
+    onHide()
+    createInlineRerenderAllEditors()()
+  })
+
+  return node
+}
+
+function buildPagedInlinePreviewSurface () {
+  const layout = document.createElement('div')
+  layout.className = 'inline-preview-layout'
+
+  const stats = document.createElement('aside')
+  stats.className = 'preview-stats inline-preview-stats'
+
+  const statsTitle = document.createElement('h2')
+  statsTitle.className = 'preview-stats-title'
+  statsTitle.textContent = 'Document Stats'
+
+  const statsList = document.createElement('dl')
+  statsList.className = 'preview-stats-list'
+
+  const createStatsRow = (labelText, valueText) => {
+    const row = document.createElement('div')
+    row.className = 'preview-stats-row'
+
+    const label = document.createElement('dt')
+    label.textContent = labelText
+
+    const value = document.createElement('dd')
+    value.textContent = valueText
+
+    row.appendChild(label)
+    row.appendChild(value)
+    statsList.appendChild(row)
+    return value
+  }
+
+  const wordValue = createStatsRow('Words', '0')
+  const sentenceValue = createStatsRow('Sentences', '0')
+  const paragraphValue = createStatsRow('Paragraphs', '0')
+  const pageValue = createStatsRow('Pages', '1')
+
+  inlineStatNodes = {
+    word: wordValue,
+    sentence: sentenceValue,
+    paragraph: paragraphValue,
+    page: pageValue
+  }
+
+  stats.appendChild(statsTitle)
+  stats.appendChild(statsList)
+
+  const canvas = document.createElement('div')
+  canvas.className = 'inline-preview-canvas'
+
+  const flow = document.createElement('div')
+  flow.className = 'inline-preview-flow'
+  canvas.appendChild(flow)
+
+  layout.appendChild(stats)
+  layout.appendChild(canvas)
+  dom.inlinePreview.appendChild(layout)
+
+  inlinePagedFlow = flow
+  return { contentRoot: flow, dropSurface: flow }
+}
+
+function createInlineItemInteractionsBinder (rerenderAllEditors) {
+  return (node, itemId) => {
+    node.addEventListener('dblclick', async (event) => {
+      event.stopPropagation()
+      if (!(await openInlineDeleteConfirm('Remove this item?'))) return
+
+      const stringId = String(itemId)
+      recipeData.items.forEach((entry) => {
+        if (String(entry.parentId) === stringId) delete entry.parentId
+      })
+      recipeData.items = recipeData.items.filter(
+        (entry) => String(entry.id) !== stringId
+      )
+      rerenderAllEditors()
+    })
+
+    if (node.dataset.freeMove === 'true') return
+
+    node.addEventListener('dragstart', (event) => {
+      event.dataTransfer.setData('text/plain', String(itemId))
+      node.classList.add('dragging')
+    })
+    node.addEventListener('dragend', () => {
+      node.classList.remove('dragging')
+      if (!dom.inlinePreview) return
+      dom.inlinePreview
+        .querySelectorAll(
+          '.inline-item.drop-target, .inline-container-surface.drop-target'
+        )
+        .forEach((n) => n.classList.remove('drop-target'))
+    })
+    node.addEventListener('dragover', (event) => {
+      event.preventDefault()
+      node.classList.add('drop-target')
+    })
+    node.addEventListener('dragleave', () => {
+      node.classList.remove('drop-target')
+    })
+    node.addEventListener('drop', (event) => {
+      event.preventDefault()
+      const dragId = event.dataTransfer.getData('text/plain')
+      const targetId = node.dataset.id
+      if (dragId && targetId && dragId !== targetId) {
+        reorderItems(dragId, targetId)
+        rerenderAllEditors()
+      }
+    })
+  }
+}
+
 export function renderInlinePreview () {
   if (!dom.inlinePreview) return
   if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') {
@@ -1185,197 +1372,61 @@ export function renderInlinePreview () {
   inlineStatNodes = null
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
-  const isPaged = recipeData.settings.previewMode === 'paged'
-  inlineIsPagedMode = isPaged
+  const isPagedMode = recipeData.settings.previewMode === 'paged'
+  inlineIsPagedMode = isPagedMode
   const applyToText = Boolean(recipeData.settings.fontApplyToText)
   const applyToTips = Boolean(recipeData.settings.fontApplyToTips)
-  dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPaged)
-  dom.inlinePreview.classList.toggle('inline-content-surface', !isPaged)
+  dom.inlinePreview.classList.toggle('inline-paged-preview-active', isPagedMode)
+  dom.inlinePreview.classList.toggle('inline-content-surface', !isPagedMode)
 
-  let contentRoot = dom.inlinePreview
-  let dropSurface = dom.inlinePreview
-
-  if (isPaged) {
-    const layout = document.createElement('div')
-    layout.className = 'inline-preview-layout'
-
-    const stats = document.createElement('aside')
-    stats.className = 'preview-stats inline-preview-stats'
-
-    const statsTitle = document.createElement('h2')
-    statsTitle.className = 'preview-stats-title'
-    statsTitle.textContent = 'Document Stats'
-
-    const statsList = document.createElement('dl')
-    statsList.className = 'preview-stats-list'
-
-    const createStatsRow = (labelText, valueText) => {
-      const row = document.createElement('div')
-      row.className = 'preview-stats-row'
-
-      const label = document.createElement('dt')
-      label.textContent = labelText
-
-      const value = document.createElement('dd')
-      value.textContent = valueText
-
-      row.appendChild(label)
-      row.appendChild(value)
-      statsList.appendChild(row)
-      return value
-    }
-
-    const wordValue = createStatsRow('Words', '0')
-    const sentenceValue = createStatsRow('Sentences', '0')
-    const paragraphValue = createStatsRow('Paragraphs', '0')
-    const pageValue = createStatsRow('Pages', '1')
-
-    inlineStatNodes = {
-      word: wordValue,
-      sentence: sentenceValue,
-      paragraph: paragraphValue,
-      page: pageValue
-    }
-
-    stats.appendChild(statsTitle)
-    stats.appendChild(statsList)
-
-    const canvas = document.createElement('div')
-    canvas.className = 'inline-preview-canvas'
-
-    const flow = document.createElement('div')
-    flow.className = 'inline-preview-flow'
-    canvas.appendChild(flow)
-
-    layout.appendChild(stats)
-    layout.appendChild(canvas)
-    dom.inlinePreview.appendChild(layout)
-
-    contentRoot = flow
-    dropSurface = flow
-    inlinePagedFlow = flow
-  }
+  const { contentRoot, dropSurface } = isPagedMode
+    ? buildPagedInlinePreviewSurface(fontStyle)
+    : { contentRoot: dom.inlinePreview, dropSurface: dom.inlinePreview }
 
   // Title (editable) — skip if hidden
   if (!recipeData.settings?.hideTitle) {
-    const h1 = document.createElement('h1')
-    h1.className = `text-4xl font-bold mb-4 font-style-${fontStyle}`
-    h1.classList.add('inline-full-span')
-    h1.contentEditable = true
-    h1.dataset.key = 'title'
-    h1.innerHTML = renderRichText(recipeData.title)
-    // Outline for empty title so users notice it's editable
-    if (!recipeData.title || recipeData.title.trim() === '') {
-      h1.classList.add('new-text-outline')
-      const removeOutline = () => {
-        h1.classList.remove('new-text-outline')
-        h1.removeEventListener('input', removeOutline)
-      }
-      h1.addEventListener('input', removeOutline)
-      setTimeout(() => h1.focus(), 20)
-    }
-    h1.addEventListener('dblclick', async (ev) => {
-      ev.stopPropagation()
-      if (await openInlineDeleteConfirm('Hide the title from preview?')) {
-        recipeData.settings.hideTitle = true
-        if (dom.hideTitleCheckbox) dom.hideTitleCheckbox.checked = true
-        import('./classic.js').then(({ renderBuilderInputs }) => {
-          renderBuilderInputs()
-          renderInlinePreview()
-        })
-      }
-    })
-    contentRoot.appendChild(h1)
+    contentRoot.appendChild(
+      buildInlineMainEditableNode({
+        tag: 'h1',
+        key: 'title',
+        html: renderRichText(recipeData.title),
+        className: `text-4xl font-bold mb-4 font-style-${fontStyle}`,
+        emptyValue: recipeData.title,
+        emptyAutofocus: true,
+        onHide: () => {
+          recipeData.settings.hideTitle = true
+          if (dom.hideTitleCheckbox) dom.hideTitleCheckbox.checked = true
+        },
+        confirmPrompt: 'Hide the title from preview?'
+      })
+    )
   }
 
   // Description (editable) — skip if hidden
   if (!recipeData.settings?.hideDescription) {
-    const descriptionParagraph = document.createElement('p')
-    descriptionParagraph.className = `text-gray-600 italic mb-4 ${
-      applyToText ? `font-style-${fontStyle}` : ''
-    }`.trim()
-    descriptionParagraph.classList.add('inline-full-span')
-    descriptionParagraph.contentEditable = true
-    descriptionParagraph.dataset.key = 'description'
-    descriptionParagraph.innerHTML = renderRichText(recipeData.description)
-    // Outline for empty description
-    if (!recipeData.description || recipeData.description.trim() === '') {
-      descriptionParagraph.classList.add('new-text-outline')
-      const removeOutlineDesc = () => {
-        descriptionParagraph.classList.remove('new-text-outline')
-        descriptionParagraph.removeEventListener('input', removeOutlineDesc)
-      }
-      descriptionParagraph.addEventListener('input', removeOutlineDesc)
-    }
-    descriptionParagraph.addEventListener('dblclick', async (ev) => {
-      ev.stopPropagation()
-      if (await openInlineDeleteConfirm('Hide the description from preview?')) {
-        recipeData.settings.hideDescription = true
-        if (dom.hideDescCheckbox) dom.hideDescCheckbox.checked = true
-        import('./classic.js').then(({ renderBuilderInputs }) => {
-          renderBuilderInputs()
-          renderInlinePreview()
-        })
-      }
-    })
-    contentRoot.appendChild(descriptionParagraph)
+    contentRoot.appendChild(
+      buildInlineMainEditableNode({
+        tag: 'p',
+        key: 'description',
+        html: renderRichText(recipeData.description),
+        className: `text-gray-600 italic mb-4 ${
+          applyToText ? `font-style-${fontStyle}` : ''
+        }`.trim(),
+        emptyValue: recipeData.description,
+        onHide: () => {
+          recipeData.settings.hideDescription = true
+          if (dom.hideDescCheckbox) dom.hideDescCheckbox.checked = true
+        },
+        confirmPrompt: 'Hide the description from preview?'
+      })
+    )
   }
 
-  const rerenderAllEditors = () => {
-    import('./classic.js').then(({ renderBuilderInputs }) => {
-      renderBuilderInputs()
-      renderInlinePreview()
-    })
-  }
+  const rerenderAllEditors = createInlineRerenderAllEditors()
 
-  const attachInlineItemInteractions = (node, itemId) => {
-    node.addEventListener('dblclick', async (ev) => {
-      ev.stopPropagation()
-      if (await openInlineDeleteConfirm('Remove this item?')) {
-        const sid = String(itemId)
-        recipeData.items.forEach((entry) => {
-          if (String(entry.parentId) === sid) delete entry.parentId
-        })
-        recipeData.items = recipeData.items.filter((i) => String(i.id) !== sid)
-        rerenderAllEditors()
-      }
-    })
-
-    if (node.dataset.freeMove === 'true') {
-      return
-    }
-
-    node.addEventListener('dragstart', (ev) => {
-      ev.dataTransfer.setData('text/plain', String(itemId))
-      node.classList.add('dragging')
-    })
-    node.addEventListener('dragend', () => {
-      node.classList.remove('dragging')
-      if (dom.inlinePreview) {
-        dom.inlinePreview
-          .querySelectorAll(
-            '.inline-item.drop-target, .inline-container-surface.drop-target'
-          )
-          .forEach((n) => n.classList.remove('drop-target'))
-      }
-    })
-    node.addEventListener('dragover', (ev) => {
-      ev.preventDefault()
-      node.classList.add('drop-target')
-    })
-    node.addEventListener('dragleave', () => {
-      node.classList.remove('drop-target')
-    })
-    node.addEventListener('drop', (ev) => {
-      ev.preventDefault()
-      const dragId = ev.dataTransfer.getData('text/plain')
-      const targetId = node.dataset.id
-      if (dragId && targetId && dragId !== targetId) {
-        reorderItems(dragId, targetId)
-        rerenderAllEditors()
-      }
-    })
-  }
+  const attachInlineItemInteractions = createInlineItemInteractionsBinder(
+    rerenderAllEditors
+  )
 
   const renderItemsInto = (rootEl, items) => {
     let currentList = null
@@ -1408,9 +1459,9 @@ export function renderInlinePreview () {
         wrapper.className = 'inline-item inline-full-span'
         wrapper.dataset.id = item.id
         wrapper.draggable = true
-        wrapper.appendChild(spacerEl)
 
         if (variant === 'container') {
+          wrapper.appendChild(spacerEl)
           wrapper.classList.add('inline-item--container-host')
           const surface = document.createElement('div')
           surface.className = 'inline-container-surface'
@@ -1425,9 +1476,6 @@ export function renderInlinePreview () {
             Math.max(1, Math.round(Number(item.containerColumns)) || 2)
           )
           surface.style.setProperty('--inline-container-cols', String(cols))
-          surface.addEventListener('dblclick', (ev) => {
-            ev.stopPropagation()
-          })
           surface.addEventListener('dragover', (ev) => {
             ev.preventDefault()
             ev.stopPropagation()
@@ -1446,6 +1494,21 @@ export function renderInlinePreview () {
           })
           renderItemsInto(surface, getChildItemsInDocumentOrder(item.id))
           wrapper.appendChild(surface)
+        } else {
+          item.inlineMinHeight = Math.max(
+            INLINE_BOX_MIN_HEIGHT,
+            Math.min(
+              INLINE_BOX_MAX_HEIGHT,
+              normalizeSpacer(item.size)
+            )
+          )
+          const frame = document.createElement('div')
+          frame.className =
+            'inline-item-frame inline-item-frame-resizable inline-item-frame--spacer'
+          frame.appendChild(spacerEl)
+          wrapper.appendChild(frame)
+          syncInlineBoxSizing(item, wrapper, frame)
+          attachInlineBorderHandles(item, frame, wrapper)
         }
 
         rootEl.appendChild(wrapper)
