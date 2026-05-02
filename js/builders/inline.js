@@ -1724,7 +1724,7 @@ export function renderInlinePreview () {
     })
   }
 
-  if (isPaged) {
+  if (isPagedMode) {
     scheduleInlinePreviewStatsUpdate()
   }
 }
