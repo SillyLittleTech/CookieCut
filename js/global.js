@@ -53,10 +53,13 @@ const VALID_ITEM_TYPES = new Set([
   'text',
   'image',
   'bubble',
-  'link'
+  'link',
+  'spacer'
 ])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
+const VALID_SPACER_VARIANTS = new Set(['blank', 'line', 'page', 'container'])
+const VALID_CONTAINER_LAYOUTS = new Set(['flow', 'grid'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 const PRINT_MODAL_ACTION_PRINT = 'print'
 const PRINT_MODAL_ACTION_EXPORT = 'export'
@@ -87,6 +90,22 @@ let redoHistory = []
 let lastTrackedRecipeSnapshot = ''
 let isApplyingHistorySnapshot = false
 let historyObserverTimerId = null
+let persistWorkingDocumentDebounceTimer = null
+const PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS = 400
+
+function schedulePersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = setTimeout(() => {
+    persistWorkingDocumentDebounceTimer = null
+    persistWorkingDocumentToCache()
+  }, PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS)
+}
+
+function flushPersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = null
+  persistWorkingDocumentToCache()
+}
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
@@ -182,6 +201,7 @@ function observeRecipeMutations () {
   }
   redoHistory = []
   lastTrackedRecipeSnapshot = currentSnapshotSerialized
+  schedulePersistWorkingDocument()
 }
 
 function startHistoryObserver () {
@@ -356,6 +376,48 @@ function normalizeImportedSettings (rawSettings) {
   }
 }
 
+function applyImportedParentId (normalized, rawParentId) {
+  if (rawParentId != null && rawParentId !== '') {
+    normalized.parentId = rawParentId
+  } else {
+    delete normalized.parentId
+  }
+}
+
+function normalizeImportedImageItem (rawItem, normalized) {
+  const size = toFiniteNumberOrFallback(rawItem.size, 350)
+  normalized.src = toStringOrFallback(rawItem.src, '')
+  normalized.alt = toStringOrFallback(rawItem.alt, '')
+  normalized.size = size
+  normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
+  normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
+    rawItem.inlineImageFlow
+  )
+    ? rawItem.inlineImageFlow
+    : 'around'
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
+}
+
+function normalizeImportedSpacerItem (rawItem, normalized) {
+  let variant = toStringOrFallback(rawItem.variant, 'blank')
+  if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
+  normalized.variant = variant
+  normalized.size = Math.max(
+    0,
+    Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
+  )
+  let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
+  if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
+  normalized.containerLayout = layout
+  const cols = Math.round(
+    toFiniteNumberOrFallback(rawItem.containerColumns, 2)
+  )
+  normalized.containerColumns = Math.min(4, Math.max(1, cols))
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
+}
+
 function normalizeImportedItem (rawItem, fallbackId) {
   if (!rawItem || typeof rawItem !== 'object') return null
   const type = toStringOrFallback(rawItem.type, '')
@@ -368,20 +430,11 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
 
   if (type === 'image') {
-    const size = toFiniteNumberOrFallback(rawItem.size, 350)
-    normalized.src = toStringOrFallback(rawItem.src, '')
-    normalized.alt = toStringOrFallback(rawItem.alt, '')
-    normalized.size = size
-    normalized.inlineWidth = toFiniteNumberOrFallback(
-      rawItem.inlineWidth,
-      size
-    )
-    normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
-      rawItem.inlineImageFlow
-    )
-      ? rawItem.inlineImageFlow
-      : 'around'
-    return normalized
+    return normalizeImportedImageItem(rawItem, normalized)
+  }
+
+  if (type === 'spacer') {
+    return normalizeImportedSpacerItem(rawItem, normalized)
   }
 
   normalized.content = toStringOrFallback(rawItem.content, '')
@@ -394,6 +447,7 @@ function normalizeImportedItem (rawItem, fallbackId) {
   if (type === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
   }
+  applyImportedParentId(normalized, rawItem.parentId)
   normalized.scale = toItemScale(rawItem.scale)
   return normalized
 }
@@ -1562,6 +1616,18 @@ export function addItem (type, subtype = null) {
       newItem.href = ''
       newItem.scale = 100
       break
+    case 'spacer': {
+      newItem.type = 'spacer'
+      const variant =
+        typeof subtype === 'string' && VALID_SPACER_VARIANTS.has(subtype)
+          ? subtype
+          : 'blank'
+      newItem.variant = variant
+      newItem.size = 80
+      newItem.containerLayout = 'flow'
+      newItem.containerColumns = 2
+      break
+    }
     default:
       break
   }
@@ -1940,7 +2006,14 @@ function handleLiveInput (e) {
 
   if (!item || !key) return
 
-  item[key] = value
+  if (key === 'containerColumns') {
+    const n = Math.round(Number.parseInt(String(value), 10))
+    item.containerColumns = Number.isFinite(n)
+      ? Math.min(4, Math.max(1, n))
+      : 2
+  } else {
+    item[key] = value
+  }
 
   // If it's the size slider, also update the live pixel display
   if (key === 'size') {
@@ -1980,6 +2053,14 @@ function handleLiveInput (e) {
   ) {
     renderInlinePreview()
   }
+
+  if (
+    isInlineMode() &&
+    item.type === 'spacer' &&
+    ['size', 'variant', 'containerLayout', 'containerColumns'].includes(key)
+  ) {
+    renderInlinePreview()
+  }
 }
 
 function handleContentInputClick (e) {
@@ -1995,9 +2076,11 @@ function handleContentInputClick (e) {
   let actionTaken = false
 
   if (deleteBtn) {
-    recipeData.items = recipeData.items.filter(
-      (i) => String(i.id) !== String(id)
-    )
+    const sid = String(id)
+    recipeData.items.forEach((entry) => {
+      if (String(entry.parentId) === sid) delete entry.parentId
+    })
+    recipeData.items = recipeData.items.filter((i) => String(i.id) !== sid)
     actionTaken = true
   } else if (moveUpBtn) {
     moveItem(id, 'up')
@@ -2449,18 +2532,21 @@ function bindFloatingAddButtonListeners () {
     menu.id = 'floating-add-menu'
     menu.className = 'inline-floating-menu'
     menu.style.position = 'fixed'
-    menu.style.right = '96px'
-    menu.style.bottom = '24px'
+    const compactViewport = window.innerWidth < 520
+    menu.style.right = compactViewport ? '16px' : '96px'
+    menu.style.bottom = compactViewport ? '16px' : '24px'
     menu.style.zIndex = 70
     menu.style.padding = '8px'
     menu.style.borderRadius = '8px'
     menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+    menu.style.maxWidth = 'calc(100vw - 32px)'
 
-    const makeBtn = (label, callback) => {
+    const makeIconBtn = (iconName, label, callback) => {
       const buttonEl = document.createElement('button')
-      buttonEl.textContent = label
+      buttonEl.type = 'button'
       buttonEl.className =
-        'inline-floating-menu-btn px-3 py-2 block w-full text-left'
+        'inline-floating-menu-btn px-3 py-2 flex w-full items-center gap-2 text-left'
+      buttonEl.innerHTML = `<span class="material-icons inline-floating-menu-icon" aria-hidden="true">${iconName}</span><span class="inline-floating-menu-label">${label}</span>`
       buttonEl.addEventListener('click', () => {
         callback()
         menu.remove()
@@ -2468,10 +2554,97 @@ function bindFloatingAddButtonListeners () {
       return buttonEl
     }
 
-    menu.appendChild(makeBtn('Add Text', () => openTextModal()))
-    menu.appendChild(makeBtn('Add Image', () => addItem('image')))
-    menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
-    menu.appendChild(makeBtn('Print', () => handlePrint()))
+    menu.appendChild(
+      makeIconBtn('text_fields', 'Add Text', () => openTextModal())
+    )
+    menu.appendChild(makeIconBtn('image', 'Add Image', () => addItem('image')))
+    menu.appendChild(
+      makeIconBtn('notifications', 'Add Toast', () => openToastModal())
+    )
+
+    const spacerRow = document.createElement('div')
+    spacerRow.className =
+      'inline-floating-menu-row inline-floating-menu-row--submenu-host'
+    const spacerToggle = document.createElement('button')
+    spacerToggle.type = 'button'
+    spacerToggle.className =
+      'inline-floating-menu-btn inline-floating-menu-row-toggle px-3 py-2 flex w-full items-center gap-2 text-left'
+    spacerToggle.setAttribute('aria-expanded', 'false')
+    spacerToggle.innerHTML =
+      '<span class="material-icons inline-floating-menu-icon" aria-hidden="true">height</span>' +
+      '<span class="inline-floating-menu-label flex-1">Add Spacer</span>' +
+      '<span class="material-icons inline-floating-submenu-chevron" aria-hidden="true">chevron_right</span>'
+    const spacerSub = document.createElement('div')
+    spacerSub.className = 'inline-floating-submenu'
+    spacerSub.setAttribute('role', 'menu')
+
+    const positionSpacerSubmenu = () => {
+      spacerSub.style.left = ''
+      spacerSub.style.right = ''
+      spacerSub.style.top = ''
+      spacerSub.style.bottom = ''
+      spacerSub.style.marginLeft = ''
+      spacerSub.style.marginRight = ''
+
+      // Measure after it's visible.
+      const rect = spacerSub.getBoundingClientRect()
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+      const gutter = 12
+
+      if (rect.right > viewportW - gutter) {
+        spacerSub.style.left = 'auto'
+        spacerSub.style.right = '100%'
+        spacerSub.style.marginRight = '6px'
+      } else {
+        spacerSub.style.left = '100%'
+        spacerSub.style.marginLeft = '6px'
+      }
+
+      const nextRect = spacerSub.getBoundingClientRect()
+      if (nextRect.bottom > viewportH - gutter) {
+        spacerSub.style.top = 'auto'
+        spacerSub.style.bottom = '0'
+      } else {
+        spacerSub.style.top = '0'
+      }
+    }
+
+    spacerToggle.addEventListener('click', (ev) => {
+      ev.preventDefault()
+      ev.stopPropagation()
+      const open = !spacerRow.classList.contains(
+        'inline-floating-menu-row--open'
+      )
+      spacerRow.classList.toggle('inline-floating-menu-row--open', open)
+      spacerToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      if (open) {
+        requestAnimationFrame(() => {
+          positionSpacerSubmenu()
+        })
+      }
+    })
+
+    spacerSub.appendChild(
+      makeIconBtn('height', 'Blank', () => addItem('spacer', 'blank'))
+    )
+    spacerSub.appendChild(
+      makeIconBtn('line_weight', 'Line', () => addItem('spacer', 'line'))
+    )
+    if (recipeData.settings?.previewMode === 'paged') {
+      spacerSub.appendChild(
+        makeIconBtn('layers', 'Page', () => addItem('spacer', 'page'))
+      )
+    }
+    spacerSub.appendChild(
+      makeIconBtn('grid_on', 'Container', () => addItem('spacer', 'container'))
+    )
+
+    spacerRow.appendChild(spacerToggle)
+    spacerRow.appendChild(spacerSub)
+    menu.appendChild(spacerRow)
+
+    menu.appendChild(makeIconBtn('print', 'Print', () => handlePrint()))
 
     document.body.appendChild(menu)
     setTimeout(() => {
@@ -2619,6 +2792,8 @@ function performInitialRender () {
 // --- INIT ---
 
 export function init () {
+  window.addEventListener('pagehide', flushPersistWorkingDocument)
+  window.addEventListener('beforeunload', flushPersistWorkingDocument)
   initializePreviewModeSetting()
   bindMainInfoListeners()
   bindTopToolbarListeners()
