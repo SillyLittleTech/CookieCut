@@ -332,7 +332,9 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
           }
         }
         if (variant === 'container') {
-          const surfaceNode = frameEl.querySelector('.inline-container-surface')
+          const surfaceNode = frameEl.querySelector(
+            '.inline-container-surface'
+          )
           if (surfaceNode) {
             surfaceNode.style.minHeight = `${item.size}px`
           }
