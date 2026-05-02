@@ -59,7 +59,12 @@ const VALID_ITEM_TYPES = new Set([
   'dropdown',
   'frame'
 ])
-const VALID_HTML_ITEM_TYPES = new Set(['button', 'navmenu', 'dropdown', 'frame'])
+const VALID_HTML_ITEM_TYPES = new Set([
+  'button',
+  'navmenu',
+  'dropdown',
+  'frame'
+])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
@@ -403,7 +408,12 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
   if (type === 'button') {
     normalized.href = toStringOrFallback(rawItem.href, '')
-    const VALID_BUTTON_STYLES = new Set(['primary', 'secondary', 'danger', 'ghost'])
+    const VALID_BUTTON_STYLES = new Set([
+      'primary',
+      'secondary',
+      'danger',
+      'ghost'
+    ])
     normalized.buttonStyle = VALID_BUTTON_STYLES.has(rawItem.buttonStyle)
       ? rawItem.buttonStyle
       : 'primary'
@@ -1662,7 +1672,9 @@ function isHtmlMode () {
 
 function updatePreviewModeSelectForHtmlMode (htmlModeActive) {
   if (!dom.previewModeSelect) return
-  const pagedOption = dom.previewModeSelect.querySelector('option[value="paged"]')
+  const pagedOption = dom.previewModeSelect.querySelector(
+    'option[value="paged"]'
+  )
   if (!pagedOption) return
   if (htmlModeActive) {
     pagedOption.disabled = true

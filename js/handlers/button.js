@@ -22,10 +22,14 @@ function sanitizeHref (href) {
 
 function getButtonClasses (style) {
   switch (style) {
-    case 'secondary': return 'html-btn html-btn--secondary'
-    case 'danger': return 'html-btn html-btn--danger'
-    case 'ghost': return 'html-btn html-btn--ghost'
-    default: return 'html-btn html-btn--primary'
+    case 'secondary':
+      return 'html-btn html-btn--secondary'
+    case 'danger':
+      return 'html-btn html-btn--danger'
+    case 'ghost':
+      return 'html-btn html-btn--ghost'
+    default:
+      return 'html-btn html-btn--primary'
   }
 }
 

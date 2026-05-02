@@ -437,7 +437,11 @@ export function sanitizeHtmlContent (rawHtml) {
         el.removeAttribute(attr.name)
         return
       }
-      if (attr.name === 'href' || attr.name === 'src' || attr.name === 'action') {
+      if (
+        attr.name === 'href' ||
+        attr.name === 'src' ||
+        attr.name === 'action'
+      ) {
         const val = attr.value.trim().toLowerCase()
         if (val.startsWith('javascript:') || val.startsWith('data:text/html')) {
           el.removeAttribute(attr.name)
