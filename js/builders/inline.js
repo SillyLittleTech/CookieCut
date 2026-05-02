@@ -1430,9 +1430,15 @@ export function renderInlinePreview () {
 
       // Add border-handle resizing for modular items (including images).
       if (
-        ['text', 'heading', 'bubble', 'link', 'image', 'button', 'dropdown'].includes(
-          item.type
-        )
+        [
+          'text',
+          'heading',
+          'bubble',
+          'link',
+          'image',
+          'button',
+          'dropdown'
+        ].includes(item.type)
       ) {
         if (item.type === 'image') {
           const normalizedImageWidth = normalizeInlineBoxMeasurement(
@@ -1451,9 +1457,7 @@ export function renderInlinePreview () {
       }
 
       // Add text scale handle for text-containing elements.
-      if (
-        ['text', 'heading', 'bubble', 'link', 'button'].includes(item.type)
-      ) {
+      if (['text', 'heading', 'bubble', 'link', 'button'].includes(item.type)) {
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
 

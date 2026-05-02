@@ -2196,7 +2196,9 @@ body[data-theme="light"] .template-gallery-shell h2 {
   color: #475569;
   background: transparent;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   line-height: 1.4;
 }
 .html-code-toggle-btn:hover {
@@ -2234,11 +2236,15 @@ body[data-theme="light"] .template-gallery-shell h2 {
   text-decoration: none;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .html-btn:hover {
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 .html-btn--primary {
   background: #4f46e5;
