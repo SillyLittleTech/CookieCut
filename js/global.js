@@ -2532,12 +2532,14 @@ function bindFloatingAddButtonListeners () {
     menu.id = 'floating-add-menu'
     menu.className = 'inline-floating-menu'
     menu.style.position = 'fixed'
-    menu.style.right = '96px'
-    menu.style.bottom = '24px'
+    const compactViewport = window.innerWidth < 520
+    menu.style.right = compactViewport ? '16px' : '96px'
+    menu.style.bottom = compactViewport ? '16px' : '24px'
     menu.style.zIndex = 70
     menu.style.padding = '8px'
     menu.style.borderRadius = '8px'
     menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+    menu.style.maxWidth = 'calc(100vw - 32px)'
 
     const makeIconBtn = (iconName, label, callback) => {
       const buttonEl = document.createElement('button')
@@ -2576,6 +2578,38 @@ function bindFloatingAddButtonListeners () {
     spacerSub.className = 'inline-floating-submenu'
     spacerSub.setAttribute('role', 'menu')
 
+    const positionSpacerSubmenu = () => {
+      spacerSub.style.left = ''
+      spacerSub.style.right = ''
+      spacerSub.style.top = ''
+      spacerSub.style.bottom = ''
+      spacerSub.style.marginLeft = ''
+      spacerSub.style.marginRight = ''
+
+      // Measure after it's visible.
+      const rect = spacerSub.getBoundingClientRect()
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+      const gutter = 12
+
+      if (rect.right > viewportW - gutter) {
+        spacerSub.style.left = 'auto'
+        spacerSub.style.right = '100%'
+        spacerSub.style.marginRight = '6px'
+      } else {
+        spacerSub.style.left = '100%'
+        spacerSub.style.marginLeft = '6px'
+      }
+
+      const nextRect = spacerSub.getBoundingClientRect()
+      if (nextRect.bottom > viewportH - gutter) {
+        spacerSub.style.top = 'auto'
+        spacerSub.style.bottom = '0'
+      } else {
+        spacerSub.style.top = '0'
+      }
+    }
+
     spacerToggle.addEventListener('click', (ev) => {
       ev.preventDefault()
       ev.stopPropagation()
@@ -2584,6 +2618,11 @@ function bindFloatingAddButtonListeners () {
       )
       spacerRow.classList.toggle('inline-floating-menu-row--open', open)
       spacerToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      if (open) {
+        requestAnimationFrame(() => {
+          positionSpacerSubmenu()
+        })
+      }
     })
 
     spacerSub.appendChild(

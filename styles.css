@@ -796,6 +796,7 @@
 
 .inline-floating-menu {
   background: #ffffff;
+  max-width: calc(100vw - 32px);
 }
 
 .inline-floating-menu-btn {
@@ -852,6 +853,9 @@
   top: 0;
   margin-left: 6px;
   min-width: 188px;
+  max-width: calc(100vw - 32px);
+  max-height: min(60vh, 360px);
+  overflow: auto;
   padding: 6px;
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);

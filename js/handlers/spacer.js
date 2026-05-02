@@ -63,15 +63,17 @@ export function getBuilderInput (item) {
     })
     .join('')
 
-  const sizeBlock =
-    variant === 'blank' || variant === 'line'
-      ? `
+  const shouldShowSize =
+    variant === 'blank' || variant === 'line' || variant === 'container'
+
+  const sizeBlock = shouldShowSize
+    ? `
             <label class="block text-sm font-medium text-gray-700 mt-2">Height (px)</label>
             <div class="flex items-center gap-2 mt-1">
               <input type="range" data-key="size" min="${MIN_SPACER_SIZE}" max="${MAX_SPACER_SIZE}" step="2" value="${size}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
               <span class="text-sm text-gray-600 w-12 text-right" data-role="size-display">${size}px</span>
             </div>`
-      : ''
+    : ''
 
   const flowSelectedAttr = layout === 'flow' ? ' selected' : ''
   const gridSelectedAttr = layout === 'grid' ? ' selected' : ''

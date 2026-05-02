@@ -304,16 +304,39 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
   }
 
   const updateSizing = (width, minHeight) => {
-    const spacerResize =
-      item.type === 'spacer' && (item.variant || 'blank') !== 'container'
+    const spacerResize = item.type === 'spacer'
 
     if (spacerResize) {
+      if (width != null) {
+        item.inlineWidth = width
+      }
       if (minHeight != null) {
-        item.size = Math.max(0, Math.min(600, Math.round(minHeight)))
+        const nextSize = Math.max(0, Math.min(600, Math.round(minHeight)))
+        const variant = item.variant || 'blank'
+        item.size = variant === 'container' ? Math.max(48, nextSize) : nextSize
         item.inlineMinHeight = Math.max(
           INLINE_BOX_MIN_HEIGHT,
           Math.min(INLINE_BOX_MAX_HEIGHT, normalizeSpacer(item.size))
         )
+
+        // Apply live visual sizing during drag (spacers render with explicit
+        // heights on inner nodes, unlike text/image frames).
+        const spacerNode = frameEl.querySelector('.inline-spacer')
+        if (spacerNode) {
+          if (variant === 'blank') {
+            spacerNode.style.height = `${item.size}px`
+          } else if (variant === 'line') {
+            spacerNode.style.height = `${Math.max(item.size, 12)}px`
+          } else if (variant === 'page') {
+            spacerNode.style.minHeight = `${Math.max(12, item.size)}px`
+          }
+        }
+        if (variant === 'container') {
+          const surfaceNode = frameEl.querySelector('.inline-container-surface')
+          if (surfaceNode) {
+            surfaceNode.style.minHeight = `${item.size}px`
+          }
+        }
       }
     } else {
       if (width != null) item.inlineWidth = width
@@ -323,44 +346,13 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
     refreshInlinePreviewMetrics()
   }
 
-  handle.addEventListener('dragstart', (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  })
-  handle.addEventListener('dblclick', (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  })
-  handle.addEventListener('pointerdown', (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    isResizing = true
-    pointerStartX = e.clientX
-    pointerStartY = e.clientY
-    widthAtStart = sizeTargetEl.getBoundingClientRect().width
-    heightAtStart = frameEl.getBoundingClientRect().height
-    frameEl.classList.add('inline-item-frame--resizing')
-    dragHost = handle.closest('.inline-item')
-    if (dragHost) {
-      dragHostWasDraggable = Boolean(dragHost.draggable)
-      dragHost.draggable = false
-    }
-    try {
-      handle.setPointerCapture(e.pointerId)
-    } catch {
-      // Pointer capture may be unavailable; drag still works.
-    }
-  })
-
-  handle.addEventListener('pointermove', (e) => {
-    if (!isResizing || !e.buttons) return
-    const deltaX = e.clientX - pointerStartX
-    const deltaY = e.clientY - pointerStartY
+  const computeResizeArgs = (event) => {
+    const deltaX = event.clientX - pointerStartX
+    const deltaY = event.clientY - pointerStartY
     let widthArg = null
     let minHeightArg = null
 
-    const spacerNoHorizontal =
-      item.type === 'spacer' && (item.variant || 'blank') !== 'container'
+    const spacerNoHorizontal = false
 
     if (!spacerNoHorizontal) {
       if (direction.includes('east')) {
@@ -380,39 +372,96 @@ function createInlineBorderHandle (item, frameEl, sizeTargetEl, direction) {
 
     if (direction.includes('south')) {
       const nextMinHeight = heightAtStart + deltaY
-      minHeightArg = Math.min(
-        INLINE_BOX_MAX_HEIGHT,
-        Math.max(INLINE_BOX_MIN_HEIGHT, nextMinHeight)
-      )
+      if (item.type === 'spacer') {
+        minHeightArg = Math.max(0, Math.min(600, nextMinHeight))
+      } else {
+        minHeightArg = Math.min(
+          INLINE_BOX_MAX_HEIGHT,
+          Math.max(INLINE_BOX_MIN_HEIGHT, nextMinHeight)
+        )
+      }
     }
 
-    updateSizing(widthArg, minHeightArg)
-  })
+    return { widthArg, minHeightArg }
+  }
 
-  const stopResizing = (e) => {
+  const handleWindowPointerMove = (event) => {
+    if (!isResizing) return
+    event.preventDefault()
+    const { widthArg, minHeightArg } = computeResizeArgs(event)
+    updateSizing(widthArg, minHeightArg)
+  }
+
+  const stopResizing = (event) => {
+    if (!isResizing) return
     isResizing = false
     frameEl.classList.remove('inline-item-frame--resizing')
-    if (e?.pointerId != null) {
+    window.removeEventListener('pointermove', handleWindowPointerMove, true)
+    window.removeEventListener('pointerup', stopResizing, true)
+    window.removeEventListener('pointercancel', stopResizing, true)
+
+    if (event?.pointerId != null) {
       try {
-        handle.releasePointerCapture(e.pointerId)
+        handle.releasePointerCapture(event.pointerId)
       } catch {
         // Pointer capture may already be released.
       }
     }
     restoreDragHost()
-    if (item.type === 'spacer' && (item.variant || 'blank') !== 'container') {
+    if (item.type === 'spacer') {
       import('./classic.js').then(({ renderBuilderInputs }) => {
         renderBuilderInputs()
       })
     }
   }
 
+  handle.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('dblclick', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  })
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isResizing = true
+    pointerStartX = e.clientX
+    pointerStartY = e.clientY
+    widthAtStart = sizeTargetEl.getBoundingClientRect().width
+    heightAtStart =
+      item.type === 'spacer' && item.inlineMinHeight
+        ? item.inlineMinHeight
+        : frameEl.getBoundingClientRect().height
+    frameEl.classList.add('inline-item-frame--resizing')
+    dragHost = handle.closest('.inline-item')
+    if (dragHost) {
+      dragHostWasDraggable = Boolean(dragHost.draggable)
+      dragHost.draggable = false
+    }
+    try {
+      handle.setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture may be unavailable; drag still works.
+    }
+
+    // Capture pointer events even when leaving the handle.
+    window.addEventListener('pointermove', handleWindowPointerMove, true)
+    window.addEventListener('pointerup', stopResizing, true)
+    window.addEventListener('pointercancel', stopResizing, true)
+  })
+
+  handle.addEventListener('pointermove', (e) => {
+    // Window-level pointer listeners handle the heavy lifting; keep this
+    // handler minimal for browsers that don't bubble pointermove reliably.
+    handleWindowPointerMove(e)
+  })
   handle.addEventListener('pointerup', stopResizing)
   handle.addEventListener('pointercancel', stopResizing)
   handle.addEventListener('lostpointercapture', () => {
-    isResizing = false
-    frameEl.classList.remove('inline-item-frame--resizing')
-    restoreDragHost()
+    // If capture is lost unexpectedly, finish the resize gracefully.
+    stopResizing()
   })
 
   return handle
@@ -1386,13 +1435,23 @@ function renderInlineSpacerItem ({
   const variant = item.variant || 'blank'
   const spacerEl = renderInlineSpacerElement(item)
   const wrapper = document.createElement('div')
-  wrapper.className = 'inline-item inline-full-span'
+  wrapper.className = 'inline-item inline-layout-item'
   wrapper.dataset.id = item.id
   wrapper.draggable = true
 
   if (variant === 'container') {
-    wrapper.appendChild(spacerEl)
     wrapper.classList.add('inline-item--container-host')
+
+    item.inlineMinHeight = Math.max(
+      INLINE_BOX_MIN_HEIGHT,
+      Math.min(INLINE_BOX_MAX_HEIGHT, normalizeSpacer(item.size))
+    )
+
+    const frame = document.createElement('div')
+    frame.className =
+      'inline-item-frame inline-item-frame-resizable inline-item-frame--spacer inline-item-frame--container'
+    frame.appendChild(spacerEl)
+
     const surface = document.createElement('div')
     surface.className = 'inline-container-surface'
     const layout = item.containerLayout === 'grid' ? 'grid' : 'flow'
@@ -1423,7 +1482,10 @@ function renderInlineSpacerItem ({
       rerenderAllEditors()
     })
     renderItemsInto(surface, getChildItemsInDocumentOrder(item.id))
-    wrapper.appendChild(surface)
+    frame.appendChild(surface)
+    wrapper.appendChild(frame)
+    syncInlineBoxSizing(item, wrapper, frame)
+    attachInlineBorderHandles(item, frame, wrapper)
   } else {
     item.inlineMinHeight = Math.max(
       INLINE_BOX_MIN_HEIGHT,
