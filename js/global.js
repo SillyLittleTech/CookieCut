@@ -2488,6 +2488,7 @@ function bindFloatingAddButtonListeners () {
     menu.appendChild(makeBtn('Add Text', () => openTextModal()))
     menu.appendChild(makeBtn('Add Image', () => addItem('image')))
     menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
+    menu.appendChild(makeBtn('Add Spacer', () => addItem('spacer')))
     menu.appendChild(makeBtn('Print', () => handlePrint()))
 
     document.body.appendChild(menu)

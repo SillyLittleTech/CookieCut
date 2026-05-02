@@ -18,6 +18,7 @@ import { renderInlineElement as renderInlineTextElement } from '../handlers/text
 import { renderInlineElement as renderInlineImageElement } from '../handlers/image.js'
 import { renderInlineElement as renderInlineBubbleElement } from '../handlers/bubble.js'
 import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js'
+import { renderInlineElement as renderInlineSpacerElement } from '../handlers/spacer.js'
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -1031,6 +1032,9 @@ function buildInlineStandardElement ({
       }
       break
     }
+    case 'spacer':
+      renderedElement = renderInlineSpacerElement(item)
+      break
     default:
       break
   }
@@ -1324,7 +1328,7 @@ export function renderInlinePreview () {
     currentList = document.createElement(type === 'step' ? 'ol' : 'ul')
     currentList.className =
       type === 'step' ? 'inline-step-list' : 'inline-bullet-list'
-    currentList.classList.add('inline-full-span')
+    currentList.classList.add('inline-layout-item')
     currentListType = type
     contentRoot.appendChild(currentList)
     return currentList
@@ -1332,6 +1336,22 @@ export function renderInlinePreview () {
 
   recipeData.items.forEach((item) => {
     const contentWithIcons = renderRichText(item.content || '')
+
+    if (item.type === 'spacer') {
+      currentList = null
+      currentListType = null
+      stepCounter = 0
+
+      const spacerEl = renderInlineSpacerElement(item)
+      const wrapper = document.createElement('div')
+      wrapper.className = 'inline-item inline-full-span'
+      wrapper.dataset.id = item.id
+      wrapper.draggable = true
+      wrapper.appendChild(spacerEl)
+      contentRoot.appendChild(wrapper)
+      attachInlineItemInteractions(wrapper, item.id)
+      return
+    }
 
     if (item.type === 'step' || item.type === 'bullet') {
       const isStep = item.type === 'step'

@@ -1196,7 +1196,7 @@
 #inline-preview .inline-step-list,
 #inline-preview .inline-bullet-list {
   list-style: none;
-  margin: 0.75rem 0;
+  margin: 0;
   padding-left: 0;
 }
 #inline-preview .inline-list-item {
@@ -1207,6 +1207,34 @@
 }
 #inline-preview .inline-list-item:last-child {
   margin-bottom: 0;
+}
+
+/* Spacer item — visible dashed outline in the editor */
+.inline-spacer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  min-height: 20px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+  pointer-events: none;
+}
+.inline-spacer::after {
+  content: "spacer";
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(99, 102, 241, 0.4);
+  pointer-events: none;
+}
+.inline-item:hover .inline-spacer {
+  border-color: rgba(99, 102, 241, 0.6);
+}
+.inline-item:hover .inline-spacer::after {
+  color: rgba(99, 102, 241, 0.75);
 }
 
 /* Print helpers: when JS adds body.print-inline-only or body.print-recipe-only
@@ -1275,6 +1303,12 @@
   .new-text-outline {
     outline: none !important;
     padding: 0 !important;
+  }
+  .inline-spacer {
+    border: none !important;
+  }
+  .inline-spacer::after {
+    display: none !important;
   }
   #floating-add-btn,
   #icon-key-btn,
@@ -1804,6 +1838,28 @@ body[data-theme="dark"] .template-gallery-shell {
   color: #e5e7eb;
 }
 
+.dark #text-type-step,
+.dark #text-type-bullet,
+.dark #text-type-text {
+  background: #374151;
+  border-color: #6b7280;
+}
+
+.dark #text-type-step:hover,
+.dark #text-type-bullet:hover,
+.dark #text-type-text:hover {
+  background: #4b5563;
+}
+
+.dark #text-type-step span,
+.dark #text-type-bullet span,
+.dark #text-type-text span,
+.dark #text-type-step p,
+.dark #text-type-bullet p,
+.dark #text-type-text p {
+  color: #e5e7eb;
+}
+
 .dark #toast-type-tip,
 .dark #toast-type-warning,
 .dark #toast-type-note {
@@ -2002,6 +2058,22 @@ body[data-theme="light"] .preview-stats {
   background: #374151;
   border-color: #4b5563;
   color: #e5e7eb;
+}
+
+.dark .inline-spacer {
+  border-color: rgba(129, 140, 248, 0.3);
+}
+
+.dark .inline-spacer::after {
+  color: rgba(129, 140, 248, 0.4);
+}
+
+.dark .inline-item:hover .inline-spacer {
+  border-color: rgba(129, 140, 248, 0.6);
+}
+
+.dark .inline-item:hover .inline-spacer::after {
+  color: rgba(129, 140, 248, 0.75);
 }
 
 .dark #inline-preview.inline-paged-preview-active .inline-preview-canvas {
