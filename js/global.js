@@ -53,7 +53,8 @@ const VALID_ITEM_TYPES = new Set([
   'text',
   'image',
   'bubble',
-  'link'
+  'link',
+  'spacer'
 ])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
@@ -381,6 +382,14 @@ function normalizeImportedItem (rawItem, fallbackId) {
     )
       ? rawItem.inlineImageFlow
       : 'around'
+    return normalized
+  }
+
+  if (type === 'spacer') {
+    normalized.size = Math.max(
+      20,
+      Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
+    )
     return normalized
   }
 
@@ -1562,6 +1571,10 @@ export function addItem (type, subtype = null) {
       newItem.href = ''
       newItem.scale = 100
       break
+    case 'spacer':
+      newItem.type = 'spacer'
+      newItem.size = 80
+      break
     default:
       break
   }
@@ -1978,6 +1991,10 @@ function handleLiveInput (e) {
     item.type === 'image' &&
     ['size', 'src', 'alt', 'inlineImageFlow'].includes(key)
   ) {
+    renderInlinePreview()
+  }
+
+  if (isInlineMode() && item.type === 'spacer' && key === 'size') {
     renderInlinePreview()
   }
 }

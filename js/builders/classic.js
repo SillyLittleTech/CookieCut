@@ -29,6 +29,10 @@ import {
   getBuilderInput as getLinkBuilderInput,
   renderPreviewElement as renderLinkPreviewElement
 } from '../handlers/link.js'
+import {
+  getBuilderInput as getSpacerBuilderInput,
+  renderPreviewElement as renderSpacerPreviewElement
+} from '../handlers/spacer.js'
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 let inlineRenderRequestId = 0
@@ -87,6 +91,12 @@ export function renderBuilderInputs () {
       }
       case 'link': {
         const result = getLinkBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
+      case 'spacer': {
+        const result = getSpacerBuilderInput(item)
         itemLabel = result.label
         inputHtml = result.inputHtml
         break
@@ -238,6 +248,11 @@ function collectPreviewNodes (fontStyle) {
       case 'link': {
         const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+        nodes.push(el)
+        break
+      }
+      case 'spacer': {
+        const el = renderSpacerPreviewElement(item)
         nodes.push(el)
         break
       }
