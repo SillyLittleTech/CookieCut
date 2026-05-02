@@ -430,6 +430,8 @@ function normalizeImportedItem (rawItem, fallbackId) {
     return normalized
   }
   normalized.scale = toItemScale(rawItem.scale)
+  // Persist the per-item HTML-content toggle
+  if (rawItem.htmlEnabled) normalized.htmlEnabled = true
   return normalized
 }
 
@@ -2051,6 +2053,12 @@ function handleLiveInput (e) {
 
   item[key] = value
 
+  // Coerce numeric fields
+  if (key === 'frameHeight') {
+    const numericHeight = Number.parseInt(value, 10)
+    item[key] = Number.isFinite(numericHeight) ? numericHeight : 400
+  }
+
   // If it's the size slider, also update the live pixel display
   if (key === 'size') {
     if (item.type === 'image') {
@@ -2064,7 +2072,9 @@ function handleLiveInput (e) {
 
   if (key === 'content') {
     const previewText =
-      item.type === 'link' ? value.trim() || item.href || '' : value
+      item.type === 'link' || item.type === 'button'
+        ? value.trim() || item.href || ''
+        : value
     syncScalePreviewText(itemEl, previewText)
   }
 
@@ -2105,9 +2115,11 @@ function handleContentInputClick (e) {
   let actionTaken = false
 
   if (htmlCodeToggleBtn) {
-    // Toggle the HTML code editor appearance for this item (visual only)
-    const isActive = htmlCodeToggleBtn.classList.toggle('active')
-    itemEl.classList.toggle('html-edit-active', isActive)
+    const item = recipeData.items.find((i) => String(i.id) === String(id))
+    if (item) {
+      item.htmlEnabled = !item.htmlEnabled
+    }
+    renderBuilderInputs()
     return
   } else if (deleteBtn) {
     recipeData.items = recipeData.items.filter(

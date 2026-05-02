@@ -18,6 +18,10 @@ import { renderInlineElement as renderInlineTextElement } from '../handlers/text
 import { renderInlineElement as renderInlineImageElement } from '../handlers/image.js'
 import { renderInlineElement as renderInlineBubbleElement } from '../handlers/bubble.js'
 import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js'
+import { renderInlineElement as renderInlineButtonElement } from '../handlers/button.js'
+import { renderInlineElement as renderInlineNavmenuElement } from '../handlers/navmenu.js'
+import { renderInlineElement as renderInlineDropdownElement } from '../handlers/dropdown.js'
+import { renderInlineElement as renderInlineFrameElement } from '../handlers/frame.js'
 // renderBuilderInputs is imported lazily inside function bodies to avoid
 // circular-import issues at module evaluation time.
 
@@ -1031,6 +1035,33 @@ function buildInlineStandardElement ({
       }
       break
     }
+    case 'button': {
+      renderedElement = renderInlineButtonElement(item)
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      // Prevent clicks on button links from navigating in inline editor
+      const btnEl = renderedElement.querySelector('a')
+      if (btnEl) {
+        btnEl.draggable = false
+        btnEl.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        })
+      }
+      break
+    }
+    case 'navmenu': {
+      renderedElement = renderInlineNavmenuElement(item)
+      break
+    }
+    case 'dropdown': {
+      renderedElement = renderInlineDropdownElement(item)
+      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
+      break
+    }
+    case 'frame': {
+      renderedElement = renderInlineFrameElement(item)
+      break
+    }
     default:
       break
   }
@@ -1398,7 +1429,11 @@ export function renderInlinePreview () {
       wrapper.appendChild(frame)
 
       // Add border-handle resizing for modular items (including images).
-      if (['text', 'heading', 'bubble', 'link', 'image'].includes(item.type)) {
+      if (
+        ['text', 'heading', 'bubble', 'link', 'image', 'button', 'dropdown'].includes(
+          item.type
+        )
+      ) {
         if (item.type === 'image') {
           const normalizedImageWidth = normalizeInlineBoxMeasurement(
             item.inlineWidth || item.size,
@@ -1416,7 +1451,9 @@ export function renderInlinePreview () {
       }
 
       // Add text scale handle for text-containing elements.
-      if (['text', 'heading', 'bubble', 'link'].includes(item.type)) {
+      if (
+        ['text', 'heading', 'bubble', 'link', 'button'].includes(item.type)
+      ) {
         wrapper.appendChild(createScaleHandle(item, renderedElement))
       }
 

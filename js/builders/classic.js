@@ -1,6 +1,10 @@
 import { recipeData } from '../state.js'
 import { dom } from '../dom.js'
-import { renderRichText, getDocumentTextStats } from '../helpers.js'
+import {
+  renderRichText,
+  getDocumentTextStats,
+  sanitizeHtmlContent
+} from '../helpers.js'
 import {
   getBuilderInput as getHeadingBuilderInput,
   renderPreviewElement as renderHeadingPreviewElement
@@ -29,6 +33,22 @@ import {
   getBuilderInput as getLinkBuilderInput,
   renderPreviewElement as renderLinkPreviewElement
 } from '../handlers/link.js'
+import {
+  getBuilderInput as getButtonBuilderInput,
+  renderPreviewElement as renderButtonPreviewElement
+} from '../handlers/button.js'
+import {
+  getBuilderInput as getNavmenuBuilderInput,
+  renderPreviewElement as renderNavmenuPreviewElement
+} from '../handlers/navmenu.js'
+import {
+  getBuilderInput as getDropdownBuilderInput,
+  renderPreviewElement as renderDropdownPreviewElement
+} from '../handlers/dropdown.js'
+import {
+  getBuilderInput as getFrameBuilderInput,
+  renderPreviewElement as renderFramePreviewElement
+} from '../handlers/frame.js'
 // Note: renderInlinePreview is imported lazily inside the function body to avoid
 // circular-import issues at module evaluation time.
 let inlineRenderRequestId = 0
@@ -91,17 +111,49 @@ export function renderBuilderInputs () {
         inputHtml = result.inputHtml
         break
       }
+      case 'button': {
+        const result = getButtonBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
+      case 'navmenu': {
+        const result = getNavmenuBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
+      case 'dropdown': {
+        const result = getDropdownBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
+      case 'frame': {
+        const result = getFrameBuilderInput(item)
+        itemLabel = result.label
+        inputHtml = result.inputHtml
+        break
+      }
       default:
         break
     }
 
     const isFirst = index === 0
     const isLast = index === recipeData.items.length - 1
+    const isHtmlMode =
+      recipeData.settings && recipeData.settings.editorMode === 'html'
+    // HTML-enabled items render their content as sanitized HTML in the preview
+    const htmlEnabled = Boolean(item.htmlEnabled)
+    const htmlToggleBtn = isHtmlMode
+      ? `<button type="button" class="html-code-toggle-btn item-btn${htmlEnabled ? ' active' : ''}" title="Toggle HTML editing for this item">{}</button>`
+      : ''
 
     el.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <label class="font-bold text-gray-700">${itemLabel}</label>
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2">
+                    ${htmlToggleBtn}
                     <button type="button" class="item-btn move-up-btn ${isFirst ? 'hidden-arrow' : ''}" title="Move up">▲</button>
                     <button type="button" class="item-btn move-down-btn ${isLast ? 'hidden-arrow' : ''}" title="Move down">▼</button>
                     <button type="button" class="item-btn delete-btn no-print" title="Delete item">&times;</button>
@@ -178,7 +230,13 @@ function collectPreviewNodes (fontStyle) {
       flushCurrentList()
     }
 
-    const contentWithIcons = renderRichText(item.content || '')
+    const isHtmlMode =
+      recipeData.settings && recipeData.settings.editorMode === 'html'
+    // When HTML mode and item has htmlEnabled, render content as raw HTML
+    const contentWithIcons =
+      isHtmlMode && item.htmlEnabled
+        ? sanitizeHtmlContent(item.content || '')
+        : renderRichText(item.content || '')
 
     switch (item.type) {
       case 'heading': {
@@ -238,6 +296,26 @@ function collectPreviewNodes (fontStyle) {
       case 'link': {
         const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
         if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+        nodes.push(el)
+        break
+      }
+      case 'button': {
+        const el = renderButtonPreviewElement(item)
+        nodes.push(el)
+        break
+      }
+      case 'navmenu': {
+        const el = renderNavmenuPreviewElement(item)
+        nodes.push(el)
+        break
+      }
+      case 'dropdown': {
+        const el = renderDropdownPreviewElement(item)
+        nodes.push(el)
+        break
+      }
+      case 'frame': {
+        const el = renderFramePreviewElement(item)
         nodes.push(el)
         break
       }
