@@ -40,18 +40,25 @@
   </div>
 
   <!-- Preview Control Buttons -->
-  <div class="preview-controls mt-6 flex gap-4">
+  <div class="preview-controls mt-6 flex gap-4 flex-wrap">
     <button
       id="edit-btn"
-      class="no-print w-1/2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
+      class="no-print flex-1 min-w-[220px] bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
     >
       Back to Editor
     </button>
     <button
       id="print-btn"
-      class="no-print w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
+      class="no-print flex-1 min-w-[220px] bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide"
     >
       Print Recipe
+    </button>
+    <button
+      id="html-preview-btn"
+      class="no-print flex-1 min-w-[220px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-100 font-display tracking-wide hidden"
+      title="Opens a new tab and can run scripts"
+    >
+      Open HTML Preview
     </button>
   </div>
 </div>

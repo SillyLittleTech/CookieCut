@@ -26,6 +26,7 @@ export const dom = {
   previewBtn: null,
   editBtn: null,
   printBtn: null,
+  htmlPreviewBtn: null,
   // Toast Modal
   toastModal: null,
   toastModalOverlay: null,
@@ -62,6 +63,7 @@ export const dom = {
   globalFontStyleSelect: null,
   fontApplyTextCheckbox: null,
   fontApplyTipsCheckbox: null,
+  showHtmlToolsCheckbox: null,
   editorModeSelect: null,
   previewModeSelect: null,
   // Print Modal
@@ -136,6 +138,7 @@ export function initDom () {
   dom.previewBtn = document.getElementById('preview-btn')
   dom.editBtn = document.getElementById('edit-btn')
   dom.printBtn = document.getElementById('print-btn')
+  dom.htmlPreviewBtn = document.getElementById('html-preview-btn')
   // Toast Modal
   dom.toastModal = document.getElementById('toast-modal')
   dom.toastModalOverlay = document.getElementById('modal-overlay')
@@ -181,6 +184,9 @@ export function initDom () {
   )
   dom.fontApplyTipsCheckbox = document.getElementById(
     'font-apply-tips-checkbox'
+  )
+  dom.showHtmlToolsCheckbox = document.getElementById(
+    'show-html-tools-checkbox'
   )
   dom.editorModeSelect = document.getElementById('editor-mode-select')
   dom.previewModeSelect = document.getElementById('preview-mode-select')

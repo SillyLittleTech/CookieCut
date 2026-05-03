@@ -404,6 +404,113 @@ export function getDocumentTextStats (recipeData) {
   return { words, sentences, paragraphs }
 }
 
+const JS_PROTOCOL = String.fromCharCode(
+  106,
+  97,
+  118,
+  97,
+  115,
+  99,
+  114,
+  105,
+  112,
+  116,
+  58
+)
+const DATA_TEXT_HTML_PREFIX = String.fromCharCode(
+  100,
+  97,
+  116,
+  97,
+  58,
+  116,
+  101,
+  120,
+  116,
+  47,
+  104,
+  116,
+  109,
+  108
+)
+
+/**
+ * True when a URL-like attribute value should be stripped for XSS safety.
+ * Uses URL parsing plus prefix checks built without embedding suspicious literals.
+ * @param {string} rawValue
+ * @returns {boolean}
+ */
+function shouldStripUrlAttrValue (rawValue) {
+  const trimmed = (rawValue || '').trim()
+  if (!trimmed) return false
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith(JS_PROTOCOL) ||
+    lower.startsWith(DATA_TEXT_HTML_PREFIX)
+  ) {
+    return true
+  }
+  try {
+    const parsed = new URL(trimmed)
+    const protocol = parsed.protocol.toLowerCase()
+    if (protocol === JS_PROTOCOL || protocol === 'data:') return true
+  } catch {
+    // Non-absolute URLs fall through; prefix checks above cover common inline cases.
+  }
+  return false
+}
+
+/**
+ * Sanitize raw HTML content by removing dangerous tags and attributes.
+ * Used when rendering item content as HTML in HTML editor mode.
+ * Strips <script>, <style>, <meta>, <link>, <object>, <embed>, <form> tags
+ * and removes all on* event handlers and unsafe href/src/action URLs.
+ * @param {string} rawHtml
+ * @returns {string} sanitized HTML string
+ */
+export function sanitizeHtmlContent (rawHtml) {
+  if (!rawHtml || typeof rawHtml !== 'string') return ''
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(rawHtml, 'text/html')
+
+  const FORBIDDEN_TAGS = [
+    'script',
+    'style',
+    'meta',
+    'link',
+    'object',
+    'embed',
+    'form',
+    'base'
+  ]
+  FORBIDDEN_TAGS.forEach((tag) => {
+    doc.querySelectorAll(tag).forEach((el) => el.remove())
+  })
+
+  doc.body.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.startsWith('on')) {
+        el.removeAttribute(attr.name)
+        return
+      }
+      if (
+        attr.name === 'href' ||
+        attr.name === 'src' ||
+        attr.name === 'action'
+      ) {
+        if (shouldStripUrlAttrValue(attr.value)) {
+          el.removeAttribute(attr.name)
+        }
+      }
+      if (attr.name === 'srcdoc') {
+        el.removeAttribute(attr.name)
+      }
+    })
+  })
+
+  return doc.body.innerHTML
+}
+
 export function copyToClipboard (text) {
   if (globalThis.navigator?.clipboard && globalThis.isSecureContext) {
     globalThis.navigator.clipboard

@@ -53,10 +53,25 @@ const VALID_ITEM_TYPES = new Set([
   'text',
   'image',
   'bubble',
-  'link'
+  'link',
+  'button',
+  'navmenu',
+  'dropdown',
+  'frame',
+  'codescript',
+  'spacer'
+])
+const VALID_HTML_ITEM_TYPES = new Set([
+  'button',
+  'navmenu',
+  'dropdown',
+  'frame',
+  'codescript'
 ])
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
+const VALID_SPACER_VARIANTS = new Set(['blank', 'line', 'page', 'container'])
+const VALID_CONTAINER_LAYOUTS = new Set(['flow', 'grid'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 const PRINT_MODAL_ACTION_PRINT = 'print'
 const PRINT_MODAL_ACTION_EXPORT = 'export'
@@ -111,6 +126,22 @@ let redoHistory = []
 let lastTrackedRecipeSnapshot = ''
 let isApplyingHistorySnapshot = false
 let historyObserverTimerId = null
+let persistWorkingDocumentDebounceTimer = null
+const PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS = 400
+
+function schedulePersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = setTimeout(() => {
+    persistWorkingDocumentDebounceTimer = null
+    persistWorkingDocumentToCache()
+  }, PERSIST_WORKING_DOCUMENT_DEBOUNCE_MS)
+}
+
+function flushPersistWorkingDocument () {
+  clearTimeout(persistWorkingDocumentDebounceTimer)
+  persistWorkingDocumentDebounceTimer = null
+  persistWorkingDocumentToCache()
+}
 
 function createItemId () {
   nextItemId = Math.max(nextItemId + 1, Date.now())
@@ -206,6 +237,7 @@ function observeRecipeMutations () {
   }
   redoHistory = []
   lastTrackedRecipeSnapshot = currentSnapshotSerialized
+  schedulePersistWorkingDocument()
 }
 
 function startHistoryObserver () {
@@ -363,6 +395,11 @@ function clearWorkingDocumentCache () {
 function normalizeImportedSettings (rawSettings) {
   const source =
     rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
+  const editorMode = source.editorMode === 'inline' ? 'inline' : 'classic'
+  // Migration: older docs may have editorMode === 'html'
+  const showHtmlTools =
+    Boolean(source.showHtmlTools) || source.editorMode === 'html'
+  const previewMode = source.previewMode === 'paged' ? 'paged' : 'continuous'
   return {
     ...DEFAULT_RECIPE_SETTINGS,
     ...source,
@@ -372,12 +409,55 @@ function normalizeImportedSettings (rawSettings) {
         : 'display',
     fontApplyToText: Boolean(source.fontApplyToText),
     fontApplyToTips: Boolean(source.fontApplyToTips),
-    editorMode: source.editorMode === 'inline' ? 'inline' : 'classic',
-    previewMode: source.previewMode === 'paged' ? 'paged' : 'continuous',
+    editorMode,
+    previewMode,
+    showHtmlTools,
     fileName: toStringOrFallback(source.fileName, ''),
     hideTitle: Boolean(source.hideTitle),
     hideDescription: Boolean(source.hideDescription)
   }
+}
+
+function applyImportedParentId (normalized, rawParentId) {
+  if (rawParentId != null && rawParentId !== '') {
+    normalized.parentId = rawParentId
+  } else {
+    delete normalized.parentId
+  }
+}
+
+function normalizeImportedImageItem (rawItem, normalized) {
+  const size = toFiniteNumberOrFallback(rawItem.size, 350)
+  normalized.src = toStringOrFallback(rawItem.src, '')
+  normalized.alt = toStringOrFallback(rawItem.alt, '')
+  normalized.size = size
+  normalized.inlineWidth = toFiniteNumberOrFallback(rawItem.inlineWidth, size)
+  normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
+    rawItem.inlineImageFlow
+  )
+    ? rawItem.inlineImageFlow
+    : 'around'
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
+}
+
+function normalizeImportedSpacerItem (rawItem, normalized) {
+  let variant = toStringOrFallback(rawItem.variant, 'blank')
+  if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
+  normalized.variant = variant
+  normalized.size = Math.max(
+    0,
+    Math.min(600, toFiniteNumberOrFallback(rawItem.size, 80))
+  )
+  let layout = toStringOrFallback(rawItem.containerLayout, 'flow')
+  if (!VALID_CONTAINER_LAYOUTS.has(layout)) layout = 'flow'
+  normalized.containerLayout = layout
+  const cols = Math.round(
+    toFiniteNumberOrFallback(rawItem.containerColumns, 2)
+  )
+  normalized.containerColumns = Math.min(4, Math.max(1, cols))
+  applyImportedParentId(normalized, rawItem.parentId)
+  return normalized
 }
 
 function normalizeImportedItem (rawItem, fallbackId) {
@@ -392,20 +472,11 @@ function normalizeImportedItem (rawItem, fallbackId) {
   }
 
   if (type === 'image') {
-    const size = toFiniteNumberOrFallback(rawItem.size, 350)
-    normalized.src = toStringOrFallback(rawItem.src, '')
-    normalized.alt = toStringOrFallback(rawItem.alt, '')
-    normalized.size = size
-    normalized.inlineWidth = toFiniteNumberOrFallback(
-      rawItem.inlineWidth,
-      size
-    )
-    normalized.inlineImageFlow = VALID_INLINE_IMAGE_FLOWS.has(
-      rawItem.inlineImageFlow
-    )
-      ? rawItem.inlineImageFlow
-      : 'around'
-    return normalized
+    return normalizeImportedImageItem(rawItem, normalized)
+  }
+
+  if (type === 'spacer') {
+    return normalizeImportedSpacerItem(rawItem, normalized)
   }
 
   normalized.content = toStringOrFallback(rawItem.content, '')
@@ -418,7 +489,36 @@ function normalizeImportedItem (rawItem, fallbackId) {
   if (type === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
   }
+  applyImportedParentId(normalized, rawItem.parentId)
+  if (type === 'button') {
+    normalized.href = toStringOrFallback(rawItem.href, '')
+    const VALID_BUTTON_STYLES = new Set([
+      'primary',
+      'secondary',
+      'danger',
+      'ghost'
+    ])
+    normalized.buttonStyle = VALID_BUTTON_STYLES.has(rawItem.buttonStyle)
+      ? rawItem.buttonStyle
+      : 'primary'
+  }
+  if (type === 'navmenu') {
+    normalized.links = toStringOrFallback(rawItem.links, '[]')
+  }
+  if (type === 'dropdown') {
+    normalized.options = toStringOrFallback(rawItem.options, '')
+  }
+  if (type === 'frame') {
+    normalized.src = toStringOrFallback(rawItem.src, '')
+    normalized.frameHeight = toFiniteNumberOrFallback(rawItem.frameHeight, 400)
+  }
   normalized.scale = toItemScale(rawItem.scale)
+  // Persist HTML tools state
+  if (rawItem.htmlEnabled) normalized.htmlEnabled = true
+  if (rawItem.codeView) normalized.codeView = true
+  if (typeof rawItem.htmlOverride === 'string') {
+    normalized.htmlOverride = toStringOrFallback(rawItem.htmlOverride, '')
+  }
   return normalized
 }
 
@@ -1521,6 +1621,11 @@ function syncUiFromRecipeData () {
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode
   }
+  if (dom.showHtmlToolsCheckbox) {
+    dom.showHtmlToolsCheckbox.checked = Boolean(
+      recipeData.settings.showHtmlTools
+    )
+  }
   if (dom.previewModeSelect) {
     dom.previewModeSelect.value = recipeData.settings.previewMode
   }
@@ -1548,6 +1653,13 @@ async function importDocumentFile (file) {
 }
 
 export function addItem (type, subtype = null) {
+  if (VALID_HTML_ITEM_TYPES.has(type) && !isHtmlToolsEnabled()) {
+    showDocumentTransferMessage(
+      'That element is only available when HTML tools are enabled.',
+      true
+    )
+    return
+  }
   const newItem = { id: createItemId() }
   switch (type) {
     case 'heading':
@@ -1586,6 +1698,65 @@ export function addItem (type, subtype = null) {
       newItem.href = ''
       newItem.scale = 100
       break
+    case 'button':
+      newItem.type = 'button'
+      newItem.content = ''
+      newItem.href = ''
+      newItem.buttonStyle = 'primary'
+      newItem.scale = 100
+      break
+    case 'navmenu': {
+      if (recipeData.items.some((i) => i.type === 'navmenu')) {
+        showDocumentTransferMessage(
+          'Only one Navigation element is allowed per document.',
+          true
+        )
+        return
+      }
+      newItem.type = 'navmenu'
+      newItem.content = ''
+      newItem.links = '[]'
+      newItem.scale = 100
+      // Navigation should always be first in document order.
+      recipeData.items.unshift(newItem)
+      renderBuilderInputs()
+      const newEl = dom.contentInputs.querySelector(
+        `[data-id="${newItem.id}"]`
+      )
+      if (newEl) {
+        const input = newEl.querySelector('input, textarea')
+        if (input) input.focus()
+      }
+      return
+    }
+    case 'dropdown':
+      newItem.type = 'dropdown'
+      newItem.content = ''
+      newItem.options = ''
+      newItem.scale = 100
+      break
+    case 'frame':
+      newItem.type = 'frame'
+      newItem.src = ''
+      newItem.frameHeight = 400
+      break
+    case 'codescript':
+      newItem.type = 'codescript'
+      newItem.content = ''
+      newItem.scale = 100
+      break
+    case 'spacer': {
+      newItem.type = 'spacer'
+      const variant =
+        typeof subtype === 'string' && VALID_SPACER_VARIANTS.has(subtype)
+          ? subtype
+          : 'blank'
+      newItem.variant = variant
+      newItem.size = 80
+      newItem.containerLayout = 'flow'
+      newItem.containerColumns = 2
+      break
+    }
     default:
       break
   }
@@ -1601,6 +1772,17 @@ export function addItem (type, subtype = null) {
 
 function moveItem (id, direction) {
   const index = recipeData.items.findIndex((i) => String(i.id) === String(id))
+  if (index === -1) return
+
+  // Lock navmenu at top (cannot be moved down or swapped under another item).
+  if (recipeData.items[index]?.type === 'navmenu') return
+  if (
+    direction === 'up' &&
+    index > 0 &&
+    recipeData.items[index - 1]?.type === 'navmenu'
+  ) {
+    return
+  }
   if (direction === 'up' && index > 0) {
     [recipeData.items[index], recipeData.items[index - 1]] = [
       recipeData.items[index - 1],
@@ -1618,6 +1800,10 @@ function moveItem (id, direction) {
 
 function isInlineMode () {
   return recipeData.settings && recipeData.settings.editorMode === 'inline'
+}
+
+function isHtmlToolsEnabled () {
+  return Boolean(recipeData.settings?.showHtmlTools)
 }
 
 function closeFloatingAddMenu () {
@@ -1706,8 +1892,11 @@ function setEditorMode (mode) {
   if (dom.editorModeSelect && dom.editorModeSelect.value !== normalizedMode) {
     dom.editorModeSelect.value = normalizedMode
   }
-  if (normalizedMode === 'inline') enableInlineEditor()
-  else disableInlineEditor()
+  if (normalizedMode === 'inline') {
+    enableInlineEditor()
+  } else {
+    disableInlineEditor()
+  }
 }
 
 // --- VIEW TOGGLE ---
@@ -1743,6 +1932,17 @@ function showPreview () {
     dom.templateGalleryPanel.classList.add('hidden')
   }
   renderPreview()
+  if (dom.htmlPreviewBtn) {
+    const hasHtmlItems = recipeData.items.some(
+      (item) =>
+        Boolean(item && VALID_HTML_ITEM_TYPES.has(item.type)) ||
+        Boolean(item?.htmlEnabled)
+    )
+    dom.htmlPreviewBtn.classList.toggle(
+      'hidden',
+      !isHtmlToolsEnabled() || !hasHtmlItems
+    )
+  }
   dom.builderPanel.classList.add('hidden')
   dom.recipePanel.classList.remove('hidden')
   updateAppLayoutForPreviewMode()
@@ -1953,20 +2153,22 @@ function handleHideDescChange () {
   }
 }
 
-function handleLiveInput (e) {
-  const itemEl = e.target.closest('[data-id]')
-  if (!itemEl) return
-
-  const id = itemEl.dataset.id
-  const key = e.target.dataset.key
-  const value = e.target.value
-  const item = recipeData.items.find((i) => String(i.id) === String(id))
-
-  if (!item || !key) return
-
+function assignLiveInputToItem (item, key, value) {
+  if (key === 'containerColumns') {
+    const n = Math.round(Number.parseInt(String(value), 10))
+    item.containerColumns = Number.isFinite(n)
+      ? Math.min(4, Math.max(1, n))
+      : 2
+    return
+  }
   item[key] = value
+  if (key === 'frameHeight') {
+    const numericHeight = Number.parseInt(value, 10)
+    item[key] = Number.isFinite(numericHeight) ? numericHeight : 400
+  }
+}
 
-  // If it's the size slider, also update the live pixel display
+function syncLiveInputUi ({ item, itemEl, key, value, e }) {
   if (key === 'size') {
     if (item.type === 'image') {
       item.inlineWidth = Number(value)
@@ -1979,11 +2181,12 @@ function handleLiveInput (e) {
 
   if (key === 'content') {
     const previewText =
-      item.type === 'link' ? value.trim() || item.href || '' : value
+      item.type === 'link' || item.type === 'button'
+        ? value.trim() || item.href || ''
+        : value
     syncScalePreviewText(itemEl, previewText)
   }
 
-  // If it's the scale slider, update the percentage display and live preview sample
   if (key === 'scale') {
     const normalizedScale = normalizeScale(value)
     item.scale = normalizedScale
@@ -1996,7 +2199,9 @@ function handleLiveInput (e) {
   if (key === 'href' && (!item.content || item.content.trim() === '')) {
     syncScalePreviewText(itemEl, item.href || '')
   }
+}
 
+function maybeRenderInlineAfterLiveInput (item, key) {
   if (
     isInlineMode() &&
     item.type === 'image' &&
@@ -2004,6 +2209,30 @@ function handleLiveInput (e) {
   ) {
     renderInlinePreview()
   }
+
+  if (
+    isInlineMode() &&
+    item.type === 'spacer' &&
+    ['size', 'variant', 'containerLayout', 'containerColumns'].includes(key)
+  ) {
+    renderInlinePreview()
+  }
+}
+
+function handleLiveInput (e) {
+  const itemEl = e.target.closest('[data-id]')
+  if (!itemEl) return
+
+  const id = itemEl.dataset.id
+  const key = e.target.dataset.key
+  const value = e.target.value
+  const item = recipeData.items.find((i) => String(i.id) === String(id))
+
+  if (!item || !key) return
+
+  assignLiveInputToItem(item, key, value)
+  syncLiveInputUi({ item, itemEl, key, value, e })
+  maybeRenderInlineAfterLiveInput(item, key)
 }
 
 function handleContentInputClick (e) {
@@ -2015,13 +2244,45 @@ function handleContentInputClick (e) {
   const deleteBtn = e.target.closest('.delete-btn')
   const moveUpBtn = e.target.closest('.move-up-btn')
   const moveDownBtn = e.target.closest('.move-down-btn')
+  const htmlCodeToggleBtn = e.target.closest('.html-code-toggle-btn')
+  const codeViewToggleBtn = e.target.closest('.code-view-toggle-btn')
 
   let actionTaken = false
 
-  if (deleteBtn) {
-    recipeData.items = recipeData.items.filter(
-      (i) => String(i.id) !== String(id)
-    )
+  if (htmlCodeToggleBtn) {
+    const item = recipeData.items.find((i) => String(i.id) === String(id))
+    if (item) {
+      item.htmlEnabled = !item.htmlEnabled
+      if (item.htmlEnabled) {
+        item.codeView = true
+      }
+    }
+    renderBuilderInputs()
+    return
+  } else if (codeViewToggleBtn) {
+    const item = recipeData.items.find((i) => String(i.id) === String(id))
+    if (item) {
+      const mode = codeViewToggleBtn.dataset.mode
+      if (mode === 'code') item.codeView = true
+      else if (mode === 'form') item.codeView = false
+      else item.codeView = !item.codeView
+      if (
+        item.codeView &&
+        !['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(
+          item.type
+        )
+      ) {
+        item.htmlEnabled = true
+      }
+    }
+    renderBuilderInputs()
+    return
+  } else if (deleteBtn) {
+    const sid = String(id)
+    recipeData.items.forEach((entry) => {
+      if (String(entry.parentId) === sid) delete entry.parentId
+    })
+    recipeData.items = recipeData.items.filter((i) => String(i.id) !== sid)
     actionTaken = true
   } else if (moveUpBtn) {
     moveItem(id, 'up')
@@ -2051,12 +2312,28 @@ function handleToastSelection (subtype) {
 }
 
 function openTextModal () {
+  const htmlTools = isHtmlToolsEnabled()
+  const classicLinkOption = document.getElementById('classic-link-option')
+  const htmlTextOptions = document.getElementById('html-text-options')
+  if (classicLinkOption) {
+    classicLinkOption.classList.toggle('hidden', htmlTools)
+  }
+  if (htmlTextOptions) {
+    htmlTextOptions.classList.toggle('hidden', !htmlTools)
+  }
   dom.textModal.classList.remove('hidden')
 }
 function closeTextModal () {
   dom.textModal.classList.add('hidden')
 }
 function handleTextSelection (type) {
+  if (VALID_HTML_ITEM_TYPES.has(type) && !isHtmlToolsEnabled()) {
+    showDocumentTransferMessage(
+      'That element is only available when HTML tools are enabled.',
+      true
+    )
+    return
+  }
   closeTextModal()
   addItem(type)
 }
@@ -2127,6 +2404,11 @@ function openSettingsModal () {
   if (dom.editorModeSelect) {
     dom.editorModeSelect.value = recipeData.settings.editorMode || 'classic'
   }
+  if (dom.showHtmlToolsCheckbox) {
+    dom.showHtmlToolsCheckbox.checked = Boolean(
+      recipeData.settings.showHtmlTools
+    )
+  }
   if (dom.previewModeSelect) {
     dom.previewModeSelect.value =
       recipeData.settings.previewMode || 'continuous'
@@ -2158,6 +2440,40 @@ function handleFontScopeChange () {
   } else if (!dom.recipePanel.classList.contains('hidden')) {
     renderPreview()
   }
+}
+
+function handleShowHtmlToolsChange () {
+  recipeData.settings.showHtmlTools = dom.showHtmlToolsCheckbox
+    ? Boolean(dom.showHtmlToolsCheckbox.checked)
+    : false
+
+  // If the Text modal is open, update its HTML tools section immediately.
+  if (dom.textModal && !dom.textModal.classList.contains('hidden')) {
+    const classicLinkOption = document.getElementById('classic-link-option')
+    const htmlTextOptions = document.getElementById('html-text-options')
+    if (classicLinkOption) {
+      classicLinkOption.classList.toggle(
+        'hidden',
+        Boolean(recipeData.settings.showHtmlTools)
+      )
+    }
+    if (htmlTextOptions) {
+      htmlTextOptions.classList.toggle(
+        'hidden',
+        !recipeData.settings.showHtmlTools
+      )
+    }
+  }
+
+  // Keep classic builder inputs refreshed so {} toggles + HTML-only buttons match.
+  renderBuilderInputs()
+  if (isInlineMode()) {
+    renderInlinePreview()
+  } else if (!dom.recipePanel.classList.contains('hidden')) {
+    renderPreview()
+  }
+
+  persistWorkingDocumentToCache()
 }
 
 function handlePreviewModeChange (e) {
@@ -2340,6 +2656,37 @@ function bindTextModalListeners () {
   dom.textTypeLinkBtn.addEventListener('click', () =>
     handleTextSelection('link')
   )
+  // HTML mode item buttons
+  const textTypeButtonBtn = document.getElementById('text-type-button')
+  if (textTypeButtonBtn) {
+    textTypeButtonBtn.addEventListener('click', () =>
+      handleTextSelection('button')
+    )
+  }
+  const textTypeNavmenuBtn = document.getElementById('text-type-navmenu')
+  if (textTypeNavmenuBtn) {
+    textTypeNavmenuBtn.addEventListener('click', () =>
+      handleTextSelection('navmenu')
+    )
+  }
+  const textTypeDropdownBtn = document.getElementById('text-type-dropdown')
+  if (textTypeDropdownBtn) {
+    textTypeDropdownBtn.addEventListener('click', () =>
+      handleTextSelection('dropdown')
+    )
+  }
+  const textTypeFrameBtn = document.getElementById('text-type-frame')
+  if (textTypeFrameBtn) {
+    textTypeFrameBtn.addEventListener('click', () =>
+      handleTextSelection('frame')
+    )
+  }
+  const textTypeCodescriptBtn = document.getElementById('text-type-codescript')
+  if (textTypeCodescriptBtn) {
+    textTypeCodescriptBtn.addEventListener('click', () =>
+      handleTextSelection('codescript')
+    )
+  }
 }
 
 function bindIconModalListeners () {
@@ -2362,6 +2709,12 @@ function bindSettingsModalListeners () {
   }
   if (dom.fontApplyTipsCheckbox) {
     dom.fontApplyTipsCheckbox.addEventListener('change', handleFontScopeChange)
+  }
+  if (dom.showHtmlToolsCheckbox) {
+    dom.showHtmlToolsCheckbox.addEventListener(
+      'change',
+      handleShowHtmlToolsChange
+    )
   }
 }
 
@@ -2473,18 +2826,21 @@ function bindFloatingAddButtonListeners () {
     menu.id = 'floating-add-menu'
     menu.className = 'inline-floating-menu'
     menu.style.position = 'fixed'
-    menu.style.right = '96px'
-    menu.style.bottom = '24px'
+    const compactViewport = window.innerWidth < 520
+    menu.style.right = compactViewport ? '16px' : '96px'
+    menu.style.bottom = compactViewport ? '16px' : '24px'
     menu.style.zIndex = 70
     menu.style.padding = '8px'
     menu.style.borderRadius = '8px'
     menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+    menu.style.maxWidth = 'calc(100vw - 32px)'
 
-    const makeBtn = (label, callback) => {
+    const makeIconBtn = (iconName, label, callback) => {
       const buttonEl = document.createElement('button')
-      buttonEl.textContent = label
+      buttonEl.type = 'button'
       buttonEl.className =
-        'inline-floating-menu-btn px-3 py-2 block w-full text-left'
+        'inline-floating-menu-btn px-3 py-2 flex w-full items-center gap-2 text-left'
+      buttonEl.innerHTML = `<span class="material-icons inline-floating-menu-icon" aria-hidden="true">${iconName}</span><span class="inline-floating-menu-label">${label}</span>`
       buttonEl.addEventListener('click', () => {
         callback()
         menu.remove()
@@ -2492,10 +2848,114 @@ function bindFloatingAddButtonListeners () {
       return buttonEl
     }
 
-    menu.appendChild(makeBtn('Add Text', () => openTextModal()))
-    menu.appendChild(makeBtn('Add Image', () => addItem('image')))
-    menu.appendChild(makeBtn('Add Toast', () => openToastModal()))
-    menu.appendChild(makeBtn('Print', () => handlePrint()))
+    menu.appendChild(
+      makeIconBtn('text_fields', 'Add Text', () => openTextModal())
+    )
+    menu.appendChild(makeIconBtn('image', 'Add Image', () => addItem('image')))
+    menu.appendChild(
+      makeIconBtn('notifications', 'Add Toast', () => openToastModal())
+    )
+
+    const spacerRow = document.createElement('div')
+    spacerRow.className =
+      'inline-floating-menu-row inline-floating-menu-row--submenu-host'
+    const spacerToggle = document.createElement('button')
+    spacerToggle.type = 'button'
+    spacerToggle.className =
+      'inline-floating-menu-btn inline-floating-menu-row-toggle px-3 py-2 flex w-full items-center gap-2 text-left'
+    spacerToggle.setAttribute('aria-expanded', 'false')
+    spacerToggle.innerHTML =
+      '<span class="material-icons inline-floating-menu-icon" aria-hidden="true">height</span>' +
+      '<span class="inline-floating-menu-label flex-1">Add Spacer</span>' +
+      '<span class="material-icons inline-floating-submenu-chevron" aria-hidden="true">chevron_right</span>'
+    const spacerSub = document.createElement('div')
+    spacerSub.className = 'inline-floating-submenu'
+    spacerSub.setAttribute('role', 'menu')
+
+    const positionSpacerSubmenu = () => {
+      spacerSub.style.left = ''
+      spacerSub.style.right = ''
+      spacerSub.style.top = ''
+      spacerSub.style.bottom = ''
+      spacerSub.style.marginLeft = ''
+      spacerSub.style.marginRight = ''
+
+      // Measure after it's visible.
+      const rect = spacerSub.getBoundingClientRect()
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+      const gutter = 12
+
+      if (rect.right > viewportW - gutter) {
+        spacerSub.style.left = 'auto'
+        spacerSub.style.right = '100%'
+        spacerSub.style.marginRight = '6px'
+      } else {
+        spacerSub.style.left = '100%'
+        spacerSub.style.marginLeft = '6px'
+      }
+
+      const nextRect = spacerSub.getBoundingClientRect()
+      if (nextRect.bottom > viewportH - gutter) {
+        spacerSub.style.top = 'auto'
+        spacerSub.style.bottom = '0'
+      } else {
+        spacerSub.style.top = '0'
+      }
+    }
+
+    spacerToggle.addEventListener('click', (ev) => {
+      ev.preventDefault()
+      ev.stopPropagation()
+      const open = !spacerRow.classList.contains(
+        'inline-floating-menu-row--open'
+      )
+      spacerRow.classList.toggle('inline-floating-menu-row--open', open)
+      spacerToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      if (open) {
+        requestAnimationFrame(() => {
+          positionSpacerSubmenu()
+        })
+      }
+    })
+
+    spacerSub.appendChild(
+      makeIconBtn('height', 'Blank', () => addItem('spacer', 'blank'))
+    )
+    spacerSub.appendChild(
+      makeIconBtn('line_weight', 'Line', () => addItem('spacer', 'line'))
+    )
+    if (recipeData.settings?.previewMode === 'paged') {
+      spacerSub.appendChild(
+        makeIconBtn('layers', 'Page', () => addItem('spacer', 'page'))
+      )
+    }
+    spacerSub.appendChild(
+      makeIconBtn('dashboard', 'Container', () =>
+        addItem('spacer', 'container')
+      )
+    )
+
+    spacerRow.appendChild(spacerToggle)
+    spacerRow.appendChild(spacerSub)
+    menu.appendChild(spacerRow)
+
+    menu.appendChild(
+      makeIconBtn('print', 'Print', () => {
+        if (isHtmlToolsEnabled()) {
+          import('./preview/advanced-html-preview.js')
+            .then(({ openAdvancedHtmlPreview }) =>
+              openAdvancedHtmlPreview(recipeData, { autoPrint: false })
+            )
+            .catch((err) => {
+              console.error('Failed to open HTML preview for print:', err)
+              handlePrint()
+            })
+          return
+        }
+        handlePrint()
+      })
+    )
 
     document.body.appendChild(menu)
     setTimeout(() => {
@@ -2605,6 +3065,18 @@ function bindCoreEditorListeners () {
   dom.previewBtn.addEventListener('click', showPreview)
   dom.editBtn.addEventListener('click', showEditor)
   dom.printBtn.addEventListener('click', handlePrint)
+  if (dom.htmlPreviewBtn) {
+    dom.htmlPreviewBtn.addEventListener('click', () => {
+      import('./preview/advanced-html-preview.js')
+        .then(({ openAdvancedHtmlPreview }) =>
+          openAdvancedHtmlPreview(recipeData)
+        )
+        .catch((err) => {
+          console.error('Failed to open HTML preview:', err)
+          showDocumentTransferMessage('Failed to open HTML preview.', true)
+        })
+    })
+  }
   document.addEventListener('keydown', handleGlobalKeydown)
 }
 
@@ -2643,6 +3115,8 @@ function performInitialRender () {
 // --- INIT ---
 
 export function init () {
+  window.addEventListener('pagehide', flushPersistWorkingDocument)
+  window.addEventListener('beforeunload', flushPersistWorkingDocument)
   initializePreviewModeSetting()
   bindMainInfoListeners()
   bindTopToolbarListeners()
