@@ -87,6 +87,36 @@
         "type": "codescript",
         "content": "<script>/* Example only — not executed in CookieCut preview */\nconsole.log('Hello');\n</script>",
         "scale": 100
+      },
+      {
+        "id": 1013,
+        "type": "spacer",
+        "variant": "blank",
+        "size": 48,
+        "scale": 100
+      },
+      {
+        "id": 1014,
+        "type": "spacer",
+        "variant": "line",
+        "size": 0,
+        "scale": 100
+      },
+      {
+        "id": 1015,
+        "type": "spacer",
+        "variant": "page",
+        "size": 0,
+        "scale": 100
+      },
+      {
+        "id": 1016,
+        "type": "spacer",
+        "variant": "container",
+        "size": 0,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "scale": 100
       }
     ],
     "settings": {

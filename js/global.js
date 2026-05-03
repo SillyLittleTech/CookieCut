@@ -71,6 +71,20 @@ const VALID_HTML_ITEM_TYPES = new Set([
 const VALID_BUBBLE_SUBTYPES = new Set(['tip', 'warning', 'note'])
 const VALID_INLINE_IMAGE_FLOWS = new Set(['around', 'over', 'under'])
 const VALID_SPACER_VARIANTS = new Set(['blank', 'line', 'page', 'container'])
+/** Alternate JSON `type` strings from older exports or external templates → spacer variant default */
+const IMPORT_SPACER_TYPE_ALIASES = new Map([
+  ['separator', 'line'],
+  ['hr', 'line'],
+  ['horizontal_rule', 'line'],
+  ['horizontalrule', 'line'],
+  ['rule', 'line'],
+  ['pagebreak', 'page'],
+  ['page_break', 'page'],
+  ['whitespace', 'blank'],
+  ['empty', 'blank'],
+  ['gap', 'blank'],
+  ['space', 'blank']
+])
 const VALID_CONTAINER_LAYOUTS = new Set(['flow', 'grid'])
 const DEFAULT_RECIPE_SETTINGS = Object.freeze({ ...recipeData.settings })
 const PRINT_MODAL_ACTION_PRINT = 'print'
@@ -441,6 +455,13 @@ function normalizeImportedImageItem (rawItem, normalized) {
   return normalized
 }
 
+function normalizeImportedItemTypeKey (rawType) {
+  return toStringOrFallback(rawType, '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '_')
+}
+
 function normalizeImportedSpacerItem (rawItem, normalized) {
   let variant = toStringOrFallback(rawItem.variant, 'blank')
   if (!VALID_SPACER_VARIANTS.has(variant)) variant = 'blank'
@@ -462,35 +483,46 @@ function normalizeImportedSpacerItem (rawItem, normalized) {
 
 function normalizeImportedItem (rawItem, fallbackId) {
   if (!rawItem || typeof rawItem !== 'object') return null
-  const type = toStringOrFallback(rawItem.type, '')
-  if (!VALID_ITEM_TYPES.has(type)) return null
+  let typeKey = normalizeImportedItemTypeKey(rawItem.type)
+  let spacerVariantWhenAlias = null
+  const aliasDefaultVariant = IMPORT_SPACER_TYPE_ALIASES.get(typeKey)
+  if (aliasDefaultVariant !== undefined) {
+    typeKey = 'spacer'
+    spacerVariantWhenAlias = aliasDefaultVariant
+  }
+  if (!VALID_ITEM_TYPES.has(typeKey)) return null
 
   const normalized = {
     ...rawItem,
     id: rawItem.id ?? fallbackId,
-    type
+    type: typeKey
   }
 
-  if (type === 'image') {
+  if (typeKey === 'image') {
     return normalizeImportedImageItem(rawItem, normalized)
   }
 
-  if (type === 'spacer') {
-    return normalizeImportedSpacerItem(rawItem, normalized)
+  if (typeKey === 'spacer') {
+    const rawVariant = toStringOrFallback(rawItem.variant, '')
+    const spacerSource =
+      spacerVariantWhenAlias != null && !VALID_SPACER_VARIANTS.has(rawVariant)
+        ? { ...rawItem, variant: spacerVariantWhenAlias }
+        : rawItem
+    return normalizeImportedSpacerItem(spacerSource, normalized)
   }
 
   normalized.content = toStringOrFallback(rawItem.content, '')
 
-  if (type === 'bubble') {
+  if (typeKey === 'bubble') {
     normalized.subtype = VALID_BUBBLE_SUBTYPES.has(rawItem.subtype)
       ? rawItem.subtype
       : 'note'
   }
-  if (type === 'link') {
+  if (typeKey === 'link') {
     normalized.href = toStringOrFallback(rawItem.href, '')
   }
   applyImportedParentId(normalized, rawItem.parentId)
-  if (type === 'button') {
+  if (typeKey === 'button') {
     normalized.href = toStringOrFallback(rawItem.href, '')
     const VALID_BUTTON_STYLES = new Set([
       'primary',
@@ -502,13 +534,13 @@ function normalizeImportedItem (rawItem, fallbackId) {
       ? rawItem.buttonStyle
       : 'primary'
   }
-  if (type === 'navmenu') {
+  if (typeKey === 'navmenu') {
     normalized.links = toStringOrFallback(rawItem.links, '[]')
   }
-  if (type === 'dropdown') {
+  if (typeKey === 'dropdown') {
     normalized.options = toStringOrFallback(rawItem.options, '')
   }
-  if (type === 'frame') {
+  if (typeKey === 'frame') {
     normalized.src = toStringOrFallback(rawItem.src, '')
     normalized.frameHeight = toFiniteNumberOrFallback(rawItem.frameHeight, 400)
   }
