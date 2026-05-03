@@ -4,13 +4,13 @@
   "version": 1,
   "exportedAt": "2026-05-03T04:29:38.753Z",
   "recipeData": {
-    "title": "                A great assignment!",
-    "description": "                                             The story of the seagull that could.",
+    "title": "A great assignment!",
+    "description": "The story of the seagull that could.",
     "items": [
       {
         "id": 1777782163624,
         "type": "heading",
-        "content": "                         Introducing our friends",
+        "content": "Introducing our friends",
         "scale": 105,
         "inlineWidth": 673,
         "inlineMinHeight": 48
