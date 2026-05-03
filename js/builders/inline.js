@@ -1594,7 +1594,7 @@ function buildInlineStandardElement ({
   applyToTips
 }) {
   const builder = INLINE_STANDARD_ELEMENT_BUILDERS[item.type]
-  let renderedElement = builder
+  const renderedElement = builder
     ? builder({
       item,
       fontStyle,

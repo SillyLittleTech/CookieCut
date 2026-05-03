@@ -331,7 +331,9 @@ const CLASSIC_PREVIEW_APPEND_HANDLERS = {
     nodes.push(el)
   },
   button ({ item, nodes }) {
-    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) {
+      return
+    }
     nodes.push(renderButtonPreviewElement(item))
   },
   navmenu ({ item, nodes }) {
@@ -339,11 +341,15 @@ const CLASSIC_PREVIEW_APPEND_HANDLERS = {
     nodes.push(renderNavmenuPreviewElement(item))
   },
   dropdown ({ item, nodes }) {
-    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) {
+      return
+    }
     nodes.push(renderDropdownPreviewElement(item))
   },
   frame ({ item, nodes }) {
-    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) {
+      return
+    }
     nodes.push(renderFramePreviewElement(item))
   },
   codescript ({ item, nodes }) {
