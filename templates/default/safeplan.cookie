@@ -1,0 +1,226 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-05-03T04:19:16.359Z",
+  "recipeData": {
+    "title": "Safety Plan",
+    "description": "",
+    "items": [
+      {
+        "id": 1777778371532,
+        "type": "spacer",
+        "variant": "container",
+        "size": 255,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 255,
+        "inlineWidth": 303
+      },
+      {
+        "id": 1777778393597,
+        "type": "text",
+        "content": "Warning Signs:",
+        "scale": 100,
+        "parentId": 1777778371532
+      },
+      {
+        "id": 1777778454650,
+        "type": "step",
+        "content": "     ",
+        "scale": 100,
+        "parentId": 1777778371532
+      },
+      {
+        "id": 1777778516820,
+        "type": "step",
+        "content": "   ",
+        "scale": 100,
+        "parentId": 1777778371532
+      },
+      {
+        "id": 1777778525974,
+        "type": "step",
+        "content": "  ",
+        "scale": 100,
+        "parentId": 1777778371532
+      },
+      {
+        "id": 1777778536234,
+        "type": "spacer",
+        "variant": "container",
+        "size": 318,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 318,
+        "inlineWidth": 313
+      },
+      {
+        "id": 1777778581032,
+        "type": "text",
+        "content": "What I can:",
+        "scale": 100,
+        "parentId": 1777778536234
+      },
+      {
+        "id": 1777778604582,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777778536234
+      },
+      {
+        "id": 1777778615082,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777778536234
+      },
+      {
+        "id": 1777778622834,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777778536234
+      },
+      {
+        "id": 1777781015054,
+        "type": "text",
+        "content": "**Emergency Checklist**",
+        "scale": 90,
+        "parentId": 1777778644967,
+        "inlineWidth": 539,
+        "inlineMinHeight": 48
+      },
+      {
+        "id": 1777781044986,
+        "type": "bullet",
+        "content": "Copies of important documents. Like  Passport/Driver's license",
+        "scale": 95,
+        "parentId": 1777778644967,
+        "inlineWidth": 545,
+        "inlineMinHeight": 48
+      },
+      {
+        "id": 1777781070154,
+        "type": "bullet",
+        "content": "Cash, Debit, and Credit cards or things like prescription drugs",
+        "scale": 90,
+        "parentId": 1777778644967,
+        "inlineWidth": 558
+      },
+      {
+        "id": 1777781101902,
+        "type": "bullet",
+        "content": "Phone and Charger and any keys to properties you need",
+        "scale": 80,
+        "parentId": 1777778644967,
+        "inlineWidth": 556
+      },
+      {
+        "id": 1777781341784,
+        "type": "text",
+        "content": "People I can call for help:",
+        "scale": 100,
+        "parentId": 1777781333734
+      },
+      {
+        "id": 1777781359917,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777781333734
+      },
+      {
+        "id": 1777781367033,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777781333734
+      },
+      {
+        "id": 1777781373383,
+        "type": "step",
+        "content": " ",
+        "scale": 100,
+        "parentId": 1777781333734
+      },
+      {
+        "id": 1777781395016,
+        "type": "text",
+        "content": "Identify your boundaries:",
+        "scale": 130,
+        "parentId": 1777781390366
+      },
+      {
+        "id": 1777781410649,
+        "type": "text",
+        "content": "To calm the situation down, I will give them what they want until:",
+        "scale": 80,
+        "parentId": 1777781390366
+      },
+      {
+        "id": 1777781441520,
+        "type": "text",
+        "content": "I know I am unsafe when:",
+        "scale": 95,
+        "parentId": 1777781390366,
+        "inlineWidth": 308,
+        "inlineMinHeight": 48
+      },
+      {
+        "id": 1777781451899,
+        "type": "text",
+        "content": "To protect myself and my mental health I will:",
+        "scale": 75,
+        "parentId": 1777781390366
+      },
+      {
+        "id": 1777781333734,
+        "type": "spacer",
+        "variant": "container",
+        "size": 262,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 262,
+        "inlineWidth": 633
+      },
+      {
+        "id": 1777781390366,
+        "type": "spacer",
+        "variant": "container",
+        "size": 48,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 48,
+        "inlineWidth": 630
+      },
+      {
+        "id": 1777778644967,
+        "type": "spacer",
+        "variant": "container",
+        "size": 48,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 48,
+        "inlineWidth": 632
+      }
+    ],
+    "settings": {
+      "fontStyle": "sans",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "inline",
+      "showHtmlTools": false,
+      "previewMode": "paged",
+      "fileName": "safeplan",
+      "hideTitle": false,
+      "hideDescription": true
+    }
+  },
+  "marketplaceTemplate": {
+    "isTemplate": true,
+    "title": "Safety Plan",
+    "summary": "A quick 2 page safety plan that covers essentials like triggers, what makes us feel safe, emergency contacts. And a second page with boundaries and important things to keep with you."
+  }
+}
