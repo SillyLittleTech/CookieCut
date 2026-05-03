@@ -79,7 +79,7 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
   },
   {
     slot: 2,
-    name: 'Grandma & Co\'s Basic Cake Recipe',
+    name: "Grandma & Co's Basic Cake Recipe",
     subtitle: 'A simple recipe with a title and description',
     path: 'templates/default/cake.cookie'
   },
@@ -97,7 +97,7 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
   },
   {
     slot: 5,
-    name: "Basic Email with Signature",
+    name: 'Basic Email with Signature',
     subtitle: 'A basic email with a signature and some template details.',
     path: 'templates/default/emailsig.cookie'
   }
