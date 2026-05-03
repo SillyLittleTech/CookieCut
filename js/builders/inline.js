@@ -1307,8 +1307,8 @@ function openInlineHtmlElementEditor (item) {
     hrefInput.value = item.href || ''
     editor.appendChild(hrefInput)
     editor.appendChild(makeLabel('Style'))
-    const styleSelect = makeSelect()
-    ;[
+    const styleSelect = makeSelect();
+    [
       { value: 'primary', label: 'Primary' },
       { value: 'secondary', label: 'Secondary' },
       { value: 'danger', label: 'Danger' },
@@ -1832,7 +1832,9 @@ function createInlineItemInteractionsBinder (rerenderAllEditors) {
   return (node, itemId) => {
     node.addEventListener('contextmenu', (event) => {
       if (!isHtmlToolsEnabled()) return
-      const item = recipeData.items.find((i) => String(i.id) === String(itemId))
+      const item = recipeData.items.find(
+        (i) => String(i.id) === String(itemId)
+      )
       if (!item || !isInlineHtmlElement(item)) return
       event.preventDefault()
       event.stopPropagation()
