@@ -1510,6 +1510,82 @@ function wrapSanitizedHtmlOverride (item, className) {
   return wrap
 }
 
+const INLINE_STANDARD_ELEMENT_BUILDERS = {
+  heading ({ item, fontStyle, contentWithIcons }) {
+    return renderInlineHeadingElement(item, fontStyle, contentWithIcons)
+  },
+  text ({ item, fontStyle, contentWithIcons, applyToText }) {
+    const el = renderInlineTextElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  image ({ item, fontStyle, contentWithIcons }) {
+    return renderInlineImageElement(item, fontStyle, contentWithIcons)
+  },
+  bubble ({ item, fontStyle, contentWithIcons, applyToTips }) {
+    const el = renderInlineBubbleElement(item, fontStyle, contentWithIcons)
+    if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  link ({ item, fontStyle, contentWithIcons, applyToText }) {
+    const el = renderInlineLinkElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    const anchorEl = el.querySelector('a')
+    if (anchorEl) {
+      anchorEl.classList.add('inline-edit-link')
+      anchorEl.draggable = false
+      anchorEl.addEventListener('dragstart', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      })
+      anchorEl.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        openLinkEditor(item)
+      })
+    }
+    return el
+  },
+  button ({ item, fontStyle, applyToText }) {
+    const el = itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineButtonElement(item)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    const btnEl = el.querySelector('a')
+    if (btnEl) {
+      btnEl.draggable = false
+      btnEl.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      })
+    }
+    return el
+  },
+  navmenu ({ item }) {
+    return itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item)
+      : renderInlineNavmenuElement(item)
+  },
+  dropdown ({ item, fontStyle, applyToText }) {
+    const el = itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineDropdownElement(item)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  frame ({ item }) {
+    return itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineFrameElement(item)
+  },
+  codescript ({ item }) {
+    return renderInlineCodescriptElement(item)
+  },
+  spacer ({ item }) {
+    return renderInlineSpacerElement(item)
+  }
+}
+
 function buildInlineStandardElement ({
   item,
   fontStyle,
@@ -1517,108 +1593,16 @@ function buildInlineStandardElement ({
   applyToText,
   applyToTips
 }) {
-  let renderedElement = null
-
-  switch (item.type) {
-    case 'heading':
-      renderedElement = renderInlineHeadingElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      break
-    case 'text':
-      renderedElement = renderInlineTextElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      break
-    case 'image':
-      renderedElement = renderInlineImageElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      break
-    case 'bubble':
-      renderedElement = renderInlineBubbleElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToTips) renderedElement.classList.add(`font-style-${fontStyle}`)
-      break
-    case 'link': {
-      renderedElement = renderInlineLinkElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      const anchorEl = renderedElement.querySelector('a')
-      if (anchorEl) {
-        anchorEl.classList.add('inline-edit-link')
-        // Disable native dragging on the anchor so the wrapper remains the drag source.
-        anchorEl.draggable = false
-        anchorEl.addEventListener('dragstart', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        })
-        anchorEl.addEventListener('click', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          openLinkEditor(item)
-        })
-      }
-      break
-    }
-    case 'button': {
-      renderedElement = itemHasNonEmptyHtmlOverride(item)
-        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
-        : renderInlineButtonElement(item)
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      // Prevent clicks on button links from navigating in inline editor
-      const btnEl = renderedElement.querySelector('a')
-      if (btnEl) {
-        btnEl.draggable = false
-        btnEl.addEventListener('click', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        })
-      }
-      break
-    }
-    case 'navmenu': {
-      renderedElement = itemHasNonEmptyHtmlOverride(item)
-        ? wrapSanitizedHtmlOverride(item)
-        : renderInlineNavmenuElement(item)
-      break
-    }
-    case 'dropdown': {
-      renderedElement = itemHasNonEmptyHtmlOverride(item)
-        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
-        : renderInlineDropdownElement(item)
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      break
-    }
-    case 'frame': {
-      renderedElement = itemHasNonEmptyHtmlOverride(item)
-        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
-        : renderInlineFrameElement(item)
-      break
-    }
-    case 'codescript': {
-      renderedElement = renderInlineCodescriptElement(item)
-      break
-    }
-    case 'spacer':
-      renderedElement = renderInlineSpacerElement(item)
-      break
-    default:
-      break
-  }
+  const builder = INLINE_STANDARD_ELEMENT_BUILDERS[item.type]
+  let renderedElement = builder
+    ? builder({
+      item,
+      fontStyle,
+      contentWithIcons,
+      applyToText,
+      applyToTips
+    })
+    : null
 
   // If this is a default element in HTML mode, disable direct inline editing.
   if (
@@ -2231,8 +2215,14 @@ export function renderInlinePreview () {
 
   const renderItemsInto = (rootEl, items) => {
     const state = { currentList: null, currentListType: null, stepCounter: 0 }
+    const htmlToolsEnabled = Boolean(recipeData.settings?.showHtmlTools)
 
     for (const item of items) {
+      const contentWithIcons =
+        htmlToolsEnabled && item.htmlEnabled
+          ? sanitizeHtmlContent(item.content || '')
+          : renderRichText(item.content || '')
+
       if (item.type === 'spacer') {
         resetInlineListState(state)
         renderInlineSpacerItem({

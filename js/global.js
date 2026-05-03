@@ -2129,33 +2129,22 @@ function handleHideDescChange () {
   }
 }
 
-function handleLiveInput (e) {
-  const itemEl = e.target.closest('[data-id]')
-  if (!itemEl) return
-
-  const id = itemEl.dataset.id
-  const key = e.target.dataset.key
-  const value = e.target.value
-  const item = recipeData.items.find((i) => String(i.id) === String(id))
-
-  if (!item || !key) return
-
+function assignLiveInputToItem (item, key, value) {
   if (key === 'containerColumns') {
     const n = Math.round(Number.parseInt(String(value), 10))
     item.containerColumns = Number.isFinite(n)
       ? Math.min(4, Math.max(1, n))
       : 2
-  } else {
-    item[key] = value
+    return
   }
-
-  // Coerce numeric fields
+  item[key] = value
   if (key === 'frameHeight') {
     const numericHeight = Number.parseInt(value, 10)
     item[key] = Number.isFinite(numericHeight) ? numericHeight : 400
   }
+}
 
-  // If it's the size slider, also update the live pixel display
+function syncLiveInputUi ({ item, itemEl, key, value, e }) {
   if (key === 'size') {
     if (item.type === 'image') {
       item.inlineWidth = Number(value)
@@ -2174,7 +2163,6 @@ function handleLiveInput (e) {
     syncScalePreviewText(itemEl, previewText)
   }
 
-  // If it's the scale slider, update the percentage display and live preview sample
   if (key === 'scale') {
     const normalizedScale = normalizeScale(value)
     item.scale = normalizedScale
@@ -2187,7 +2175,9 @@ function handleLiveInput (e) {
   if (key === 'href' && (!item.content || item.content.trim() === '')) {
     syncScalePreviewText(itemEl, item.href || '')
   }
+}
 
+function maybeRenderInlineAfterLiveInput (item, key) {
   if (
     isInlineMode() &&
     item.type === 'image' &&
@@ -2203,6 +2193,22 @@ function handleLiveInput (e) {
   ) {
     renderInlinePreview()
   }
+}
+
+function handleLiveInput (e) {
+  const itemEl = e.target.closest('[data-id]')
+  if (!itemEl) return
+
+  const id = itemEl.dataset.id
+  const key = e.target.dataset.key
+  const value = e.target.value
+  const item = recipeData.items.find((i) => String(i.id) === String(id))
+
+  if (!item || !key) return
+
+  assignLiveInputToItem(item, key, value)
+  syncLiveInputUi({ item, itemEl, key, value, e })
+  maybeRenderInlineAfterLiveInput(item, key)
 }
 
 function handleContentInputClick (e) {

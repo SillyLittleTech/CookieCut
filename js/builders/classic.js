@@ -281,126 +281,90 @@ function getChildItemsInDocumentOrder (parentId) {
     .map(({ it }) => it)
 }
 
-function appendClassicPreviewNodeForItem ({
-  item,
-  fontStyle,
-  contentWithIcons,
-  applyToText,
-  applyToTips,
-  nodes,
-  listState
-}) {
-  switch (item.type) {
-    case 'heading': {
-      nodes.push(
-        renderHeadingPreviewElement(item, fontStyle, contentWithIcons)
-      )
-      break
+function pushClassicHtmlOverridePreview (nodes, item, className) {
+  if (!(recipeData.settings?.showHtmlTools && item.htmlOverride)) return false
+  const el = document.createElement('div')
+  if (className) el.className = className
+  el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
+  nodes.push(el)
+  return true
+}
+
+const CLASSIC_PREVIEW_APPEND_HANDLERS = {
+  heading ({ item, fontStyle, contentWithIcons, nodes }) {
+    nodes.push(renderHeadingPreviewElement(item, fontStyle, contentWithIcons))
+  },
+  step ({ item, fontStyle, contentWithIcons, applyToText, listState }) {
+    if (!listState.currentList) {
+      listState.currentList = document.createElement('ol')
+      listState.currentListType = 'step'
     }
-    case 'step': {
-      if (!listState.currentList) {
-        listState.currentList = document.createElement('ol')
-        listState.currentListType = 'step'
-      }
-      const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
-      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-      listState.currentList.appendChild(el)
-      break
+    const el = renderStepPreviewElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    listState.currentList.appendChild(el)
+  },
+  bullet ({ item, fontStyle, contentWithIcons, applyToText, listState }) {
+    if (!listState.currentList) {
+      listState.currentList = document.createElement('ul')
+      listState.currentListType = 'bullet'
     }
-    case 'bullet': {
-      if (!listState.currentList) {
-        listState.currentList = document.createElement('ul')
-        listState.currentListType = 'bullet'
-      }
-      const el = renderBulletPreviewElement(item, fontStyle, contentWithIcons)
-      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-      listState.currentList.appendChild(el)
-      break
+    const el = renderBulletPreviewElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    listState.currentList.appendChild(el)
+  },
+  text ({ item, fontStyle, contentWithIcons, applyToText, nodes }) {
+    const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    nodes.push(el)
+  },
+  image ({ item, fontStyle, contentWithIcons, nodes }) {
+    nodes.push(renderImagePreviewElement(item, fontStyle, contentWithIcons))
+  },
+  bubble ({ item, fontStyle, contentWithIcons, applyToTips, nodes }) {
+    const el = renderBubblePreviewElement(item, fontStyle, contentWithIcons)
+    if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
+    nodes.push(el)
+  },
+  link ({ item, fontStyle, contentWithIcons, applyToText, nodes }) {
+    const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    nodes.push(el)
+  },
+  button ({ item, nodes }) {
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    nodes.push(renderButtonPreviewElement(item))
+  },
+  navmenu ({ item, nodes }) {
+    if (pushClassicHtmlOverridePreview(nodes, item, '')) return
+    nodes.push(renderNavmenuPreviewElement(item))
+  },
+  dropdown ({ item, nodes }) {
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    nodes.push(renderDropdownPreviewElement(item))
+  },
+  frame ({ item, nodes }) {
+    if (pushClassicHtmlOverridePreview(nodes, item, 'recipe-text-block')) return
+    nodes.push(renderFramePreviewElement(item))
+  },
+  codescript ({ item, nodes }) {
+    nodes.push(renderCodescriptPreviewElement(item))
+  },
+  spacer ({ item, fontStyle, nodes }) {
+    const el = renderSpacerPreviewElement(item)
+    const variant = item.variant || 'blank'
+    if (variant === 'container') {
+      const kids = getChildItemsInDocumentOrder(item.id)
+      collectPreviewNodesFromItems(kids, fontStyle).forEach((childNode) => {
+        el.appendChild(childNode)
+      })
     }
-    case 'text': {
-      const el = renderTextPreviewElement(item, fontStyle, contentWithIcons)
-      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-      nodes.push(el)
-      break
-    }
-    case 'image': {
-      nodes.push(renderImagePreviewElement(item, fontStyle, contentWithIcons))
-      break
-    }
-    case 'bubble': {
-      const el = renderBubblePreviewElement(item, fontStyle, contentWithIcons)
-      if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
-      nodes.push(el)
-      break
-    }
-    case 'link': {
-      const el = renderLinkPreviewElement(item, fontStyle, contentWithIcons)
-      if (applyToText) el.classList.add(`font-style-${fontStyle}`)
-      nodes.push(el)
-      break
-    }
-    case 'button': {
-      if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
-        const el = document.createElement('div')
-        el.className = 'recipe-text-block'
-        el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
-        nodes.push(el)
-        break
-      }
-      nodes.push(renderButtonPreviewElement(item))
-      break
-    }
-    case 'navmenu': {
-      if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
-        const el = document.createElement('div')
-        el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
-        nodes.push(el)
-        break
-      }
-      nodes.push(renderNavmenuPreviewElement(item))
-      break
-    }
-    case 'dropdown': {
-      if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
-        const el = document.createElement('div')
-        el.className = 'recipe-text-block'
-        el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
-        nodes.push(el)
-        break
-      }
-      nodes.push(renderDropdownPreviewElement(item))
-      break
-    }
-    case 'frame': {
-      if (recipeData.settings?.showHtmlTools && item.htmlOverride) {
-        const el = document.createElement('div')
-        el.className = 'recipe-text-block'
-        el.innerHTML = sanitizeHtmlContent(item.htmlOverride || '')
-        nodes.push(el)
-        break
-      }
-      nodes.push(renderFramePreviewElement(item))
-      break
-    }
-    case 'codescript': {
-      nodes.push(renderCodescriptPreviewElement(item))
-      break
-    }
-    case 'spacer': {
-      const el = renderSpacerPreviewElement(item)
-      const variant = item.variant || 'blank'
-      if (variant === 'container') {
-        const kids = getChildItemsInDocumentOrder(item.id)
-        collectPreviewNodesFromItems(kids, fontStyle).forEach((childNode) => {
-          el.appendChild(childNode)
-        })
-      }
-      nodes.push(el)
-      break
-    }
-    default:
-      break
+    nodes.push(el)
   }
+}
+
+function appendClassicPreviewNodeForItem (params) {
+  const handler = CLASSIC_PREVIEW_APPEND_HANDLERS[params.item.type]
+  if (handler) handler(params)
 }
 
 /**
