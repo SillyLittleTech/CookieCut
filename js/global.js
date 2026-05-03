@@ -76,6 +76,30 @@ const BUILTIN_TEMPLATE_SLOTS = Object.freeze([
     name: 'All Item Types',
     subtitle: 'One sample for every item type',
     path: 'templates/default/all-items.cookie'
+  },
+  {
+    slot: 2,
+    name: 'Grandma & Co\'s Basic Cake Recipe',
+    subtitle: 'A simple recipe with a title and description',
+    path: 'templates/default/cake.cookie'
+  },
+  {
+    slot: 3,
+    name: 'Assignment',
+    subtitle: 'A simple essay builder assignment template with references',
+    path: 'templates/default/assignment.cookie'
+  },
+  {
+    slot: 4,
+    name: 'Safety Plan',
+    subtitle: 'A quick 2 page safety plan that covers essentials...',
+    path: 'templates/default/safeplan.cookie'
+  },
+  {
+    slot: 5,
+    name: "Basic Email with Signature",
+    subtitle: 'A basic email with a signature and some template details.',
+    path: 'templates/default/emailsig.cookie'
   }
 ])
 let printModalAction = PRINT_MODAL_ACTION_PRINT

@@ -1,0 +1,174 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-05-03T04:56:02.539Z",
+  "recipeData": {
+    "title": ":cake: Grandma & Co's Basic Cake Recipe",
+    "description": ":favorite: Hey grandbaby, it's your sweet old Grandma here, and I am going to teach you how to make my secret recipe for grandma's amazing cake.\n\nThis recipe yields a light, airy, sponge with a tender crumb-perfect for any occasion from birthday parties to tea parties.",
+    "items": [
+      {
+        "id": 1777783253797,
+        "type": "heading",
+        "content": "Ingredients",
+        "scale": 100
+      },
+      {
+        "id": 1777783528645,
+        "type": "text",
+        "content": ":cookie: Dry Goods;",
+        "scale": 100
+      },
+      {
+        "id": 1777783489979,
+        "type": "bullet",
+        "content": ":check: 2 1/2 cups all-purpose flour",
+        "scale": 100
+      },
+      {
+        "id": 1777783500046,
+        "type": "bullet",
+        "content": ":check: 1 1/2 cups granulated sugar",
+        "scale": 100
+      },
+      {
+        "id": 1777783509630,
+        "type": "bullet",
+        "content": ":check: 1 tablespoon baking powder",
+        "scale": 100
+      },
+      {
+        "id": 1777783518522,
+        "type": "bullet",
+        "content": ":check: 1/2 teaspoon salt",
+        "scale": 100
+      },
+      {
+        "id": 1777783543512,
+        "type": "text",
+        "content": ":kitchen: Cold Goods; ",
+        "scale": 100
+      },
+      {
+        "id": 1777783551265,
+        "type": "bullet",
+        "content": ":coffee: 1 cup whole milk [y[**(at room temperature)**]]",
+        "scale": 100
+      },
+      {
+        "id": 1777783565110,
+        "type": "bullet",
+        "content": "1/2 cup unsalted butter [y[(**softened**)]]",
+        "scale": 100
+      },
+      {
+        "id": 1777783617195,
+        "type": "bullet",
+        "content": ":egg: 2 large eggs",
+        "scale": 100
+      },
+      {
+        "id": 1777783622708,
+        "type": "bullet",
+        "content": ":coffee: 2 teaspoons pure vanilla extract",
+        "scale": 100
+      },
+      {
+        "id": 1777783637708,
+        "type": "image",
+        "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcReXZ1L2VTDdI9ODmiwmduoNzqGaQzrfVJvUXZC0DipI8kLZUxKkikpYC-RbcNB",
+        "alt": "seagulls",
+        "size": "100",
+        "inlineWidth": 100,
+        "inlineImageFlow": "around"
+      },
+      {
+        "id": 1777783665792,
+        "type": "heading",
+        "content": ":countertops: Preparation",
+        "scale": 100
+      },
+      {
+        "id": 1777783727198,
+        "type": "bubble",
+        "subtype": "note",
+        "content": ":microwave: Preheat your oven to 180°C. \nGrease and flower two 8-inch round cake pans to ensure a clean release.",
+        "scale": 100
+      },
+      {
+        "id": 1777783779375,
+        "type": "step",
+        "content": ":fastfood: In a large bowl, beat the softened butter and sugar together until the mixture is pale and fluffy **[y[(:timer:about 3-5 minutes)]]**.",
+        "scale": 100
+      },
+      {
+        "id": 1777783944243,
+        "type": "bubble",
+        "subtype": "tip",
+        "content": "Ensure eggs and milk are at room temperature before starting. This helps the batter emulsify proper, which result in a much smoother texture.",
+        "scale": 100
+      },
+      {
+        "id": 1777783821468,
+        "type": "step",
+        "content": "Add eggs one at a time, beating well after each addition. Stir in the vanilla extract.",
+        "scale": 100
+      },
+      {
+        "id": 1777784004520,
+        "type": "bubble",
+        "subtype": "warning",
+        "content": "Don't over-mix! Once you add the flour, mix only until combined. Overworking the gluten can make the cake too tough.",
+        "scale": 100
+      },
+      {
+        "id": 1777783843969,
+        "type": "step",
+        "content": ":map: Whisk the flour, baking powder, and salt together.\nGradually add the dry ingredients to the butter mixture, alternating with the milk. Start and end with the flour.",
+        "scale": 100
+      },
+      {
+        "id": 1777783884685,
+        "type": "step",
+        "content": ":grass: Divide the batter evenly between the pans. Baking for 30-35 minutes, or until a toothpick inserted comes out clean.",
+        "scale": 100
+      },
+      {
+        "id": 1777784051923,
+        "type": "bubble",
+        "subtype": "tip",
+        "content": ":eco: If your cake has a large dome use a serrated knife to gently shave off some of the top for a flat surface before frosting.",
+        "scale": 100
+      },
+      {
+        "id": 1777783909818,
+        "type": "step",
+        "content": ":thermostat: Allow the cake to cool in the pan for around *:timer: 10 minutes* before transferring them to a wire rack for complete cooling.",
+        "scale": 100
+      },
+      {
+        "id": 1777784083337,
+        "type": "bubble",
+        "subtype": "tip",
+        "content": ":science: Gently press the centre of the cake with your finger; if it springs back, it's ready to serve.",
+        "scale": 100
+      }
+    ],
+    "settings": {
+      "fontStyle": "display",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "classic",
+      "showHtmlTools": false,
+      "previewMode": "paged",
+      "fileName": "cake",
+      "hideTitle": false,
+      "hideDescription": false
+    }
+  },
+  "marketplaceTemplate": {
+    "isTemplate": true,
+    "title": "Grandma & Co's Basic Cake Recipe",
+    "summary": "A simple cake recipe to show you how CookieCut can be used to make cooking instructions."
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-05-03T04:38:59.315Z",
+  "recipeData": {
+    "title": "",
+    "description": "",
+    "items": [
+      {
+        "id": 1777782639804,
+        "type": "image",
+        "src": "https://raw.githubusercontent.com/SillyLittleTech/lander/refs/heads/main/assetlab/raster/text_alt.png",
+        "alt": "SLT Logo",
+        "size": 180,
+        "inlineWidth": 180,
+        "inlineImageFlow": "around",
+        "inlineMinHeight": 173
+      },
+      {
+        "id": 1777782764602,
+        "type": "heading",
+        "content": "**Capitulation Agreement**\n\n{16{SillyLittleTech}}\n{21{*May 3rd 2026*}}",
+        "scale": 160,
+        "inlineWidth": 351
+      },
+      {
+        "id": 1777782874051,
+        "type": "spacer",
+        "variant": "line",
+        "size": 0,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 48,
+        "inlineWidth": 670
+      },
+      {
+        "id": 1777782889951,
+        "type": "text",
+        "content": "Dear X,\n\nWhile we would love to meet and talk about your bountiful layers of cake, \nI am afraid we are going to have to decline, as we have a shareholder metting at 12:00 PM PT that same say.\n\nWe would like to reach out and meet another time, send us your calendar and we will take a lookies. \n\n<3 XOXO \nThe totally real development team!\ntrustus@SillyLittleTech.org",
+        "scale": 100,
+        "inlineWidth": 673,
+        "inlineMinHeight": 341
+      },
+      {
+        "id": 1777783051999,
+        "type": "spacer",
+        "variant": "blank",
+        "size": 60,
+        "containerLayout": "flow",
+        "containerColumns": 2,
+        "inlineMinHeight": 60,
+        "inlineWidth": 650
+      },
+      {
+        "id": 1777783010715,
+        "type": "text",
+        "content": "Disclaimer, this is not a real email, nor does it match our internal design docs for such emails. It is simply a mockup example used to show what could be done with this tool.",
+        "scale": 60,
+        "inlineWidth": 642
+      }
+    ],
+    "settings": {
+      "fontStyle": "sans",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "inline",
+      "showHtmlTools": false,
+      "previewMode": "paged",
+      "fileName": "emailsig",
+      "hideTitle": true,
+      "hideDescription": true
+    }
+  },
+  "marketplaceTemplate": {
+    "isTemplate": true,
+    "title": "Email with Signature",
+    "summary": "A company email with a signature and some template details."
+  }
+}

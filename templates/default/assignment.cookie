@@ -1,0 +1,84 @@
+{
+  "app": "CookieCut",
+  "format": "cookie_document",
+  "version": 1,
+  "exportedAt": "2026-05-03T04:29:38.753Z",
+  "recipeData": {
+    "title": "                A great assignment!",
+    "description": "                                             The story of the seagull that could.",
+    "items": [
+      {
+        "id": 1777782163624,
+        "type": "heading",
+        "content": "                         Introducing our friends",
+        "scale": 105,
+        "inlineWidth": 673,
+        "inlineMinHeight": 48
+      },
+      {
+        "id": 1777782216640,
+        "type": "text",
+        "content": "The undisputed kings of the boardwalk, seagulls are less \"majestic seabirds\" and more \"highly organized snack-heist specialists.\" With an uncanny ability to hear a chip bag opening from three miles away, they patrol the coastline with a piercing gaze and zero respect for personal boundaries. Whether they’re performing a mid-air acrobatic feat to intercept a tourist’s fry or simply standing on a pier post looking vaguely judgmental, the seagull remains the ocean’s most chaotic—and loud—ambassador.",
+        "scale": 80,
+        "inlineWidth": 667
+      },
+      {
+        "id": 1777782278373,
+        "type": "bullet",
+        "content": "The Rain Dance (Worm Charming)If you ever see a seagull frantically tapping its feet on a patch of grass like it’s practicing for a talent show, it isn't \"dancing\"—it's simulating a rainstorm. By rapidly drumming their feet, gulls create vibrations in the soil that mimic the sound of falling rain. This tricks earthworms into thinking a flood is coming, driving them to the surface to avoid drowning. Once the worms pop up to \"safety,\" the seagull has a gourmet dinner served without ever having to dig.",
+        "scale": 65,
+        "inlineWidth": 604
+      },
+      {
+        "id": 1777782344239,
+        "type": "bullet",
+        "content": "They Track Your Taste Buds: Recent studies have shown that urban seagulls are more likely to steal food that they have specifically seen a human handling. If you’re eating a blue bag of chips, they are significantly more likely to target a blue bag than a green one. They don't just want food; they want your food.",
+        "scale": 65
+      },
+      {
+        "id": 1777782374505,
+        "type": "bullet",
+        "content": "Built-in Desalinization: Seagulls can drink salt water. They have specialized supraorbital glands located above their eyes that act like tiny desalination plants, filtering the salt out of their blood and \"sneezing\" it out through their nostrils.",
+        "scale": 65
+      },
+      {
+        "id": 1777782399555,
+        "type": "text",
+        "content": "Grudge Holders: They are highly intelligent and can recognize individual human faces. If you’ve shooed one away aggressively or, conversely, shared a fry, they are likely to remember you the next time you walk down the boardwalk.",
+        "scale": 80,
+        "inlineWidth": 653,
+        "inlineMinHeight": 98
+      },
+      {
+        "id": 1777782520904,
+        "type": "heading",
+        "content": "References",
+        "scale": 100
+      },
+      {
+        "id": 1777782461187,
+        "type": "text",
+        "content": "Gulliver, Finnegan. The Coastal Heist: Behavioral Patterns of Urban Laridae. Seaside University Press, 2024.\n\nLarson, Sandra. \"Vibrational Foraging: The Mechanics of the Seagull Rain Dance.\" Journal of Avian Intelligence, vol. 42, no. 3, 2025, pp. 112-128.\n",
+        "scale": 100,
+        "inlineWidth": 631,
+        "inlineMinHeight": 171
+      }
+    ],
+    "settings": {
+      "fontStyle": "serif",
+      "fontApplyToText": false,
+      "fontApplyToTips": false,
+      "editorMode": "inline",
+      "showHtmlTools": false,
+      "previewMode": "paged",
+      "fileName": "assignment",
+      "hideTitle": false,
+      "hideDescription": false
+    }
+  },
+  "marketplaceTemplate": {
+    "isTemplate": true,
+    "title": "Assignment",
+    "summary": "A simple essay builder assignment template with references."
+  }
+}
