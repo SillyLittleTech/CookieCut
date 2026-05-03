@@ -4,7 +4,8 @@ import {
   renderRichText,
   getTextAndCaret,
   setCaretPosition,
-  getDocumentTextStats
+  getDocumentTextStats,
+  sanitizeHtmlContent
 } from '../helpers.js'
 import {
   applyItemScale,
@@ -18,6 +19,11 @@ import { renderInlineElement as renderInlineTextElement } from '../handlers/text
 import { renderInlineElement as renderInlineImageElement } from '../handlers/image.js'
 import { renderInlineElement as renderInlineBubbleElement } from '../handlers/bubble.js'
 import { renderInlineElement as renderInlineLinkElement } from '../handlers/link.js'
+import { renderInlineElement as renderInlineButtonElement } from '../handlers/button.js'
+import { renderInlineElement as renderInlineNavmenuElement } from '../handlers/navmenu.js'
+import { renderInlineElement as renderInlineDropdownElement } from '../handlers/dropdown.js'
+import { renderInlineElement as renderInlineFrameElement } from '../handlers/frame.js'
+import { renderInlineElement as renderInlineCodescriptElement } from '../handlers/codescript.js'
 import {
   renderInlineElement as renderInlineSpacerElement,
   normalizeSpacer
@@ -29,12 +35,75 @@ import {
 let currentResizer = null
 let currentLinkEditor = null
 let linkEditorInputIdCounter = 0
+let currentHtmlEditor = null
 let currentDeleteConfirm = null
 let currentDeleteResolve = null
 let currentDeleteKeydownHandler = null
+let currentContextMenu = null
 let inlinePagedFlow = null
 let inlineStatNodes = null
 let inlineIsPagedMode = false
+
+function isHtmlToolsEnabled () {
+  return Boolean(recipeData.settings?.showHtmlTools)
+}
+
+function closeInlineContextMenu () {
+  if (currentContextMenu) {
+    currentContextMenu.remove()
+    currentContextMenu = null
+  }
+}
+
+function openInlineContextMenu ({ x, y, title = '', actions = [] }) {
+  closeInlineContextMenu()
+  const menu = document.createElement('div')
+  menu.className = 'inline-floating-menu'
+  menu.style.position = 'fixed'
+  menu.style.left = `${Math.max(8, x)}px`
+  menu.style.top = `${Math.max(8, y)}px`
+  menu.style.zIndex = 80
+  menu.style.padding = '8px'
+  menu.style.borderRadius = '8px'
+  menu.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+  menu.style.minWidth = '220px'
+
+  if (title) {
+    const header = document.createElement('div')
+    header.textContent = title
+    header.className =
+      'text-xs font-semibold text-gray-600 dark:text-gray-300 px-2 py-1'
+    menu.appendChild(header)
+  }
+
+  actions.forEach((action) => {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = action.label
+    btn.className = 'inline-floating-menu-btn px-3 py-2 block w-full text-left'
+    btn.addEventListener('click', () => {
+      try {
+        action.onClick()
+      } finally {
+        closeInlineContextMenu()
+      }
+    })
+    menu.appendChild(btn)
+  })
+
+  document.body.appendChild(menu)
+  currentContextMenu = menu
+
+  setTimeout(() => {
+    const handler = (ev) => {
+      if (!currentContextMenu) return
+      if (ev.target && currentContextMenu.contains(ev.target)) return
+      closeInlineContextMenu()
+      document.removeEventListener('click', handler)
+    }
+    document.addEventListener('click', handler)
+  }, 0)
+}
 const INLINE_BOX_MIN_WIDTH = 180
 const INLINE_BOX_MAX_WIDTH = 1200
 const INLINE_BOX_MIN_HEIGHT = 48
@@ -244,9 +313,15 @@ function normalizeInlineBoxMeasurement (value, min, max) {
 }
 
 function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
+  const minWidth =
+    item?.type === 'button'
+      ? 72
+      : item?.type === 'dropdown'
+        ? 120
+        : INLINE_BOX_MIN_WIDTH
   const width = normalizeInlineBoxMeasurement(
     item.inlineWidth,
-    INLINE_BOX_MIN_WIDTH,
+    minWidth,
     INLINE_BOX_MAX_WIDTH
   )
   const minHeight = normalizeInlineBoxMeasurement(
@@ -269,8 +344,28 @@ function syncInlineBoxSizing (item, sizeTargetEl, frameEl) {
       sizeTargetEl.style.width = `${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
       sizeTargetEl.style.removeProperty('flex')
     } else {
-      sizeTargetEl.style.removeProperty('width')
-      sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+      // Auto-size certain elements based on scale/content.
+      if (item?.type === 'button') {
+        const scale = Number(item.scale) || 100
+        const label = (item.content || 'Button').trim()
+        const clampedScale = Math.max(40, Math.min(200, scale))
+        const approxCharPx = 8
+        const basePaddingPx = 44 // left+right padding at ~100%
+        const baseWidth =
+          Math.max(
+            minWidth,
+            Math.min(
+              520,
+              Math.round(label.length * approxCharPx + basePaddingPx)
+            )
+          ) *
+          (clampedScale / 100)
+        sizeTargetEl.style.width = `${Math.round(baseWidth)}px`
+        sizeTargetEl.style.flex = '0 0 auto'
+      } else {
+        sizeTargetEl.style.removeProperty('width')
+        sizeTargetEl.style.flex = `1 1 ${INLINE_BOX_DEFAULT_FLEX_BASIS}px`
+      }
     }
   }
 
@@ -703,11 +798,7 @@ function openInlineDeleteConfirm (message = 'Remove this item?') {
   })
 }
 
-function closeActiveInlineEditors () {
-  closeImageResizer()
-  closeLinkEditor()
-  closeInlineDeleteConfirm(false)
-}
+// closeActiveInlineEditors is defined later (after editor helpers)
 
 function syncLinkInputs (item) {
   const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
@@ -1027,6 +1118,297 @@ export function closeLinkEditor () {
   }
 }
 
+function closeHtmlEditor () {
+  if (currentHtmlEditor) {
+    currentHtmlEditor.remove()
+    currentHtmlEditor = null
+  }
+}
+
+function closeActiveInlineEditors () {
+  closeImageResizer()
+  closeLinkEditor()
+  closeHtmlEditor()
+  closeInlineDeleteConfirm(false)
+}
+
+function openInlineHtmlSourceEditor (
+  item,
+  { title = 'Edit HTML', fieldKey = 'content', enableHtmlOnSave = false } = {}
+) {
+  closeActiveInlineEditors()
+  const editor = document.createElement('div')
+  editor.className = 'inline-link-editor-overlay'
+  editor.style.position = 'fixed'
+  editor.style.left = '50%'
+  editor.style.transform = 'translateX(-50%)'
+  editor.style.bottom = '20px'
+  editor.style.zIndex = 61
+  editor.style.padding = '12px'
+  editor.style.borderRadius = '8px'
+  editor.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+  editor.style.width = 'min(680px, calc(100vw - 32px))'
+
+  const titleEl = document.createElement('p')
+  titleEl.className = 'inline-link-editor-title'
+  titleEl.textContent = title
+  titleEl.style.fontWeight = '700'
+  titleEl.style.marginBottom = '8px'
+  titleEl.style.fontSize = '14px'
+
+  const textarea = document.createElement('textarea')
+  textarea.className = 'inline-link-editor-input'
+  const currentValue = item[fieldKey] || ''
+  if (!currentValue && fieldKey === 'htmlOverride') {
+    if (item.type === 'button') {
+      textarea.value = `<button>${(item.content || 'Button')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')}</button>`
+    } else if (item.type === 'dropdown') {
+      const options = (item.options || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+        .map(
+          (o) =>
+            `<option>${o.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</option>`
+        )
+        .join('\n')
+      textarea.value = `<label>${(item.content || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')}</label>\n<select>\n${options}\n</select>`
+    } else if (item.type === 'frame') {
+      textarea.value = `<iframe src="${(item.src || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')}"></iframe>`
+    } else if (item.type === 'navmenu') {
+      textarea.value = `<nav>\n  <span>${(item.content || 'Navigation')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')}</span>\n</nav>`
+    } else {
+      textarea.value = ''
+    }
+  } else {
+    textarea.value = currentValue
+  }
+  textarea.placeholder = '<div>...</div>'
+  textarea.style.width = '100%'
+  textarea.style.height = '180px'
+  textarea.style.marginTop = '4px'
+  textarea.style.marginBottom = '10px'
+  textarea.style.fontFamily = 'ui-monospace, monospace'
+  textarea.style.fontSize = '12px'
+
+  const actions = document.createElement('div')
+  actions.style.display = 'flex'
+  actions.style.justifyContent = 'flex-end'
+  actions.style.gap = '8px'
+
+  const cancelBtn = document.createElement('button')
+  cancelBtn.textContent = 'Cancel'
+  cancelBtn.className = 'inline-overlay-btn inline-overlay-btn-cancel'
+  cancelBtn.addEventListener('click', closeHtmlEditor)
+
+  const saveBtn = document.createElement('button')
+  saveBtn.textContent = 'Save'
+  saveBtn.className = 'inline-overlay-btn inline-overlay-btn-primary'
+  saveBtn.addEventListener('click', () => {
+    item[fieldKey] = textarea.value || ''
+    if (enableHtmlOnSave) {
+      item.htmlEnabled = true
+    }
+    import('./classic.js').then(({ renderBuilderInputs }) => {
+      renderBuilderInputs()
+      renderInlinePreview()
+    })
+    closeHtmlEditor()
+  })
+
+  actions.appendChild(cancelBtn)
+  actions.appendChild(saveBtn)
+  editor.appendChild(titleEl)
+  editor.appendChild(textarea)
+  editor.appendChild(actions)
+  document.body.appendChild(editor)
+  currentHtmlEditor = editor
+  textarea.focus()
+}
+
+function openInlineHtmlElementEditor (item) {
+  closeActiveInlineEditors()
+  const editor = document.createElement('div')
+  editor.className = 'inline-link-editor-overlay'
+  editor.style.position = 'fixed'
+  editor.style.left = '50%'
+  editor.style.transform = 'translateX(-50%)'
+  editor.style.bottom = '20px'
+  editor.style.zIndex = 61
+  editor.style.padding = '12px'
+  editor.style.borderRadius = '8px'
+  editor.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)'
+  editor.style.width = 'min(720px, calc(100vw - 32px))'
+
+  const titleEl = document.createElement('p')
+  titleEl.className = 'inline-link-editor-title'
+  titleEl.textContent = `Edit ${item.type}`
+  titleEl.style.fontWeight = '700'
+  titleEl.style.marginBottom = '8px'
+  titleEl.style.fontSize = '14px'
+  editor.appendChild(titleEl)
+
+  const makeLabel = (text) => {
+    const label = document.createElement('label')
+    label.className = 'inline-link-editor-label'
+    label.textContent = text
+    label.style.display = 'block'
+    label.style.fontSize = '12px'
+    label.style.marginTop = '8px'
+    return label
+  }
+  const makeInput = (type = 'text') => {
+    const input = document.createElement('input')
+    input.className = 'inline-link-editor-input'
+    input.type = type
+    input.style.width = '100%'
+    input.style.marginTop = '4px'
+    return input
+  }
+  const makeTextarea = (rows = 4) => {
+    const ta = document.createElement('textarea')
+    ta.className = 'inline-link-editor-input'
+    ta.rows = rows
+    ta.style.width = '100%'
+    ta.style.marginTop = '4px'
+    ta.style.fontFamily = 'ui-monospace, monospace'
+    ta.style.fontSize = '12px'
+    return ta
+  }
+  const makeSelect = () => {
+    const sel = document.createElement('select')
+    sel.className = 'inline-link-editor-input'
+    sel.style.width = '100%'
+    sel.style.marginTop = '4px'
+    return sel
+  }
+
+  const fields = []
+
+  if (item.type === 'button') {
+    editor.appendChild(makeLabel('Label'))
+    const labelInput = makeInput('text')
+    labelInput.value = item.content || ''
+    editor.appendChild(labelInput)
+    editor.appendChild(makeLabel('URL'))
+    const hrefInput = makeInput('url')
+    hrefInput.value = item.href || ''
+    editor.appendChild(hrefInput)
+    editor.appendChild(makeLabel('Style'))
+    const styleSelect = makeSelect();
+    [
+      { value: 'primary', label: 'Primary' },
+      { value: 'secondary', label: 'Secondary' },
+      { value: 'danger', label: 'Danger' },
+      { value: 'ghost', label: 'Ghost' }
+    ].forEach((styleOpt) => {
+      const optionEl = document.createElement('option')
+      optionEl.value = styleOpt.value
+      optionEl.textContent = styleOpt.label
+      styleSelect.appendChild(optionEl)
+    })
+    styleSelect.value = item.buttonStyle || 'primary'
+    editor.appendChild(styleSelect)
+    fields.push(() => {
+      item.content = labelInput.value || ''
+      item.href = hrefInput.value || ''
+      item.buttonStyle = styleSelect.value || 'primary'
+    })
+  } else if (item.type === 'navmenu') {
+    editor.appendChild(makeLabel('Brand / title'))
+    const brandInput = makeInput('text')
+    brandInput.value = item.content || ''
+    editor.appendChild(brandInput)
+    editor.appendChild(makeLabel('Links (JSON array)'))
+    const linksTa = makeTextarea(5)
+    linksTa.value = item.links || '[]'
+    editor.appendChild(linksTa)
+    fields.push(() => {
+      item.content = brandInput.value || ''
+      item.links = linksTa.value || '[]'
+    })
+  } else if (item.type === 'dropdown') {
+    editor.appendChild(makeLabel('Label (optional)'))
+    const labelInput = makeInput('text')
+    labelInput.value = item.content || ''
+    editor.appendChild(labelInput)
+    editor.appendChild(makeLabel('Options (comma-separated)'))
+    const optionsTa = makeTextarea(4)
+    optionsTa.value = item.options || ''
+    editor.appendChild(optionsTa)
+    fields.push(() => {
+      item.content = labelInput.value || ''
+      item.options = optionsTa.value || ''
+    })
+  } else if (item.type === 'frame') {
+    editor.appendChild(makeLabel('URL (https://...)'))
+    const srcInput = makeInput('url')
+    srcInput.value = item.src || ''
+    editor.appendChild(srcInput)
+    editor.appendChild(makeLabel('Height (px)'))
+    const heightInput = makeInput('number')
+    heightInput.value = String(item.frameHeight || 400)
+    editor.appendChild(heightInput)
+    fields.push(() => {
+      item.src = srcInput.value || ''
+      const parsed = Number.parseInt(heightInput.value, 10)
+      item.frameHeight = Number.isFinite(parsed) ? parsed : 400
+    })
+  } else if (item.type === 'codescript') {
+    editor.appendChild(makeLabel('Raw HTML / scripts'))
+    const codeTa = makeTextarea(10)
+    codeTa.value = item.content || ''
+    editor.appendChild(codeTa)
+    fields.push(() => {
+      item.content = codeTa.value || ''
+    })
+  } else {
+    openInlineHtmlSourceEditor(item, { title: 'Edit HTML source' })
+    return
+  }
+
+  const actions = document.createElement('div')
+  actions.style.display = 'flex'
+  actions.style.justifyContent = 'flex-end'
+  actions.style.gap = '8px'
+  actions.style.marginTop = '10px'
+
+  const cancelBtn = document.createElement('button')
+  cancelBtn.textContent = 'Cancel'
+  cancelBtn.className = 'inline-overlay-btn inline-overlay-btn-cancel'
+  cancelBtn.addEventListener('click', closeHtmlEditor)
+
+  const saveBtn = document.createElement('button')
+  saveBtn.textContent = 'Save'
+  saveBtn.className = 'inline-overlay-btn inline-overlay-btn-primary'
+  saveBtn.addEventListener('click', () => {
+    fields.forEach((apply) => apply())
+    import('./classic.js').then(({ renderBuilderInputs }) => {
+      renderBuilderInputs()
+      renderInlinePreview()
+    })
+    closeHtmlEditor()
+  })
+
+  actions.appendChild(cancelBtn)
+  actions.appendChild(saveBtn)
+  editor.appendChild(actions)
+  document.body.appendChild(editor)
+  currentHtmlEditor = editor
+}
+
 // --- Drag/Drop Reorder Helper ---
 
 function reorderItems (dragId, targetId) {
@@ -1045,6 +1427,22 @@ function reorderItems (dragId, targetId) {
   } else {
     recipeData.items.splice(newTargetIndex, 0, dragItem)
   }
+
+  // Ensure navmenu stays first.
+  const navIndex = recipeData.items.findIndex((i) => i && i.type === 'navmenu')
+  if (navIndex > 0) {
+    const [navItem] = recipeData.items.splice(navIndex, 1)
+    recipeData.items.unshift(navItem)
+  }
+}
+
+function isInlineHtmlElement (item) {
+  return Boolean(
+    item &&
+    ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(
+      item.type
+    )
+  )
 }
 
 function hasValidParentInRecipe (item) {
@@ -1099,6 +1497,95 @@ function assignItemToContainer (dragId, containerId) {
   recipeData.items.splice(insertAt, 0, moved)
 }
 
+function itemHasNonEmptyHtmlOverride (item) {
+  if (!isHtmlToolsEnabled() || !item) return false
+  const override = item.htmlOverride
+  return typeof override === 'string' && override.trim().length > 0
+}
+
+function wrapSanitizedHtmlOverride (item, className) {
+  const wrap = document.createElement('div')
+  if (className) wrap.className = className
+  wrap.innerHTML = sanitizeHtmlContent(item.htmlOverride)
+  return wrap
+}
+
+const INLINE_STANDARD_ELEMENT_BUILDERS = {
+  heading ({ item, fontStyle, contentWithIcons }) {
+    return renderInlineHeadingElement(item, fontStyle, contentWithIcons)
+  },
+  text ({ item, fontStyle, contentWithIcons, applyToText }) {
+    const el = renderInlineTextElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  image ({ item, fontStyle, contentWithIcons }) {
+    return renderInlineImageElement(item, fontStyle, contentWithIcons)
+  },
+  bubble ({ item, fontStyle, contentWithIcons, applyToTips }) {
+    const el = renderInlineBubbleElement(item, fontStyle, contentWithIcons)
+    if (applyToTips) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  link ({ item, fontStyle, contentWithIcons, applyToText }) {
+    const el = renderInlineLinkElement(item, fontStyle, contentWithIcons)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    const anchorEl = el.querySelector('a')
+    if (anchorEl) {
+      anchorEl.classList.add('inline-edit-link')
+      anchorEl.draggable = false
+      anchorEl.addEventListener('dragstart', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      })
+      anchorEl.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        openLinkEditor(item)
+      })
+    }
+    return el
+  },
+  button ({ item, fontStyle, applyToText }) {
+    const el = itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineButtonElement(item)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    const btnEl = el.querySelector('a')
+    if (btnEl) {
+      btnEl.draggable = false
+      btnEl.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      })
+    }
+    return el
+  },
+  navmenu ({ item }) {
+    return itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item)
+      : renderInlineNavmenuElement(item)
+  },
+  dropdown ({ item, fontStyle, applyToText }) {
+    const el = itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineDropdownElement(item)
+    if (applyToText) el.classList.add(`font-style-${fontStyle}`)
+    return el
+  },
+  frame ({ item }) {
+    return itemHasNonEmptyHtmlOverride(item)
+      ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+      : renderInlineFrameElement(item)
+  },
+  codescript ({ item }) {
+    return renderInlineCodescriptElement(item)
+  },
+  spacer ({ item }) {
+    return renderInlineSpacerElement(item)
+  }
+}
+
 function buildInlineStandardElement ({
   item,
   fontStyle,
@@ -1106,68 +1593,29 @@ function buildInlineStandardElement ({
   applyToText,
   applyToTips
 }) {
-  let renderedElement = null
+  const builder = INLINE_STANDARD_ELEMENT_BUILDERS[item.type]
+  const renderedElement = builder
+    ? builder({
+      item,
+      fontStyle,
+      contentWithIcons,
+      applyToText,
+      applyToTips
+    })
+    : null
 
-  switch (item.type) {
-    case 'heading':
-      renderedElement = renderInlineHeadingElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      break
-    case 'text':
-      renderedElement = renderInlineTextElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      break
-    case 'image':
-      renderedElement = renderInlineImageElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      break
-    case 'bubble':
-      renderedElement = renderInlineBubbleElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToTips) renderedElement.classList.add(`font-style-${fontStyle}`)
-      break
-    case 'link': {
-      renderedElement = renderInlineLinkElement(
-        item,
-        fontStyle,
-        contentWithIcons
-      )
-      if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
-      const anchorEl = renderedElement.querySelector('a')
-      if (anchorEl) {
-        anchorEl.classList.add('inline-edit-link')
-        // Disable native dragging on the anchor so the wrapper remains the drag source.
-        anchorEl.draggable = false
-        anchorEl.addEventListener('dragstart', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        })
-        anchorEl.addEventListener('click', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          openLinkEditor(item)
-        })
-      }
-      break
+  // If this is a default element in HTML mode, disable direct inline editing.
+  if (
+    renderedElement &&
+    isHtmlToolsEnabled() &&
+    item?.htmlEnabled &&
+    typeof renderedElement.contentEditable !== 'undefined'
+  ) {
+    try {
+      renderedElement.contentEditable = false
+    } catch {
+      // ignore
     }
-    case 'spacer':
-      renderedElement = renderInlineSpacerElement(item)
-      break
-    default:
-      break
   }
 
   return renderedElement
@@ -1203,6 +1651,10 @@ export function handleInlineInput (e) {
   // content for items
   const item = recipeData.items.find((i) => String(i.id) === String(id))
   if (!item) return
+  if (isHtmlToolsEnabled() && item.htmlEnabled) {
+    // HTML-enabled items are edited via the HTML source editor overlay.
+    return
+  }
   const { text: codeText, caret: newCaret } = getTextAndCaret(el)
   item.content = codeText || ''
   const newHtml = renderRichText(item.content)
@@ -1235,6 +1687,9 @@ export function handleInlineBlur (e) {
   } else if (id) {
     const item = recipeData.items.find((i) => String(i.id) === String(id))
     if (item) {
+      if (isHtmlToolsEnabled() && item.htmlEnabled) {
+        return
+      }
       item.content = text
       const itemEl = dom.contentInputs.querySelector(`[data-id="${item.id}"]`)
       if (itemEl) {
@@ -1359,6 +1814,17 @@ function buildPagedInlinePreviewSurface () {
 
 function createInlineItemInteractionsBinder (rerenderAllEditors) {
   return (node, itemId) => {
+    node.addEventListener('contextmenu', (event) => {
+      if (!isHtmlToolsEnabled()) return
+      const item = recipeData.items.find(
+        (i) => String(i.id) === String(itemId)
+      )
+      if (!item || !isInlineHtmlElement(item)) return
+      event.preventDefault()
+      event.stopPropagation()
+      openInlineHtmlElementEditor(item)
+    })
+
     node.addEventListener('dblclick', async (event) => {
       event.stopPropagation()
       if (!(await openInlineDeleteConfirm('Remove this item?'))) return
@@ -1643,10 +2109,50 @@ export function renderInlinePreview () {
   if (!recipeData.settings || recipeData.settings.editorMode !== 'inline') {
     return
   }
+  closeInlineContextMenu()
   closeLinkEditor()
   dom.inlinePreview.innerHTML = ''
   inlinePagedFlow = null
   inlineStatNodes = null
+
+  dom.inlinePreview.oncontextmenu = (ev) => {
+    if (!isHtmlToolsEnabled()) return
+    // Item-level menus stopPropagation; reaching here means background.
+    ev.preventDefault()
+    ev.stopPropagation()
+    openInlineContextMenu({
+      x: ev.clientX,
+      y: ev.clientY,
+      title: 'Add HTML element',
+      actions: [
+        {
+          label: 'Add Button',
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('button'))
+        },
+        {
+          label: 'Add Navigation',
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('navmenu'))
+        },
+        {
+          label: 'Add Dropdown',
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('dropdown'))
+        },
+        {
+          label: 'Add Frame',
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('frame'))
+        },
+        {
+          label: 'Add Code script',
+          onClick: () =>
+            import('../global.js').then(({ addItem }) => addItem('codescript'))
+        }
+      ]
+    })
+  }
 
   const fontStyle = recipeData.settings.fontStyle || 'display'
   const isPagedMode = recipeData.settings.previewMode === 'paged'
@@ -1709,9 +2215,13 @@ export function renderInlinePreview () {
 
   const renderItemsInto = (rootEl, items) => {
     const state = { currentList: null, currentListType: null, stepCounter: 0 }
+    const htmlToolsEnabled = Boolean(recipeData.settings?.showHtmlTools)
 
     for (const item of items) {
-      const contentWithIcons = renderRichText(item.content || '')
+      const contentWithIcons =
+        htmlToolsEnabled && item.htmlEnabled
+          ? sanitizeHtmlContent(item.content || '')
+          : renderRichText(item.content || '')
 
       if (item.type === 'spacer') {
         resetInlineListState(state)
