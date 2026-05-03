@@ -48,9 +48,9 @@ function showBootstrapError (error) {
   wrap.style.borderRadius = '8px'
   wrap.style.background = '#fef2f2'
   wrap.style.color = '#7f1d1d'
-  wrap.textContent =
-    'CookieCut failed to start.\n\n' +
-    (error && error.stack ? String(error.stack) : String(error))
+  wrap.textContent = `CookieCut failed to start.\n\n${
+    error?.stack ? String(error.stack) : String(error)
+  }`
   container.appendChild(wrap)
 }
 

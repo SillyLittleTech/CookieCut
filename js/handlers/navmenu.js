@@ -75,11 +75,11 @@ function createNavElement (item) {
   const links = parseNavLinks(item.links)
   links.forEach((link) => {
     const li = document.createElement('li')
-    const a = document.createElement('a')
-    a.href = link.href || '#'
-    a.innerHTML = renderRichText(link.label || '')
-    a.className = 'html-navmenu-link'
-    li.appendChild(a)
+    const anchorEl = document.createElement('a')
+    anchorEl.href = link.href || '#'
+    anchorEl.innerHTML = renderRichText(link.label || '')
+    anchorEl.className = 'html-navmenu-link'
+    li.appendChild(anchorEl)
     linkList.appendChild(li)
   })
 

@@ -1681,7 +1681,7 @@ export function addItem (type, subtype = null) {
       newItem.buttonStyle = 'primary'
       newItem.scale = 100
       break
-    case 'navmenu':
+    case 'navmenu': {
       if (recipeData.items.some((i) => i.type === 'navmenu')) {
         showDocumentTransferMessage(
           'Only one Navigation element is allowed per document.',
@@ -1704,6 +1704,7 @@ export function addItem (type, subtype = null) {
         if (input) input.focus()
       }
       return
+    }
     case 'dropdown':
       newItem.type = 'dropdown'
       newItem.content = ''
@@ -1778,7 +1779,7 @@ function isInlineMode () {
 }
 
 function isHtmlToolsEnabled () {
-  return Boolean(recipeData.settings && recipeData.settings.showHtmlTools)
+  return Boolean(recipeData.settings?.showHtmlTools)
 }
 
 function closeFloatingAddMenu () {
@@ -1910,8 +1911,8 @@ function showPreview () {
   if (dom.htmlPreviewBtn) {
     const hasHtmlItems = recipeData.items.some(
       (item) =>
-        (item && VALID_HTML_ITEM_TYPES.has(item.type)) ||
-        Boolean(item && item.htmlEnabled)
+        Boolean(item && VALID_HTML_ITEM_TYPES.has(item.type)) ||
+        Boolean(item?.htmlEnabled)
     )
     dom.htmlPreviewBtn.classList.toggle(
       'hidden',

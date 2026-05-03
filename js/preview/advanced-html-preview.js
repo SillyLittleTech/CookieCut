@@ -58,7 +58,7 @@ function collectPreviewNodesAdvanced (doc, data, fontStyle) {
     if (!isListItem && currentList) flushCurrentList()
 
     const htmlContent =
-      item && item.htmlEnabled && typeof item.content === 'string'
+      item?.htmlEnabled && typeof item.content === 'string'
         ? item.content
         : renderRichText(item?.content || '')
 
@@ -246,9 +246,9 @@ export async function openAdvancedHtmlPreview (
     try {
       win.document.open()
       win.document.write(
-        '<!doctype html><title>Preview error</title><pre style="white-space: pre-wrap; font-family: ui-monospace, monospace; padding: 16px; color: #7f1d1d; background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px;">' +
-          String(err && err.stack ? err.stack : err) +
-          '</pre>'
+        `<!doctype html><title>Preview error</title><pre style="white-space: pre-wrap; font-family: ui-monospace, monospace; padding: 16px; color: #7f1d1d; background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px;">${String(
+          err?.stack ? err.stack : err
+        )}</pre>`
       )
       win.document.close()
     } catch {

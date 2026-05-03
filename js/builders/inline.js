@@ -45,7 +45,7 @@ let inlineStatNodes = null
 let inlineIsPagedMode = false
 
 function isHtmlToolsEnabled () {
-  return Boolean(recipeData.settings && recipeData.settings.showHtmlTools)
+  return Boolean(recipeData.settings?.showHtmlTools)
 }
 
 function closeInlineContextMenu () {
@@ -1307,17 +1307,17 @@ function openInlineHtmlElementEditor (item) {
     hrefInput.value = item.href || ''
     editor.appendChild(hrefInput)
     editor.appendChild(makeLabel('Style'))
-    const styleSelect = makeSelect();
-    [
+    const styleSelect = makeSelect()
+    ;[
       { value: 'primary', label: 'Primary' },
       { value: 'secondary', label: 'Secondary' },
       { value: 'danger', label: 'Danger' },
       { value: 'ghost', label: 'Ghost' }
-    ].forEach((opt) => {
-      const o = document.createElement('option')
-      o.value = opt.value
-      o.textContent = opt.label
-      styleSelect.appendChild(o)
+    ].forEach((styleOpt) => {
+      const optionEl = document.createElement('option')
+      optionEl.value = styleOpt.value
+      optionEl.textContent = styleOpt.label
+      styleSelect.appendChild(optionEl)
     })
     styleSelect.value = item.buttonStyle || 'primary'
     editor.appendChild(styleSelect)
@@ -1436,17 +1436,6 @@ function reorderItems (dragId, targetId) {
   }
 }
 
-function canToggleHtmlForItem (item) {
-  if (!item || typeof item !== 'object') return false
-  if (!isHtmlToolsEnabled()) return false
-  if (
-    ['button', 'navmenu', 'dropdown', 'frame', 'codescript'].includes(item.type)
-  ) {
-    return false
-  }
-  return typeof item.content === 'string'
-}
-
 function isInlineHtmlElement (item) {
   return Boolean(
     item &&
@@ -1454,19 +1443,6 @@ function isInlineHtmlElement (item) {
       item.type
     )
   )
-}
-
-function getInlineContentHtml (item) {
-  if (
-    isHtmlToolsEnabled() &&
-    item &&
-    item.htmlEnabled &&
-    typeof item.content === 'string' &&
-    item.content.trim()
-  ) {
-    return sanitizeHtmlContent(item.content)
-  }
-  return renderRichText(item?.content || '')
 }
 
 function hasValidParentInRecipe (item) {
@@ -1519,6 +1495,19 @@ function assignItemToContainer (dragId, containerId) {
     }
   }
   recipeData.items.splice(insertAt, 0, moved)
+}
+
+function itemHasNonEmptyHtmlOverride (item) {
+  if (!isHtmlToolsEnabled() || !item) return false
+  const override = item.htmlOverride
+  return typeof override === 'string' && override.trim().length > 0
+}
+
+function wrapSanitizedHtmlOverride (item, className) {
+  const wrap = document.createElement('div')
+  if (className) wrap.className = className
+  wrap.innerHTML = sanitizeHtmlContent(item.htmlOverride)
+  return wrap
 }
 
 function buildInlineStandardElement ({
@@ -1586,17 +1575,9 @@ function buildInlineStandardElement ({
       break
     }
     case 'button': {
-      if (
-        isHtmlToolsEnabled() &&
-        typeof item.htmlOverride === 'string' &&
-        item.htmlOverride.trim()
-      ) {
-        renderedElement = document.createElement('div')
-        renderedElement.className = 'recipe-text-block'
-        renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
-      } else {
-        renderedElement = renderInlineButtonElement(item)
-      }
+      renderedElement = itemHasNonEmptyHtmlOverride(item)
+        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+        : renderInlineButtonElement(item)
       if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
       // Prevent clicks on button links from navigating in inline editor
       const btnEl = renderedElement.querySelector('a')
@@ -1610,45 +1591,22 @@ function buildInlineStandardElement ({
       break
     }
     case 'navmenu': {
-      if (
-        isHtmlToolsEnabled() &&
-        typeof item.htmlOverride === 'string' &&
-        item.htmlOverride.trim()
-      ) {
-        renderedElement = document.createElement('div')
-        renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
-      } else {
-        renderedElement = renderInlineNavmenuElement(item)
-      }
+      renderedElement = itemHasNonEmptyHtmlOverride(item)
+        ? wrapSanitizedHtmlOverride(item)
+        : renderInlineNavmenuElement(item)
       break
     }
     case 'dropdown': {
-      if (
-        isHtmlToolsEnabled() &&
-        typeof item.htmlOverride === 'string' &&
-        item.htmlOverride.trim()
-      ) {
-        renderedElement = document.createElement('div')
-        renderedElement.className = 'recipe-text-block'
-        renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
-      } else {
-        renderedElement = renderInlineDropdownElement(item)
-      }
+      renderedElement = itemHasNonEmptyHtmlOverride(item)
+        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+        : renderInlineDropdownElement(item)
       if (applyToText) renderedElement.classList.add(`font-style-${fontStyle}`)
       break
     }
     case 'frame': {
-      if (
-        isHtmlToolsEnabled() &&
-        typeof item.htmlOverride === 'string' &&
-        item.htmlOverride.trim()
-      ) {
-        renderedElement = document.createElement('div')
-        renderedElement.className = 'recipe-text-block'
-        renderedElement.innerHTML = sanitizeHtmlContent(item.htmlOverride)
-      } else {
-        renderedElement = renderInlineFrameElement(item)
-      }
+      renderedElement = itemHasNonEmptyHtmlOverride(item)
+        ? wrapSanitizedHtmlOverride(item, 'recipe-text-block')
+        : renderInlineFrameElement(item)
       break
     }
     case 'codescript': {
@@ -1666,8 +1624,7 @@ function buildInlineStandardElement ({
   if (
     renderedElement &&
     isHtmlToolsEnabled() &&
-    item &&
-    item.htmlEnabled &&
+    item?.htmlEnabled &&
     typeof renderedElement.contentEditable !== 'undefined'
   ) {
     try {
@@ -1873,6 +1830,15 @@ function buildPagedInlinePreviewSurface () {
 
 function createInlineItemInteractionsBinder (rerenderAllEditors) {
   return (node, itemId) => {
+    node.addEventListener('contextmenu', (event) => {
+      if (!isHtmlToolsEnabled()) return
+      const item = recipeData.items.find((i) => String(i.id) === String(itemId))
+      if (!item || !isInlineHtmlElement(item)) return
+      event.preventDefault()
+      event.stopPropagation()
+      openInlineHtmlElementEditor(item)
+    })
+
     node.addEventListener('dblclick', async (event) => {
       event.stopPropagation()
       if (!(await openInlineDeleteConfirm('Remove this item?'))) return
